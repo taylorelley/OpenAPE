@@ -1,0 +1,47 @@
+[
+  {
+    "file": "pi-main.json",
+    "bytes": 76284,
+    "sha256": "7c8be35180f95b82dd9047f35c0ffc978e54f2c7f06c0a347f80c24beff11439"
+  },
+  {
+    "file": "openclaw-hooks.html",
+    "bytes": 287484,
+    "sha256": "4df1aa74e7614ed0c5536861a609e54d8bcc93d2e443fa5ea0d49d716886277e"
+  },
+  {
+    "file": "hermes-prompts.html",
+    "bytes": 81419,
+    "sha256": "301d8ee7e6f7fcb034fc37a3a113e9c5eedaaadd015713dc67072e06ca2c054c"
+  },
+  {
+    "file": "hermes-main.json",
+    "bytes": 16665,
+    "sha256": "b33709b06802929d80f12763ee75a35c6eebcf8a2ddaadb75ec2f983c12cf9d0"
+  },
+  {
+    "file": "openclaw-main.json",
+    "bytes": 16576,
+    "sha256": "850b0daa1f783e6bd05984ef6c274c366b0e9a57657c428b60042a5b036e41c7"
+  },
+  {
+    "file": "hermes-plugins.html",
+    "bytes": 672173,
+    "sha256": "7686703998fde5e38e06f382f24618b8922469f02fad698ef53adb6915571bc5"
+  },
+  {
+    "file": "pi-extensions.html",
+    "bytes": 135218,
+    "sha256": "9ac362e6d5392d874e4edce0e8956a12ec21a82ce1a10c3a2829aeb500b81736"
+  },
+  {
+    "file": "opencogni-main.json",
+    "bytes": 309254,
+    "sha256": "49e7e9aaec6e81aed291674899643ec81e5277c1213b51b158feb5ffdcc21300"
+  },
+  {
+    "file": "claude-hooks.html",
+    "bytes": 3261820,
+    "sha256": "cbaab246755b2ca50da8a57a217559c9113c2a056251343af0e5cf086b91b0a9"
+  }
+]

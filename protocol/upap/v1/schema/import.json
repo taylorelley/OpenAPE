@@ -1,0 +1,27 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "protocol_version": {
+      "const": "upap/1",
+      "title": "Protocol Version",
+      "type": "string"
+    },
+    "persona_id": {
+      "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+      "title": "Persona Id",
+      "type": "string"
+    },
+    "bundle": {
+      "additionalProperties": true,
+      "title": "Bundle",
+      "type": "object"
+    }
+  },
+  "required": [
+    "protocol_version",
+    "persona_id",
+    "bundle"
+  ],
+  "title": "Import",
+  "type": "object"
+}

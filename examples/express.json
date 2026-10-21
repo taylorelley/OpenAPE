@@ -1,0 +1,27 @@
+{
+  "protocol_version": "upap/1",
+  "request_id": "req-conformance",
+  "identity": {
+    "tenant_id": "local",
+    "persona_id": "ape",
+    "user_id": "alice"
+  },
+  "session": {
+    "id": "s",
+    "turn_id": "t"
+  },
+  "host": {
+    "adapter_id": "custom",
+    "adapter_version": "0.1",
+    "host_version": "fixture",
+    "provider_family": "other",
+    "model_id": "fixture"
+  },
+  "context": {
+    "task_type": "general",
+    "channel": "terminal",
+    "stakes": "low",
+    "turn_origin": "user",
+    "tags": []
+  }
+}

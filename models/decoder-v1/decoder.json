@@ -1,0 +1,30 @@
+{
+  "hash": "sha256:934d9e8665386fb4819d8102cdb579e34884f5ea22c24c2757c9316feca3c30a",
+  "seed": 42,
+  "encoder": "encoder/1",
+  "catalogue": "behaviour-controls/1",
+  "status": "experimental_synthetic",
+  "metrics": {
+    "train": {
+      "examples": 288,
+      "accuracy": 0.9131944179534912,
+      "cross_entropy": 0.3274869918823242
+    },
+    "calibration": {
+      "examples": 48,
+      "accuracy": 0.9375,
+      "cross_entropy": 0.11406517028808594
+    },
+    "validation": {
+      "examples": 96,
+      "accuracy": 0.9166666865348816,
+      "cross_entropy": 0.22381329536437988
+    }
+  },
+  "license": "Apache-2.0 weights; original CC0 corpus",
+  "limitations": [
+    "Synthetic rule labels only",
+    "No independent human validation",
+    "No measured cross-model benefit"
+  ]
+}

@@ -1,0 +1,20 @@
+✔ valid active (0.979521ms)
+✔ valid shadow (0.187878ms)
+✔ wrong protocol (0.192855ms)
+✔ unknown control (0.09448ms)
+✔ catalogue mismatch (0.076704ms)
+✔ wrong control schema (0.067109ms)
+✔ shadow is empty (0.200407ms)
+✔ offline and disabled do not block (1.210633ms)
+✔ Pi only returns context and never replaces host prompt (1.089814ms)
+✔ OpenClaw skips heartbeat, cron and missing text/admission identity (0.660498ms)
+✔ OpenClaw respects closed invocation lifetime (0.482214ms)
+✔ Pi removes only its own stale custom style messages (0.204933ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 190.719744

@@ -1,0 +1,5 @@
+name: openape
+version: 0.1.0
+description: Experimental OpenAPE style context, coexisting with Hermes identity
+requires_env:
+  - OPENAPE_TOKEN

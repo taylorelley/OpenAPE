@@ -1,0 +1,30 @@
+{
+  "adapter_id": "upap.pi",
+  "adapter_version": "0.1.0",
+  "protocol_version": "upap/1",
+  "host_commit": "7f225f25d8a961f7db50fec50124c15d11013f93",
+  "host_compatibility": "1.3.0",
+  "verified_capabilities": [
+    "native_prompt_lifecycle_synthetic_model",
+    "outage_fallback",
+    "observation"
+  ],
+  "verified_with_actual_model": false,
+  "insertion_levels": [
+    "context"
+  ],
+  "observation_hooks": [
+    "agent_end",
+    "session_shutdown"
+  ],
+  "permissions": [
+    "persona:express",
+    "observations:write"
+  ],
+  "default_mode": "shadow",
+  "user_linking": "explicit configuration only",
+  "subagents": "automatic lineage/snapshot handling unverified; use separately scoped child credentials or disable adapter",
+  "fallback": "250ms deadline; same-scope approved cache or empty injection",
+  "concurrency": "host session IDs scoped by adapter and persona; no mutable latent sharing",
+  "release_status": "native_lifecycle_verified_synthetic_transport"
+}

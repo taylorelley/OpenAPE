@@ -1,0 +1,7 @@
+OpenAPE — Agent Personality Engine
+Copyright 2026 OpenAPE contributors
+Source and decoder weights: Apache License 2.0.
+Original synthetic rule-label corpus: CC0-1.0.
+Third-party dependencies retain their respective licenses. No upstream host code
+is redistributed in this source repository. Exact source-inspection pins and
+license references are recorded in docs/upstream and docs/reports/dependencies.md.

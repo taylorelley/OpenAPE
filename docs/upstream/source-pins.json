@@ -1,0 +1,26 @@
+[
+  {
+    "host": "pi",
+    "commit": "7f225f25d8a961f7db50fec50124c15d11013f93",
+    "inspected_at": "2026-10-21",
+    "source_url": "https://github.com/badlogic/pi-mono/tree/7f225f25d8a961f7db50fec50124c15d11013f93"
+  },
+  {
+    "host": "hermes",
+    "commit": "3fa571a51a6bf1220dfe9a7a23fcd5bb9482a1af",
+    "inspected_at": "2026-10-21",
+    "source_url": "https://github.com/NousResearch/hermes-agent/tree/3fa571a51a6bf1220dfe9a7a23fcd5bb9482a1af"
+  },
+  {
+    "host": "openclaw",
+    "commit": "56efa0e64cd5ffd3257faa14f06b2b275336f73c",
+    "inspected_at": "2026-10-21",
+    "source_url": "https://github.com/openclaw/openclaw/tree/56efa0e64cd5ffd3257faa14f06b2b275336f73c"
+  },
+  {
+    "host": "opencogni",
+    "commit": "833f4e6bb77c35f87c139e4944f80424f2ff8a30",
+    "inspected_at": "2026-10-21",
+    "source_url": "https://github.com/taylorelley/opencogni/tree/833f4e6bb77c35f87c139e4944f80424f2ff8a30"
+  }
+]

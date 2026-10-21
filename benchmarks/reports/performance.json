@@ -1,0 +1,26 @@
+{
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+  "python": "3.12.14",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "torch": "2.5.1+cpu",
+  "cold_start_ready_seconds": 1.262183135999976,
+  "http_warm": {
+    "n": 500,
+    "p50_ms": 1.9051829999625625,
+    "p95_ms": 2.6823145000037125,
+    "max_ms": 77.2936570000411
+  },
+  "neural_warm": {
+    "n": 500,
+    "p50_ms": 0.07196599995040742,
+    "p95_ms": 0.1705588999925564,
+    "max_ms": 0.3192199999375589
+  },
+  "targets": {
+    "http_p95_ms": 75,
+    "neural_p95_ms": 25
+  },
+  "load": "single client, 500 measured requests, SQLite decisions persisted",
+  "added_style_tokens": "renderer <=150 whitespace tokens; tokenizer-specific costs unmeasured",
+  "behavioral_benefit": "not measured"
+}

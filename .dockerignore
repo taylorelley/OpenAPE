@@ -1,0 +1,7 @@
+.venv
+.host-test
+.git
+.openape
+__pycache__
+.pytest_cache
+docs/upstream

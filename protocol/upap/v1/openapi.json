@@ -1,0 +1,1505 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OpenAPE \u2014 Agent Personality Engine",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/health/live": {
+      "get": {
+        "summary": "Live",
+        "operationId": "live_health_live_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "summary": "Ready",
+        "operationId": "ready_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/capabilities": {
+      "get": {
+        "summary": "Capabilities",
+        "operationId": "capabilities_v1_capabilities_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas": {
+      "get": {
+        "summary": "List Personas",
+        "operationId": "list_personas_v1_personas_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create",
+        "operationId": "create_v1_personas_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Create"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/{id}": {
+      "get": {
+        "summary": "Inspect",
+        "operationId": "inspect_v1_personas__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete",
+        "operationId": "delete_v1_personas__id__delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/{id}/history": {
+      "get": {
+        "summary": "History",
+        "operationId": "history_v1_personas__id__history_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/express": {
+      "post": {
+        "summary": "Express",
+        "operationId": "express_v1_express_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Express"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Decision"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/feedback": {
+      "post": {
+        "summary": "Feedback",
+        "operationId": "feedback_v1_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Feedback"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/observations": {
+      "post": {
+        "summary": "Observations",
+        "operationId": "observations_v1_observations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Observations"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/consolidations": {
+      "post": {
+        "summary": "Consolidate",
+        "operationId": "consolidate_v1_consolidations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Consolidate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/consolidations/{id}": {
+      "get": {
+        "summary": "Job",
+        "operationId": "job_v1_consolidations__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/{id}/promotions": {
+      "post": {
+        "summary": "Promote",
+        "operationId": "promote_v1_personas__id__promotions_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Promote"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/{id}/rollbacks": {
+      "post": {
+        "summary": "Rollback",
+        "operationId": "rollback_v1_personas__id__rollbacks_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Rollback"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/{id}/export": {
+      "post": {
+        "summary": "Export",
+        "operationId": "export_v1_personas__id__export_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Export"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/import": {
+      "post": {
+        "summary": "Import Persona",
+        "operationId": "import_persona_v1_personas_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Import"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Consolidate": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/1",
+            "title": "Protocol Version"
+          },
+          "persona_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Persona Id"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "core",
+              "relationship"
+            ],
+            "title": "Scope",
+            "default": "relationship"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed",
+            "default": 42
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "persona_id"
+        ],
+        "title": "Consolidate"
+      },
+      "Context": {
+        "properties": {
+          "task_type": {
+            "type": "string",
+            "enum": [
+              "general",
+              "code_review",
+              "coding",
+              "support",
+              "creative",
+              "research"
+            ],
+            "title": "Task Type",
+            "default": "general"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "terminal",
+              "chat",
+              "voice",
+              "background"
+            ],
+            "title": "Channel",
+            "default": "terminal"
+          },
+          "stakes": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Stakes",
+            "default": "low"
+          },
+          "turn_origin": {
+            "type": "string",
+            "enum": [
+              "user",
+              "system",
+              "tool",
+              "subagent"
+            ],
+            "title": "Turn Origin",
+            "default": "user"
+          },
+          "tags": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "technical",
+                "review",
+                "sensitive",
+                "urgent",
+                "beginner",
+                "expert"
+              ]
+            },
+            "type": "array",
+            "maxItems": 6,
+            "title": "Tags"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Context"
+      },
+      "Controls": {
+        "properties": {
+          "directness": {
+            "type": "string",
+            "enum": [
+              "low",
+              "moderate",
+              "high"
+            ],
+            "title": "Directness"
+          },
+          "warmth": {
+            "type": "string",
+            "enum": [
+              "low",
+              "moderate",
+              "high"
+            ],
+            "title": "Warmth"
+          },
+          "verbosity": {
+            "type": "string",
+            "enum": [
+              "low",
+              "moderate",
+              "high"
+            ],
+            "title": "Verbosity"
+          },
+          "humour": {
+            "type": "string",
+            "enum": [
+              "low",
+              "moderate",
+              "high"
+            ],
+            "title": "Humour"
+          },
+          "formality": {
+            "type": "string",
+            "enum": [
+              "low",
+              "moderate",
+              "high"
+            ],
+            "title": "Formality"
+          },
+          "explanation_depth": {
+            "type": "string",
+            "enum": [
+              "low",
+              "moderate",
+              "high"
+            ],
+            "title": "Explanation Depth"
+          },
+          "assertiveness": {
+            "type": "string",
+            "enum": [
+              "low",
+              "moderate",
+              "high"
+            ],
+            "title": "Assertiveness"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "directness",
+          "warmth",
+          "verbosity",
+          "humour",
+          "formality",
+          "explanation_depth",
+          "assertiveness"
+        ],
+        "title": "Controls"
+      },
+      "Create": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/1",
+            "title": "Protocol Version"
+          },
+          "persona_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Persona Id"
+          },
+          "seed_preferences": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "concise",
+                "detailed",
+                "warm",
+                "formal"
+              ]
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Seed Preferences"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "persona_id"
+        ],
+        "title": "Create"
+      },
+      "Decision": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/1",
+            "title": "Protocol Version",
+            "default": "upap/1"
+          },
+          "request_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Request Id"
+          },
+          "decision_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Decision Id"
+          },
+          "persona_version": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Persona Version"
+          },
+          "relationship_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relationship Version"
+          },
+          "decoder_hash": {
+            "type": "string",
+            "title": "Decoder Hash"
+          },
+          "control_schema": {
+            "type": "string",
+            "const": "behaviour-controls/1",
+            "title": "Control Schema",
+            "default": "behaviour-controls/1"
+          },
+          "control_set_id": {
+            "type": "string",
+            "title": "Control Set Id"
+          },
+          "controls": {
+            "$ref": "#/components/schemas/Controls"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "shadow",
+              "active",
+              "frozen"
+            ],
+            "title": "Mode"
+          },
+          "applies_to": {
+            "type": "string",
+            "const": "next_model_request",
+            "title": "Applies To",
+            "default": "next_model_request"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/Policy"
+          },
+          "cache_ttl_ms": {
+            "type": "integer",
+            "title": "Cache Ttl Ms",
+            "default": 30000
+          },
+          "engine_status": {
+            "type": "string",
+            "enum": [
+              "experimental_synthetic",
+              "baseline_fallback"
+            ],
+            "title": "Engine Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "decision_id",
+          "persona_version",
+          "decoder_hash",
+          "control_set_id",
+          "controls",
+          "mode",
+          "policy",
+          "engine_status"
+        ],
+        "title": "Decision"
+      },
+      "Event": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Event Id"
+          },
+          "occurred_at": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Occurred At"
+          },
+          "persona_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Persona Id"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "decision_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "session.started",
+              "turn.preparing",
+              "turn.completed",
+              "turn.failed",
+              "model.changed",
+              "session.compacted",
+              "session.ended",
+              "tool.result.summary",
+              "experience.corrected"
+            ],
+            "title": "Type"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "failed",
+              "aborted"
+            ],
+            "title": "Status",
+            "default": "ok"
+          },
+          "feedback_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "event_id",
+          "occurred_at",
+          "persona_id",
+          "type"
+        ],
+        "title": "Event"
+      },
+      "Export": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/1",
+            "title": "Protocol Version"
+          },
+          "include_relationships": {
+            "type": "boolean",
+            "title": "Include Relationships",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version"
+        ],
+        "title": "Export"
+      },
+      "Express": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/1",
+            "title": "Protocol Version"
+          },
+          "request_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Request Id"
+          },
+          "identity": {
+            "$ref": "#/components/schemas/Identity"
+          },
+          "session": {
+            "$ref": "#/components/schemas/Session"
+          },
+          "host": {
+            "$ref": "#/components/schemas/Host"
+          },
+          "context": {
+            "$ref": "#/components/schemas/Context"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "shadow",
+              "active",
+              "frozen"
+            ],
+            "title": "Mode",
+            "default": "shadow"
+          },
+          "selection": {
+            "type": "string",
+            "enum": [
+              "argmax",
+              "sample"
+            ],
+            "title": "Selection",
+            "default": "argmax"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "exploration_consent": {
+            "type": "boolean",
+            "title": "Exploration Consent",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "request_id",
+          "identity",
+          "session",
+          "host"
+        ],
+        "title": "Express"
+      },
+      "Feedback": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/1",
+            "title": "Protocol Version"
+          },
+          "feedback_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Feedback Id"
+          },
+          "decision_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Decision Id"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "explicit_user",
+              "owner",
+              "verified_evaluator"
+            ],
+            "title": "Source"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "rating",
+              "pairwise_preference",
+              "correction"
+            ],
+            "title": "Kind"
+          },
+          "actor_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Actor Id"
+          },
+          "consent_scope": {
+            "type": "string",
+            "enum": [
+              "core",
+              "relationship",
+              "session",
+              "record_only"
+            ],
+            "title": "Consent Scope",
+            "default": "record_only"
+          },
+          "learning_consent": {
+            "type": "boolean",
+            "title": "Learning Consent",
+            "default": false
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": -1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "preferred_control": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 19.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Control"
+          },
+          "rejected_control": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 19.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejected Control"
+          },
+          "evidence_group": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Evidence Group"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "feedback_id",
+          "decision_id",
+          "source",
+          "kind",
+          "actor_id",
+          "evidence_group"
+        ],
+        "title": "Feedback"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Host": {
+        "properties": {
+          "adapter_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Adapter Id"
+          },
+          "adapter_version": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Adapter Version"
+          },
+          "host_version": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Host Version"
+          },
+          "provider_family": {
+            "type": "string",
+            "enum": [
+              "openai",
+              "anthropic",
+              "google",
+              "qwen",
+              "other"
+            ],
+            "title": "Provider Family",
+            "default": "other"
+          },
+          "model_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Model Id",
+            "default": "unspecified"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "adapter_id",
+          "adapter_version",
+          "host_version"
+        ],
+        "title": "Host"
+      },
+      "Identity": {
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Tenant Id"
+          },
+          "persona_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Persona Id"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "persona_id"
+        ],
+        "title": "Identity"
+      },
+      "Import": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/1",
+            "title": "Protocol Version"
+          },
+          "persona_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Persona Id"
+          },
+          "bundle": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Bundle"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "persona_id",
+          "bundle"
+        ],
+        "title": "Import"
+      },
+      "Observations": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/1",
+            "title": "Protocol Version"
+          },
+          "adapter_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Adapter Id"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Events"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "adapter_id",
+          "events"
+        ],
+        "title": "Observations"
+      },
+      "Policy": {
+        "properties": {
+          "eligible": {
+            "type": "boolean",
+            "title": "Eligible"
+          },
+          "mask_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mask Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "eligible",
+          "mask_reason"
+        ],
+        "title": "Policy"
+      },
+      "Promote": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/1",
+            "title": "Protocol Version"
+          },
+          "candidate_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Candidate Id"
+          },
+          "expected_version": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Expected Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "candidate_id",
+          "expected_version"
+        ],
+        "title": "Promote"
+      },
+      "Rollback": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/1",
+            "title": "Protocol Version"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Version"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "version",
+          "reason"
+        ],
+        "title": "Rollback"
+      },
+      "Session": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Id"
+          },
+          "turn_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Turn Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "turn_id"
+        ],
+        "title": "Session"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

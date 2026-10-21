@@ -1,0 +1,25 @@
+{
+  "adapter_id": "upap.openclaw",
+  "adapter_version": "0.1.0",
+  "protocol_version": "upap/1",
+  "host_commit": "56efa0e64cd5ffd3257faa14f06b2b275336f73c",
+  "host_compatibility": "2026.10.5",
+  "verified_capabilities": [],
+  "verified_with_actual_model": false,
+  "insertion_levels": [
+    "context"
+  ],
+  "observation_hooks": [
+    "agent_end"
+  ],
+  "permissions": [
+    "persona:express",
+    "observations:write"
+  ],
+  "default_mode": "shadow",
+  "user_linking": "explicit configuration only",
+  "subagents": "automatic lineage/snapshot handling unverified; use separately scoped child credentials or disable adapter",
+  "fallback": "250ms deadline; same-scope approved cache or empty injection",
+  "concurrency": "host session IDs scoped by adapter and persona; no mutable latent sharing",
+  "release_status": "unsupported_release_gate"
+}

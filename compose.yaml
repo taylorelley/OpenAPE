@@ -1,0 +1,20 @@
+services:
+  openape:
+    image: openape:0.1.0
+    build: .
+    ports: ["127.0.0.1:8765:8765"]
+    environment:
+      OPENAPE_CREDENTIALS_FILE: /run/secrets/credentials
+    secrets: [credentials]
+    volumes: ["openape-data:/data"]
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    init: true
+    restart: unless-stopped
+secrets:
+  credentials:
+    file: ./.openape/docker-credentials.json
+volumes:
+  openape-data:

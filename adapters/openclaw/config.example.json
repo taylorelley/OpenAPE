@@ -1,0 +1,1 @@
+{"plugins":{"entries":{"openape":{"enabled":true,"hooks":{"allowPromptInjection":true,"allowConversationAccess":true}}}}}

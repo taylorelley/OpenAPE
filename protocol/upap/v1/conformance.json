@@ -1,0 +1,217 @@
+{
+  "request": {
+    "protocol_version": "upap/1",
+    "request_id": "req-conformance",
+    "identity": {
+      "tenant_id": "local",
+      "persona_id": "ape",
+      "user_id": "alice"
+    },
+    "session": {
+      "id": "s",
+      "turn_id": "t"
+    },
+    "host": {
+      "adapter_id": "custom",
+      "adapter_version": "0.1",
+      "host_version": "fixture",
+      "provider_family": "other",
+      "model_id": "fixture"
+    },
+    "context": {
+      "task_type": "general",
+      "channel": "terminal",
+      "stakes": "low",
+      "turn_origin": "user",
+      "tags": []
+    }
+  },
+  "decisions": [
+    {
+      "name": "valid active",
+      "valid": true,
+      "value": {
+        "protocol_version": "upap/1",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/1",
+        "control_set_id": "style-00",
+        "controls": {
+          "directness": "moderate",
+          "warmth": "low",
+          "verbosity": "low",
+          "humour": "low",
+          "formality": "high",
+          "explanation_depth": "low",
+          "assertiveness": "moderate"
+        },
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic"
+      }
+    },
+    {
+      "name": "valid shadow",
+      "valid": true,
+      "value": {
+        "protocol_version": "upap/1",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/1",
+        "control_set_id": "style-00",
+        "controls": {
+          "directness": "moderate",
+          "warmth": "low",
+          "verbosity": "low",
+          "humour": "low",
+          "formality": "high",
+          "explanation_depth": "low",
+          "assertiveness": "moderate"
+        },
+        "mode": "shadow",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic"
+      }
+    },
+    {
+      "name": "wrong protocol",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/1",
+        "control_set_id": "style-00",
+        "controls": {
+          "directness": "moderate",
+          "warmth": "low",
+          "verbosity": "low",
+          "humour": "low",
+          "formality": "high",
+          "explanation_depth": "low",
+          "assertiveness": "moderate"
+        },
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic"
+      }
+    },
+    {
+      "name": "unknown control",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/1",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/1",
+        "control_set_id": "style-00",
+        "controls": {
+          "directness": "moderate",
+          "warmth": "unbounded",
+          "verbosity": "low",
+          "humour": "low",
+          "formality": "high",
+          "explanation_depth": "low",
+          "assertiveness": "moderate"
+        },
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic"
+      }
+    },
+    {
+      "name": "catalogue mismatch",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/1",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/1",
+        "control_set_id": "style-99",
+        "controls": {
+          "directness": "moderate",
+          "warmth": "low",
+          "verbosity": "low",
+          "humour": "low",
+          "formality": "high",
+          "explanation_depth": "low",
+          "assertiveness": "moderate"
+        },
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic"
+      }
+    },
+    {
+      "name": "wrong control schema",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/1",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "unknown",
+        "control_set_id": "style-00",
+        "controls": {
+          "directness": "moderate",
+          "warmth": "low",
+          "verbosity": "low",
+          "humour": "low",
+          "formality": "high",
+          "explanation_depth": "low",
+          "assertiveness": "moderate"
+        },
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic"
+      }
+    }
+  ]
+}

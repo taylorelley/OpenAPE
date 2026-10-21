@@ -1,0 +1,182 @@
+[
+  {
+    "directness": "moderate",
+    "warmth": "low",
+    "verbosity": "low",
+    "humour": "low",
+    "formality": "high",
+    "explanation_depth": "low",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "high",
+    "warmth": "low",
+    "verbosity": "low",
+    "humour": "low",
+    "formality": "moderate",
+    "explanation_depth": "low",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "moderate",
+    "warmth": "moderate",
+    "verbosity": "low",
+    "humour": "low",
+    "formality": "moderate",
+    "explanation_depth": "low",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "high",
+    "warmth": "moderate",
+    "verbosity": "low",
+    "humour": "moderate",
+    "formality": "moderate",
+    "explanation_depth": "low",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "moderate",
+    "warmth": "high",
+    "verbosity": "low",
+    "humour": "low",
+    "formality": "high",
+    "explanation_depth": "low",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "high",
+    "warmth": "high",
+    "verbosity": "low",
+    "humour": "low",
+    "formality": "moderate",
+    "explanation_depth": "low",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "moderate",
+    "warmth": "low",
+    "verbosity": "moderate",
+    "humour": "low",
+    "formality": "moderate",
+    "explanation_depth": "moderate",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "high",
+    "warmth": "low",
+    "verbosity": "moderate",
+    "humour": "low",
+    "formality": "moderate",
+    "explanation_depth": "moderate",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "moderate",
+    "warmth": "moderate",
+    "verbosity": "moderate",
+    "humour": "low",
+    "formality": "high",
+    "explanation_depth": "moderate",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "high",
+    "warmth": "moderate",
+    "verbosity": "moderate",
+    "humour": "moderate",
+    "formality": "moderate",
+    "explanation_depth": "moderate",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "moderate",
+    "warmth": "high",
+    "verbosity": "moderate",
+    "humour": "low",
+    "formality": "moderate",
+    "explanation_depth": "moderate",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "high",
+    "warmth": "high",
+    "verbosity": "moderate",
+    "humour": "low",
+    "formality": "moderate",
+    "explanation_depth": "moderate",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "moderate",
+    "warmth": "low",
+    "verbosity": "high",
+    "humour": "low",
+    "formality": "high",
+    "explanation_depth": "high",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "high",
+    "warmth": "low",
+    "verbosity": "high",
+    "humour": "low",
+    "formality": "moderate",
+    "explanation_depth": "high",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "moderate",
+    "warmth": "moderate",
+    "verbosity": "high",
+    "humour": "low",
+    "formality": "moderate",
+    "explanation_depth": "high",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "high",
+    "warmth": "moderate",
+    "verbosity": "high",
+    "humour": "moderate",
+    "formality": "moderate",
+    "explanation_depth": "high",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "moderate",
+    "warmth": "high",
+    "verbosity": "high",
+    "humour": "low",
+    "formality": "high",
+    "explanation_depth": "high",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "high",
+    "warmth": "high",
+    "verbosity": "high",
+    "humour": "low",
+    "formality": "moderate",
+    "explanation_depth": "high",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "moderate",
+    "warmth": "low",
+    "verbosity": "low",
+    "humour": "low",
+    "formality": "moderate",
+    "explanation_depth": "low",
+    "assertiveness": "moderate"
+  },
+  {
+    "directness": "high",
+    "warmth": "low",
+    "verbosity": "low",
+    "humour": "low",
+    "formality": "moderate",
+    "explanation_depth": "low",
+    "assertiveness": "moderate"
+  }
+]
