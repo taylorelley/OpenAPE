@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased — human-like development (see docs/adr/0004-human-like-development.md)
+
+* Temperament and individuality: the creation version is the persona's temperament
+  and automatic core change stays within a radius of it; `individuality` (0-1,
+  default 0.3) and `individuality_seed` vary the archetype profile reproducibly, so
+  personas of one archetype are alike but not identical (`individuality: 0` is the
+  exact archetype). CLI `--individuality`, `--individuality-seed`.
+* Session state: consented in-session preferences (including `consent_scope:
+  session`) fit an ephemeral latent offset applied for the rest of that session;
+  feedback and reflection responses report `session_adapted`. Durably consented
+  states are sampled at session end, and consistent states become a habit step.
+* Lifelong plasticity: growth continues after the horizon at a slow adult rate;
+  surface traits settle before interpersonal ones. Experience is weighted by
+  novelty, and life events (role change, new host, correction bursts/ruptures)
+  temporarily raise plasticity; audited as `life_event`.
+* Relationships accommodate to the user's context tags over time and cool after
+  long absences.
+* Consolidation passes combine cooling, the curve step, habits and a self anchor
+  that pulls back learned change it has not absorbed (unless feedback would be
+  undone); core habituation replays decisions weighted by salience.
+* Influence by maturity: owner feedback weighs more early and users' later, agent
+  reflections gain weight and share with maturity, and older feedback weighs less.
+* Inspect reports effective experience, growth, plasticity, boost, temperament
+  version, individuality and character drift. `benchmarks/development.py` records
+  developmental trajectory metrics (engineering only, not human evidence).
+
 ## Unreleased — archetypes and automatic evolution (see docs/adr/0003-automatic-evolution.md)
 
 * Breaking: creating a persona requires a starting `archetype` (balanced, mentor,

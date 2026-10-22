@@ -29,14 +29,20 @@ class Store:
         CREATE TABLE IF NOT EXISTS audit(seq INTEGER PRIMARY KEY,tenant TEXT,persona TEXT,action TEXT,data TEXT);
         CREATE TABLE IF NOT EXISTS experience(tenant TEXT,persona TEXT,user_id TEXT,adapter TEXT,session TEXT,PRIMARY KEY(tenant,persona,user_id,adapter,session));
         CREATE TABLE IF NOT EXISTS maturation(tenant TEXT,persona TEXT,user_id TEXT,experience INTEGER DEFAULT 0,last_m REAL DEFAULT 0,last_decision INTEGER DEFAULT 0,PRIMARY KEY(tenant,persona,user_id));
+        CREATE TABLE IF NOT EXISTS states(tenant TEXT,persona TEXT,user_id TEXT,adapter TEXT,session TEXT,delta TEXT,feedback TEXT,updates INTEGER,PRIMARY KEY(tenant,persona,user_id,adapter,session));
+        CREATE TABLE IF NOT EXISTS samples(tenant TEXT,persona TEXT,user_id TEXT,session TEXT,delta TEXT,feedback TEXT,consumed INTEGER DEFAULT 0);
         ''')
         self.db.row_factory=sqlite3.Row
         # Additive migrations from the 0.1.0 schema. Lineage columns drive revocation.
         # Personas from 0.2.0 keep manual evolution and no agent feedback until changed.
         for table,column,decl in (('personas','parent','TEXT'),('versions','job','TEXT'),('versions','core_base','TEXT'),('versions','revoked','INTEGER DEFAULT 0'),
-                ('personas','archetype','TEXT'),('personas','seeds',"TEXT DEFAULT '[]'"),('personas','evolution',"TEXT DEFAULT 'manual'"),('personas','maturation','TEXT'),('personas','agent_feedback','INTEGER DEFAULT 0')):
+                ('personas','archetype','TEXT'),('personas','seeds',"TEXT DEFAULT '[]'"),('personas','evolution',"TEXT DEFAULT 'manual'"),('personas','maturation','TEXT'),('personas','agent_feedback','INTEGER DEFAULT 0'),
+                ('personas','temperament','TEXT'),('personas','individuality','TEXT'),('maturation','effective','REAL'),('maturation','last_e','REAL DEFAULT 0'),
+                ('maturation','life','TEXT'),('maturation','anchor','TEXT')):
             if column not in {r['name'] for r in self.db.execute(f'PRAGMA table_info({table})')}:
                 self.db.execute(f'ALTER TABLE {table} ADD COLUMN {column} {decl}')
+        # Experience recorded before effective experience counts one unit per session.
+        self.db.execute('UPDATE maturation SET effective=experience WHERE effective IS NULL')
     @contextmanager
     def tx(self):
         with self.lock:

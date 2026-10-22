@@ -45,8 +45,12 @@ Hermes SOUL migration uses keyword heuristics and is always a reviewed dry run f
 
 ## ISSUE-006 — Automatic evolution is unvalidated
 
-Maturation (square-root curve, familiarity profile, context habituation) is a fixed
-design prior. It is not learned from or validated against people, and no study shows
+Maturation (square-root curve, familiarity profile, context habituation) and the
+developmental processes of ADR 0004 (individuality, session state and habits,
+novelty, life events, accommodation, cooling, the self anchor, maturity-weighted
+influence) are fixed design priors. `benchmarks/development.py` records their
+trajectories against qualitative patterns from personality psychology; it is not
+human evidence. It is not learned from or validated against people, and no study shows
 users prefer a maturing persona. The agent `persona_feedback` tool is offered in
 the real Claude Code, Hermes, Pi and OpenClaw builds (host smokes, synthetic model),
 and a Pi call is recorded end to end. No live model has used it, so there is no

@@ -37,6 +37,47 @@ context rules fit these simulated users worse than the neutral default).
 catalogue's trait vocabulary, task correctness/safety are not simulated, and the
 sample is small. `measured_behavioral_benefit` stays `false`.
 
+## 1b. Developmental trajectory benchmark (runs offline)
+
+```sh
+python -m benchmarks.development    # ~1.5 min; writes reports/development.json
+```
+
+8 automatic personas (4 archetypes × 2 individuals, default individuality) live 48
+sessions through the real API. Each serves a two-task role that switches at
+session 32, after development completes. Each has a linked simulated user who
+sometimes states a consented preference for one hidden catalogue row. Trait levels
+are decoder diagnostics over six fixed contexts, checked every 8 sessions. It
+compares trajectories with patterns from personality psychology
+([ADR 0004](../docs/adr/0004-human-like-development.md)).
+
+Current result (`reports/development.json`):
+
+| Period (sessions) | 0-8 | 8-16 | 16-24 | 24-32 | 32-40 | 40-48 |
+|---|---|---|---|---|---|---|
+| rank-order stability | 0.96 | 0.88 | 0.87 | 0.98 | 0.99 | 0.99 |
+| mean-level change | 0.03 | 0.19 | 0.21 | 0.04 | 0.02 | 0.02 |
+
+* What matches people:
+  * Change concentrates in the developmental period and then becomes small.
+  * Rank order is least stable while personas develop and stabilises after.
+  * Same-archetype personas end closer to each other (0.49) than to other
+    archetypes (0.77), but are not identical.
+* What does not match:
+  * Stability stays well above the ~0.7 human plateau. The personas start as
+    distinct archetypes and the sample is 8.
+  * The role change at session 32 is detected (14 `role_change` events: core and
+    relationship scopes for 7 of 8 personas). Its effect on traits is not
+    visible, because adult steps are small.
+  * The first period changes little: the familiarity target grows with maturity,
+    so early steps have budget but little to move toward.
+* Activity: the evaluated consolidation passes contained 286 curve steps, 42
+  habit steps and 75 anchor pulls; there were 15 correction bursts and 15
+  ruptures.
+
+**This is not human or live-model evidence.** It is a regression record for fixed
+priors.
+
 ## 2. Independent outcome evaluation (the release-gate benchmark)
 
 `evaluate.py` accepts independent blinded outcome labels in JSONL:

@@ -18,6 +18,14 @@
    curve (frequent, larger steps first, settling at the horizon) and promotes the
    feedback candidate itself. `openape job JOB_ID` shows any evaluator report, and
    `openape persona inspect ID --user alice` shows growth.
+   Inspect also shows the persona's development (ADR 0004): `individuality`
+   (create a second mentor and its seed differs; `--individuality 0` gives the exact
+   archetype), `effective_experience` (repeated identical sessions count less),
+   `plasticity` and `boost`, and `character_drift` from the temperament. In
+   `history`, `life_event` entries record role changes, new hosts and correction
+   bursts. Each `matured` entry lists its `components`: curve, habit, cooling and
+   elastic. Feedback with `consent_scope: session` returns `session_adapted: true`
+   and changes later turns of that session only.
 5. `openape persona history DEMO_ID` lists versions (with producing candidate and
    revoked flag) and the audit trail. Restart `openape serve` and inspect again to
    confirm SQLite persistence.

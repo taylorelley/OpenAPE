@@ -123,6 +123,27 @@
       "default": true,
       "title": "Agent Feedback",
       "type": "boolean"
+    },
+    "individuality": {
+      "default": 0.3,
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Individuality",
+      "type": "number"
+    },
+    "individuality_seed": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Individuality Seed"
     }
   },
   "required": [

@@ -43,22 +43,24 @@ def seed_profile(seeds):
         for trait, (target, weight) in SEEDS[s].items(): profile[trait] = (target, weight)
     return profile
 
-def context_score(item, ctx):
-    """Synthetic, documented context rules (CC0). Not human evidence."""
+def context_score(item, ctx, weights=None):
+    """Synthetic, documented context rules (CC0). Not human evidence. Optional
+    per-trait weights scale each trait's terms (development's sensitive periods)."""
+    w = (lambda trait: weights.get(trait, 1.0)) if weights else (lambda trait: 1.0)
     task, tags, s = ctx.get('task_type'), ctx.get('tags', []), 0.0
-    if task == 'code_review': s += 0.8 * (item['directness'] == 'high')
-    if task == 'support': s += 1.0 * (item['warmth'] == 'high')
-    if task == 'creative': s += 0.6 * (item['humour'] != 'low')
-    if task == 'research': s += 0.6 * (item['explanation_depth'] == 'high')
-    if task == 'coding': s += 0.4 * (item['verbosity'] != 'high')
-    if 'beginner' in tags: s += 1.0 * (item['explanation_depth'] == 'high') + 0.5 * (item['warmth'] != 'low')
-    if 'expert' in tags: s += 0.8 * (item['verbosity'] == 'low')
-    if 'urgent' in tags: s += 0.8 * (item['verbosity'] == 'low')
-    if 'sensitive' in tags: s += 0.6 * (item['warmth'] == 'high')
-    if ctx.get('channel') == 'voice': s += 0.6 * (item['verbosity'] == 'low')
-    if ctx.get('channel') == 'chat': s += 0.3 * (item['formality'] != 'high')
-    if ctx.get('stakes') == 'high': s += 0.5 * (item['formality'] != 'low') + 0.4 * (item['explanation_depth'] != 'low')
-    if ctx.get('turn_origin') in ('tool', 'subagent', 'system'): s += 0.5 * (item['verbosity'] == 'low')
+    if task == 'code_review': s += 0.8 * w('directness') * (item['directness'] == 'high')
+    if task == 'support': s += 1.0 * w('warmth') * (item['warmth'] == 'high')
+    if task == 'creative': s += 0.6 * w('humour') * (item['humour'] != 'low')
+    if task == 'research': s += 0.6 * w('explanation_depth') * (item['explanation_depth'] == 'high')
+    if task == 'coding': s += 0.4 * w('verbosity') * (item['verbosity'] != 'high')
+    if 'beginner' in tags: s += 1.0 * w('explanation_depth') * (item['explanation_depth'] == 'high') + 0.5 * w('warmth') * (item['warmth'] != 'low')
+    if 'expert' in tags: s += 0.8 * w('verbosity') * (item['verbosity'] == 'low')
+    if 'urgent' in tags: s += 0.8 * w('verbosity') * (item['verbosity'] == 'low')
+    if 'sensitive' in tags: s += 0.6 * w('warmth') * (item['warmth'] == 'high')
+    if ctx.get('channel') == 'voice': s += 0.6 * w('verbosity') * (item['verbosity'] == 'low')
+    if ctx.get('channel') == 'chat': s += 0.3 * w('formality') * (item['formality'] != 'high')
+    if ctx.get('stakes') == 'high': s += 0.5 * w('formality') * (item['formality'] != 'low') + 0.4 * w('explanation_depth') * (item['explanation_depth'] != 'low')
+    if ctx.get('turn_origin') in ('tool', 'subagent', 'system'): s += 0.5 * w('verbosity') * (item['verbosity'] == 'low')
     s += 0.5 * (item == CATALOGUE[0])  # mild pull to the neutral approved default
     return s
 
@@ -85,12 +87,14 @@ def reference_contexts():
         rows.append(dict(task_type=task, channel='terminal', stakes=stakes, turn_origin='user', tags=tags))
     return rows
 
-def fit_seed_latent(decoder, seeds, steps=150, max_norm=None):
-    """Explicit seed initialization: fit a core latent to the declared profile with the
-    frozen decoder. Deterministic; labelled `seed_preferences`, never `learned`."""
-    if not seeds: return torch.zeros(CORE_DIM)  # the explicit `balanced` archetype
+def fit_seed_latent(decoder, seeds, steps=150, max_norm=None, profile=None):
+    """Explicit seed initialization: fit a core latent to the declared profile (or a
+    given variation of it) with the frozen decoder. Deterministic; labelled
+    `seed_preferences`, never `learned`."""
+    profile = seed_profile(seeds) if profile is None else profile
+    if not profile or (not seeds and decoder.model is None): return torch.zeros(CORE_DIM)  # the neutral `balanced` prior
     if decoder.model is None: raise ValueError('trained decoder required for seed initialization')
-    profile = seed_profile(seeds); contexts = reference_contexts(); host = {'provider_family': 'other', 'adapter_id': 'seed'}
+    contexts = reference_contexts(); host = {'provider_family': 'other', 'adapter_id': 'seed'}
     targets = torch.stack([target_distribution(c, profile) for c in contexts])
     feats = torch.stack([features(c, host) for c in contexts]); masks = torch.stack([mask(c) for c in contexts])
     fixed = torch.cat((torch.zeros(len(contexts), REL_DIM + SESSION_DIM), feats), 1)
