@@ -1,116 +1,102 @@
 # OpenAPE — Agent Personality Engine
 
-A local, CPU-only neural style policy with a versioned **UPAP/1** HTTP API,
-scoped explicit feedback, isolated latent candidates, held-out validation,
-manual compare-and-swap promotion, version pinning and rollback.
+A local, CPU-only neural style policy behind a versioned **UPAP/1** HTTP API. A
+persistent persona latent (plus optional per-user relationship latent) conditions a
+frozen decoder that picks one of 24 audited style configurations; hosts render it
+as short, approved context text. Learning comes only from explicit, consented,
+attributable feedback, through isolated candidates, an independent held-out
+evaluator, manual compare-and-swap promotion, version pinning and rollback.
 
-**Experimental 0.1.0, not the completed v1 release gate.** The decoder is trained
-on original synthetic rule labels. Offline tests demonstrate neural inference
-and directional latent learning; they do **not** establish a learned personality,
-human preference gains, cross-provider portability or task/safety non-inferiority.
-See [release status](docs/reports/release-status.md) for every unfulfilled gate.
+**Experimental 0.2.0, not the completed v1 release gate.** The decoder is trained
+on original synthetic persona profiles; held-out synthetic personas can be fitted
+from 16 preferences (top-1 0.66 vs 0.12 neutral). All five host adapters run real
+host turns against a synthetic model endpoint. There is still **no live-model and
+no independent human evidence** of preference gains, cross-provider portability or
+task/safety non-inferiority. See [release status](docs/reports/release-status.md).
 
 ## Run locally (Python 3.12+, no GPU or provider credentials)
 
-From this repository root:
-
 ```sh
-python3.12 -m venv .venv
-. .venv/bin/activate
+python3.12 -m venv .venv && . .venv/bin/activate
 pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.lock
 pip install --no-deps -e .
-openape init
-openape serve
+openape init           # owner credential in .openape/ (0700/0600)
+openape serve          # 127.0.0.1:8765
 ```
 
-In another terminal, activate the same environment:
+In another terminal (same venv):
 
 ```sh
-openape persona create ape
-openape persona inspect ape
-openape express --file examples/express.json
-python -m scripts.offline_demo
+openape persona create terse --seed concise --seed direct
+openape persona create kind --seed warm --seed detailed
+openape preview --file examples/express.json          # text an adapter would inject
+openape token add --actor pi-host --personas terse    # restricted host token; restart serve
+python -m scripts.offline_demo                        # feedback → candidate → evaluate → promote → export → rollback
 ```
 
-`init` creates a unique owner credential in `.openape/credentials.json` with mode
-0600; CLI commands use it locally. A Docker-readable copy is created at
-`.openape/docker-credentials.json` (0444) inside the private 0700 directory, for
-the unprivileged container secret mount. The example request is shadow mode by default.
-The demo explicitly opts into active expressions and synthetic learning, creates
-an isolated demo persona, records preference pairs, trains/evaluates a candidate,
-promotes it, exports core state, and rolls back. Actor `owner` is the default init
-credential; custom actors must adjust the demo. No transcript or LLM call is used.
-Restart the service and `openape persona history <demo-id>` to inspect persistence.
+`examples/express.json` names persona `ape`; edit `identity.persona_id` to preview
+your persona. Interactive API docs: `http://127.0.0.1:8765/docs`.
 
-Docs at `http://127.0.0.1:8765/docs` expose the complete interactive API.
+## Host adapters
+
+| Host | Install | Real-host smoke |
+|---|---|---|
+| Claude Code 2.1.307 | `claude plugin marketplace add $PWD && claude plugin install openape@openape` | `python -m scripts.claude_code_host_smoke` |
+| Hermes Agent 0.19.0 | `openape adapter install hermes && hermes plugins enable openape` | `python -m scripts.hermes_host_smoke` |
+| OpenClaw 2026.10.5 | see `adapters/openclaw/config.example.json` | `OPENCLAW_NODE_BIN=… python -m scripts.openclaw_host_smoke` |
+| Pi 1.3.0 | `pi -e $PWD/adapters/pi/index.ts` | `python -m scripts.real_host_smoke` |
+| OpenCogni 833f4e6 | needs `adapters/opencogni/upstream` patch | `OPENCOGNI_DIR=… python -m scripts.opencogni_host_smoke` |
+
+`openape adapter doctor HOST --persona ID` checks a setup. Hermes users with an
+existing SOUL.md can run `openape adapter migrate-soul` (dry run; `--apply --persona
+ID` backs it up first). Details and limits: [compatibility](docs/adapters/compatibility.md).
 
 ## Verify
 
 ```sh
-pytest -q
-node --test sdk/typescript/test.ts tests/adapters.test.ts
-python -m scripts.train_decoder
+bash scripts/check_all.sh          # pytest, node tests, protocol regeneration
+python -m scripts.check_reproducibility   # ~6.5 min decoder rebuild, exact hash
+python -m scripts.offline_smoke    # real HTTP lifecycle + restart persistence
+python -m benchmarks.simulated     # simulated-user A/B/C/D engineering benchmark
 python -m scripts.performance
 ```
 
-A real Pi lifecycle test uses the **actual pinned Pi SDK** and a **synthetic model
-transport**, not a live provider:
-
-```sh
-npm --prefix .host-test install --no-audit --no-fund @earendil-works/pi-coding-agent@1.3.0
-python -m scripts.real_host_smoke
-```
-
-See [compatibility](docs/adapters/compatibility.md) before installing any host
-adapter. Only Pi's native lifecycle is tested here. The other adapters are
-experimental examples or explicitly unsupported. Real model tests need separately
-configured providers and independent outcomes; none are silently substituted.
+Host smokes install pinned hosts under `.host-test/` and never call a provider.
 
 ## Use from a custom harness
 
 ```python
-from sdk.python.client import Client
-client = Client('http://127.0.0.1:8765', token='YOUR_SCOPED_TOKEN')
-# request follows examples/express.json
-result = client.express(request, mode='shadow')
-# At an approved context hook, inject result['text'] once if nonempty.
-# Task success is never feedback. Submit explicit authorized feedback separately.
-client.close()
+from sdk.python.client import Client          # httpx; or sdk/python/lite.py (stdlib only)
+client = Client('http://127.0.0.1:8765', token='SCOPED_HOST_TOKEN')
+result = client.express(request, mode='shadow')  # request as in examples/express.json
+# Inject result['text'] once at an approved context hook if non-empty.
+# Task success is never feedback; submit explicit authorised feedback separately.
 ```
 
-TypeScript (Node 24+) exports `Client`, `render`, and `PersonalityAdapter` from
-`sdk/typescript/client.ts`. The Python client currently depends on this package's
-contracts/catalogue; an independently packaged lightweight SDK remains a v1 gap.
-`openape bridge` is a JSONL stdin/stdout bridge, not an automatic native hook.
+TypeScript (Node 22.18+/24) exports `Client`, `render` and `PersonalityAdapter` from
+`sdk/typescript/client.ts`. Both SDKs pass the same golden fixtures in
+`protocol/upap/v1/conformance.json`. `openape bridge` is a JSONL stdin/stdout bridge,
+not an automatic native hook.
 
 ## Operations
 
-Commands: `persona create/list/inspect/history/delete`, `express`, `feedback`,
-`observe`, `learn`, `promote`, `rollback`, `export`, `import`, and `bridge`.
-Write commands accept `--file request.json` (or stdin); promotion, rollback and
-export need `--persona ID`. All API bodies explicitly declare `upap/1`.
-The engine never automatically promotes. Feedback defaults to record-only;
-learning requires `learning_consent: true`, an authorized scope and existing
-decision. Pairwise corrections identify approved catalogue options, not free text.
+`openape init | serve | token add | persona create/list/inspect/history/delete |
+express | preview | feedback | observe | learn | job | promote | rollback | export |
+import | adapter install/uninstall/doctor/migrate-soul | bridge`. Write commands take
+`--file request.json` (or stdin). The engine never promotes automatically. Feedback
+is record-only unless `learning_consent: true` with an authorised scope.
 
-For Docker, run `openape init` first, then `docker compose up --build`.
-Use `-f compose.yaml -f compose.limits.yaml` for resource limits. The container
-runs unprivileged with a read-only filesystem and a writable data volume. The
-published port is loopback-only. Verify the running container with
-`python -m scripts.docker_smoke`. Remote deployments require TLS at a trusted
-reverse proxy and authenticated connections. Shared SQLite replicas are unsupported.
-If your Docker build uses an intercepting proxy, supply its CA with BuildKit
-`--secret id=proxy_ca,src=/path/to/combined-ca.pem`; never disable TLS verification.
+Docker: `openape init`, then `docker compose up --build` (loopback port, unprivileged,
+read-only root, data volume; add `-f compose.limits.yaml` for limits). Remote
+deployments need TLS at a trusted reverse proxy. Shared SQLite replicas are unsupported.
 
 ## Design and evidence
 
-* [Architecture and security decisions](docs/adr/0001-architecture.md)
-* [Protocol semantics](protocol/upap/v1/specification.md), JSON Schemas and OpenAPI
+* ADRs: [0001 architecture](docs/adr/0001-architecture.md), [0002 decoder-v2, evaluator, lineage](docs/adr/0002-decoder-v2-evaluator-lineage.md)
+* [Protocol](protocol/upap/v1/specification.md), JSON Schemas, OpenAPI, conformance fixtures
+* [Model card](models/decoder-v2/MODEL_CARD.md) · [benchmarks](benchmarks/README.md)
+* [Release status](docs/reports/release-status.md) · [review of 0.1.0 against the brief](docs/reports/v0.2-review.md) · [open issues](docs/reports/open-issues.md)
 * [10-minute walkthrough](docs/walkthrough.md)
-* [Model card and provenance](models/decoder-v1/MODEL_CARD.md)
-* [Test and benchmark evidence](docs/reports/release-status.md)
-* [Independent A/B/C/D benchmark instructions](benchmarks/README.md)
 
-Apache-2.0 source/weights; original synthetic corpus CC0-1.0. No provider-generated
-or proprietary training data is included. The original brief is preserved in
-`docs/original-brief.md`; the project and CLI are renamed **OpenAPE**.
+Apache-2.0 source and weights; original synthetic corpus CC0-1.0. No provider-generated
+or proprietary training data. The original brief is in `docs/original-brief.md`.

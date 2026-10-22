@@ -1,40 +1,54 @@
-# OpenAPE decoder-v1 model card
+# OpenAPE decoder-v2 model card
 
-Status: **experimental, trained on synthetic labels only**. CPU PyTorch 2.5.1.
-No measured human/persona/LLM efficacy. The model selects one of 20 bounded style
-configurations, not permissions, objectives, tools, factual certainty or arbitrary
-instructions. It never calls an LLM on the expression path.
+Status: **experimental, trained on synthetic profile labels only**. CPU PyTorch 2.5.1.
+It selects one of 24 audited style configurations (behaviour-controls/1), never
+permissions, objectives, tools, factual certainty or free text, and never calls an
+LLM on the expression path. Exact hash and metrics: `decoder.json`.
 
-Architecture: 192 inputs = 64 core + 32 relationship + 16 zero session + 64
-encoder/1 context features + 16 provider/adapter features. 128 GELU, 64 GELU, 20
-logits. Safetensors artifact and SHA-256 manifest. Decoding applies a fixed mask
-against humour for high-stakes/sensitive contexts. Diagnostic outputs are the seven
-catalogue controls; no psychological interpretation of latent coordinates.
+## Architecture
 
-Training source: `scripts/train_decoder.py` creates 432 original rule-labeled
-examples, grouped by 36 synthetic scenario families. 288 train, 48 calibration,
-96 validation. There are no human authors, real users, transcripts, proprietary
-provider outputs or independent task-family validation. Synthetic family grouping
-protects fixture separation only; it does not establish real-world generalization.
-Training uses seed 42, Adam .006, 180 full-batch steps, clipped gradients and
-small random latent perturbations. Calibration is reported, not used for tuning.
+192 inputs = 64 core latent + 32 relationship latent + 16 session (zero; no session
+learning) + 64 encoder/2 context one-hots + 16 provider/adapter features →
+128 GELU → 64 GELU → 24 logits. A fixed mask removes humour in high-stakes/sensitive
+contexts and high verbosity for `urgent`. Diagnostics are probability-weighted
+catalogue trait levels (decoder outputs), not interpretations of latent coordinates.
 
-`decoder.json` records exact hash and metrics. Reproduce from checkout:
+## Training (auto-decoder)
 
-```sh
-python -m scripts.train_decoder
-```
+`python -m scripts.train_decoder` (seed 42, ~6.5 min on one CPU thread):
 
-On the pinned toolchain/CPU, rerunning should reproduce the hash and metrics.
-Other PyTorch/hardware versions can differ; record their hashes before deployment.
-Routine learning freezes these shared weights and fits only a core or relationship
-latent from explicitly consenting feedback. It never mutates active state until
-administrator promotion passes evaluation. Session adaptation is not implemented.
+* 544 synthetic personas, each a random profile over 2–4 traits (target level and
+  weight), with two relationship profiles each; partitioned 384 train / 64
+  calibration / 96 validation **by persona**.
+* 28 576 rows: 40 persona contexts + 2×12 relationship contexts per training persona,
+  plus 4 000 neutral rows that anchor the zero latent to context-only behaviour.
+* Soft targets = masked softmax of (context rules + profile scores) / 0.35.
+* The decoder and per-persona / per-relationship latent tables are fitted jointly
+  (Adam, 700 full-batch steps, L2 latent prior, clipped decoder gradients).
 
-Limitations: tiny deterministic rule corpus, context hash collisions, no semantic
-embeddings, no independently labeled author/task partitions, no three-provider
-behavior study, no benchmark win. Synthetic preference tests demonstrate the
-optimizer works and can be rejected; they do not prove learned personality.
+## Evaluation (synthetic; see decoder.json)
 
-License: source and weights Apache-2.0; the original generated corpus is dedicated
-to the public domain under CC0-1.0. See `benchmarks/data/PROVENANCE.md`.
+Held-out personas are never seen in training. With the decoder frozen, each one's
+latent is fitted from 16 pairwise preferences, exactly like runtime learning, then
+scored on 32 unseen contexts (top-1 agreement with the profile's best option):
+
+| Partition | neutral latent | fixed default | fitted latent |
+|---|---|---|---|
+| calibration (64) | 0.137 | 0.065 | 0.618 |
+| validation (96) | 0.122 | 0.049 | 0.657 |
+
+Seed initialization agreement per single seed is recorded in `decoder.json`.
+Training-row top-1 agreement is 0.749 (soft, tied targets make 1.0 unreachable).
+
+These numbers show that the latent channel is learnable and generalises to unseen
+synthetic personas. They are **not** evidence of human preference satisfaction,
+identity distinctness for real users, or cross-model benefit.
+
+## Limitations
+
+Synthetic rules and profiles only; no human authors, users, transcripts or provider
+outputs. Context vocabulary is small and categorical (no embeddings). Session state is
+always zero. Other PyTorch/CPU combinations may change the hash; record theirs.
+
+License: source and weights Apache-2.0; generated corpus CC0-1.0
+(`benchmarks/data/PROVENANCE.md`).

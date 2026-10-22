@@ -1,5 +1,7 @@
 # WP5: Pi and Hermes
 
+**0.2.0 update:** Hermes plugin fixed and verified on hermes-agent 0.19.0 (docs/reports/hermes-host-smoke.json), including SOUL migration with backup. Pi smoke extended with model switch, compaction and multi-session.
+
 Status: **PARTIAL**.
 
 Implemented: Pi native extension plus Hermes source-inspected coexistence plugin. No SOUL edits.

@@ -1,5 +1,7 @@
 # WP4: Learning and evaluation
 
+**0.2.0 update:** Independent evaluator, latent trust region, REINFORCE baseline, lineage revocation and directional-learning tests (tests/test_learning.py). Simulated A/B/C/D in benchmarks/reports/simulated.json.
+
 Status: **IMPLEMENTED EXPERIMENTAL**.
 
 Implemented: Consent-scoped pairwise/bandit loss, canonical session grouping, frozen decoder, bounded jobs, fixed evaluator, drift limits, isolated candidates and manual promotion.

@@ -30,7 +30,7 @@ class Fault(Exception):
     def __init__(self,code,message,status=400,retryable=False): self.code,self.message,self.status,self.retryable=code,message,status,retryable
 VERSION_COLUMNS='(tenant,persona,id,hash,parent,scope,user_id,job,core_base)'
 
-def create_app(data_dir=None,credentials=None,decoder_path=None):
+def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_minute=600):
     auth=Auth(credentials); store=Store(data_dir or os.environ.get('OPENAPE_DATA','.openape'))
     decoder_location=decoder_path or os.environ.get('OPENAPE_DECODER',str(DEFAULT_DECODER))
     try:decoder=Decoder(decoder_location)
@@ -76,7 +76,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None):
         with limit_lock:
             q=limits[(p.tenant,p.actor)]; now=time.monotonic()
             while q and now-q[0]>60:q.popleft()
-            if len(q)>=600: raise Fault('RATE_LIMITED','600 requests per actor per minute',429,True)
+            if len(q)>=rate_limit_per_minute: raise Fault('RATE_LIMITED',f'{rate_limit_per_minute} requests per actor per minute',429,True)
             q.append(now)
         return p
     def scope(p,s,persona=None,user=None):

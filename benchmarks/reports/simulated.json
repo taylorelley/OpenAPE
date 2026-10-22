@@ -1,0 +1,101 @@
+{
+  "kind": "simulated-user engineering benchmark; NOT human or live-model evidence",
+  "sealed_seed": 20261022,
+  "simulated_users": 24,
+  "feedback_pairs_per_user": 24,
+  "answer_noise": 0.1,
+  "heldout_interactions": 384,
+  "promotions": 20,
+  "evaluator_rejections": 28,
+  "rates": {
+    "A": {
+      "preference_satisfied": 0.013,
+      "mean_regret": 1.6941
+    },
+    "B": {
+      "preference_satisfied": 0.3438,
+      "mean_regret": 1.3139
+    },
+    "C": {
+      "preference_satisfied": 0.1432,
+      "mean_regret": 1.6822
+    },
+    "D": {
+      "preference_satisfied": 0.4297,
+      "mean_regret": 0.8191
+    }
+  },
+  "paired_differences": {
+    "D-B": {
+      "satisfied": {
+        "mean": 0.0859,
+        "ci95": [
+          -0.112,
+          0.2943
+        ]
+      },
+      "regret": {
+        "mean": -0.4948,
+        "ci95": [
+          -1.0221,
+          -0.0247
+        ]
+      }
+    },
+    "D-C": {
+      "satisfied": {
+        "mean": 0.2865,
+        "ci95": [
+          0.1432,
+          0.4193
+        ]
+      },
+      "regret": {
+        "mean": -0.8631,
+        "ci95": [
+          -1.2418,
+          -0.4931
+        ]
+      }
+    },
+    "D-A": {
+      "satisfied": {
+        "mean": 0.4167,
+        "ci95": [
+          0.2994,
+          0.5339
+        ]
+      },
+      "regret": {
+        "mean": -0.875,
+        "ci95": [
+          -1.3495,
+          -0.3622
+        ]
+      }
+    },
+    "C-B": {
+      "satisfied": {
+        "mean": -0.2005,
+        "ci95": [
+          -0.3698,
+          -0.0285
+        ]
+      },
+      "regret": {
+        "mean": 0.3683,
+        "ci95": [
+          -0.1729,
+          0.9017
+        ]
+      }
+    }
+  },
+  "limitations": [
+    "Simulated users with synthetic utilities; no human raters or live LLM outputs",
+    "A is approximated by the closest catalogue row; real markdown effects are unmeasured",
+    "Task correctness and safety are not simulated",
+    "User-clustered bootstrap over 24 users; provisional sample size"
+  ],
+  "measured_behavioral_benefit": false
+}

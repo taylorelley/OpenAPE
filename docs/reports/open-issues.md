@@ -1,49 +1,44 @@
-# Open release issues
+# Open release issues (0.2.0)
 
-## ISSUE-001 — Remaining actual host lifecycle and model verification
+## ISSUE-001 — Live models and remaining host coverage
 
-Pi 1.3.0 native SDK lifecycle passes with synthetic model transport. Actual
-provider behavior is untested. Hermes, Claude Code and OpenClaw examples lack
-actual full host turn tests. OpenCogni exposes a companion service only and has
-no planner injection. Add real pinned installation/doctor/uninstall tests,
-compaction/resume/provider-switch/subagent coverage, approved explicit feedback
-flows and engine-outage turns. Keep OpenCogni planner boundary changes in a
-separate review and run its PostgreSQL/NATS/runtime/evaluator suites.
-`tests/test_release_gates.py` retains strict expected failures for four hosts.
+All five hosts now run real turns with a synthetic model endpoint (see
+compatibility.md), but **no live provider model** has been called, so the three
+model-family requirement is unmet. Remaining host gaps: OpenCogni needs the
+`adapters/opencogni/upstream` patch reviewed and merged, and its integration/evaluator
+suites (nats-server + PostgreSQL) run; Claude Code `PostModelSwitch`/`StopFailure`
+paths; OpenClaw gateway/channel and Codex/Copilot runners; Pi child-process lineage;
+Pi 1.4.0. Strict xfails: `tests/test_release_gates.py`.
 
-## ISSUE-002 — Independent behavioral evidence
+## ISSUE-002 — Independent behavioural evidence
 
-No >=200 interaction sealed human/evaluator corpus, blinded identity-distinction
-study, three-provider/three-harness efficacy evaluation, predefined safety/task
-non-inferiority suite or measured benefit. Decoder corpus is synthetic.
-Benchmark evaluator exists; do not invent outcomes. Strict xfail preserves gate.
+No sealed human/evaluator corpus, blinded identity-distinction study, three-provider ×
+three-harness efficacy study or task/safety non-inferiority suite. The simulated-user
+benchmark (`benchmarks/reports/simulated.json`) is engineering evidence only: learning
+beats the frozen persona, but its preference-satisfaction gain over fixed controls has
+a 95% CI that crosses zero. The decoder corpus is synthetic.
 
 ## ISSUE-003 — Protocol/SDK completeness
 
-Clients are manual; no generated clients or full identical negative corpus for
-all API responses. Python client packaging depends on OpenAPE contracts, TS
-package on sibling catalogue JSON. Missing SDK distribution artifacts, capability
-handshake enforcement, broad compatibility migrations, adapter install/doctor,
-subagent snapshot creation, session-vector learning/checkpoints, independently
-trained diagnostic probes and explicit seed preference initialization. Neutral
-creation is implemented; seed preferences are recorded only and labeled unapplied.
+Clients are hand-written and conformance is fixture-based (golden decisions and
+rendered text shared by Python and TypeScript), not generated. No published SDK
+packages. Session-vector learning/checkpoints are not implemented (session state is
+zero). Diagnostic traits are decoder outputs, not independently trained probes.
+Seed initialization uses declared synthetic profiles, not learned evidence.
 
 ## ISSUE-004 — Hardening and isolation
 
-One in-process bounded worker thread; no OS-isolated trainer/evaluator.
-Policy thresholds are fixed code, not changeable by host credentials, but trusted
-process compromise could alter them. No exhaustive dependency CVE/license audit,
-formal penetration test, crash-consistent artifact GC under power loss, adversarial
-load study, automated backup/recovery test, or production multi-instance support.
-Rate-limit and job queues are memory-local. Raw transcripts are never accepted.
+Training and evaluation run in one in-process worker thread; the evaluator is a
+separate module with fixed thresholds that host credentials cannot change, but it is
+not OS-isolated. No CVE/licence audit, penetration test, power-loss artifact GC test,
+backup/recovery automation or multi-instance support. Rate limits and job queues are
+memory-local. Docker image was verified for 0.1.0 only; no Docker daemon was
+available to re-run `scripts/docker_smoke.py` for 0.2.0.
 
-## ISSUE-005 — Provenance and deletion sophistication
+## ISSUE-005 — Provenance and re-derivation
 
-Source reliability is a credential/source class, not a full attestation service.
-Actors may supply repeated low-quality labels; canonical session grouping blocks
-obvious row leakage but cannot prove independent human evidence. Relationship
-revocation resets that relationship to prior; core revocation resets all derived
-persona state conservatively. No automatic clean-evidence re-derivation. Candidate
-metadata remains for audit, including feedback IDs; revoked candidate artifacts
-must be garbage-collected after their reference is removed. Exports only support
-same-tenant core; opting into relationship export is explicitly rejected.
+Source reliability is a credential/source class, not an attestation service.
+Revocation follows candidate lineage and resets to the nearest clean ancestor, but
+re-deriving state from the remaining evidence needs an explicit admin consolidation.
+Exports support same-tenant core state only; relationship export is rejected.
+Hermes SOUL migration uses keyword heuristics and is always a reviewed dry run first.
