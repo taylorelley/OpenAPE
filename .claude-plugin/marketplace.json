@@ -1,0 +1,11 @@
+{
+  "name": "openape",
+  "owner": {"name": "OpenAPE project"},
+  "plugins": [
+    {
+      "name": "openape",
+      "source": "./adapters/claude-code",
+      "description": "Experimental OpenAPE (UPAP/1) bounded style context with lifecycle observations. Fail-open; never edits CLAUDE.md or AGENTS.md."
+    }
+  ]
+}
