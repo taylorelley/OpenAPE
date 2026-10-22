@@ -1,0 +1,97 @@
+{
+  "kind": "developmental trajectory engineering benchmark; NOT human or live-model evidence",
+  "seed": 20261022,
+  "personas": 8,
+  "sessions": 48,
+  "role_switch_after_session": 32,
+  "horizons": {
+    "relationship_horizon": 12,
+    "core_horizon": 20
+  },
+  "periods": [
+    "0-8",
+    "8-16",
+    "16-24",
+    "24-32",
+    "32-40",
+    "40-48"
+  ],
+  "rank_order_stability": [
+    0.9626,
+    0.8844,
+    0.8707,
+    0.983,
+    0.9864,
+    0.9898
+  ],
+  "mean_level_change": [
+    0.0315,
+    0.1858,
+    0.2101,
+    0.044,
+    0.0206,
+    0.0223
+  ],
+  "individuality": {
+    "same_archetype_distance": 0.4909,
+    "different_archetype_distance": 0.7732
+  },
+  "life_events": {
+    "correction_burst": 15,
+    "rupture": 15,
+    "role_change": 14
+  },
+  "consolidation_components": {
+    "curve": 286,
+    "habit": 42,
+    "elastic": 75
+  },
+  "final_growth": {
+    "mentor-0": {
+      "core": 1.0,
+      "relationship": 1.0,
+      "character_drift": 0.5336
+    },
+    "mentor-1": {
+      "core": 1.0,
+      "relationship": 1.0,
+      "character_drift": 0.6043
+    },
+    "pragmatic_engineer-0": {
+      "core": 1.0,
+      "relationship": 1.0,
+      "character_drift": 0.5224
+    },
+    "pragmatic_engineer-1": {
+      "core": 1.0,
+      "relationship": 1.0,
+      "character_drift": 0.5781
+    },
+    "analyst-0": {
+      "core": 1.0,
+      "relationship": 1.0,
+      "character_drift": 0.401
+    },
+    "analyst-1": {
+      "core": 1.0,
+      "relationship": 1.0,
+      "character_drift": 0.4368
+    },
+    "collaborator-0": {
+      "core": 1.0,
+      "relationship": 1.0,
+      "character_drift": 0.5677
+    },
+    "collaborator-1": {
+      "core": 1.0,
+      "relationship": 1.0,
+      "character_drift": 0.6135
+    }
+  },
+  "human_reference": "rank-order stability rises with age and plateaus near 0.7 (Roberts & DelVecchio 2000); mean-level change is largest in young adulthood and small later (Roberts, Walton & Viechtbauer 2006)",
+  "limitations": [
+    "Synthetic users and fixed priors; no human raters or live LLM outputs",
+    "Trait levels are decoder diagnostics over six fixed contexts",
+    "8 personas over 48 sessions; qualitative comparison only"
+  ]
+}

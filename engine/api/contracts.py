@@ -57,6 +57,10 @@ class Create(Envelope):
     evolution: Literal['automatic','manual'] = 'automatic'
     maturation_rate: MaturationRate | None = None
     agent_feedback: bool = True
+    # Temperament variation around the archetype (0 = the exact archetype profile);
+    # the seed defaults to one derived from tenant and persona id and is recorded.
+    individuality: float = Field(default=0.3, ge=0, le=1)
+    individuality_seed: int | None = Field(default=None, ge=0, le=2**31-1)
 class Evolution(Envelope):
     evolution: Literal['automatic','manual'] | None = None
     maturation_rate: MaturationRate | None = None

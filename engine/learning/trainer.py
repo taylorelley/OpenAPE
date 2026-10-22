@@ -30,9 +30,11 @@ def fit_candidate(decoder,core,rel,train,scope,seed,maximum_drift):
     baseline=sum(ratings)/len(ratings) if ratings else 0.0
     usable=[e for e in train if loss_for(decoder,core,rel,e) is not None]
     if not usable: raise ValueError('need eligible training groups')
+    # Optional per-example weights (recency, source influence); all 1 is the plain mean.
+    weights=torch.tensor([float(e.get('weight',1.0)) for e in usable]);weights=weights/weights.sum()
     for _ in range(100):
         optimizer.zero_grad()
-        loss=torch.stack([loss_for(decoder,*states(candidate),e,baseline) for e in usable]).mean()+0.01*(candidate-original).square().mean()
+        loss=(weights*torch.stack([loss_for(decoder,*states(candidate),e,baseline) for e in usable])).sum()+0.01*(candidate-original).square().mean()
         loss.backward(); torch.nn.utils.clip_grad_norm_([candidate],1.0); optimizer.step()
         with torch.no_grad():
             # Trust region: per-candidate drift budget, then absolute state-norm bound.

@@ -54,10 +54,15 @@ def test_square_root_schedule():
     for t in range(1,100):
         m=maturation.due(t,T,last)
         if m is not None:steps.append((t,maturation.step_budget('relationship',m,last)));last=m
-    times=[t for t,_ in steps];budgets=[b for _,b in steps]
-    assert times[0]==1 and times[-1]==T and max(times)<=T
+    young=[(t,b) for t,b in steps if t<=T];adult=[(t,b) for t,b in steps if t>T]
+    times=[t for t,_ in young];budgets=[b for _,b in young]
+    assert times[0]==1 and times[-1]==T
     gaps=[b-a for a,b in zip(times,times[1:])];assert gaps[-1]>gaps[0]  # changes become rarer
-    assert budgets[0]>budgets[-2] and abs(sum(budgets)-maturation.BUDGET['relationship'])<1e-9  # total drift budget is bounded
+    assert budgets[0]>budgets[-2] and abs(sum(budgets)-maturation.BUDGET['relationship'])<1e-9  # developmental drift is bounded
+    # Plasticity never reaches zero: adult steps continue, much rarer and small.
+    adult_gaps=[b-a for a,b in zip([T]+[t for t,_ in adult],[t for t,_ in adult])]
+    assert len(adult)>=2 and min(adult_gaps)>max(gaps[:3]) and all(b<=maturation.MIN_STEP*maturation.BUDGET['relationship']+1e-9 for _,b in adult)
+    assert abs(maturation.growth(2*T,T)-(1+maturation.ADULT_RATE))<1e-12
     first_settled=lambda rate:next(t for t in range(1,1001) if maturation.maturity(t,maturation.horizons(rate)['relationship'])>=1)
     assert first_settled('fast')<first_settled('normal')<first_settled('slow')
     assert maturation.horizons({'relationship_horizon':7,'core_horizon':9})=={'rate':'custom','relationship':7,'core':9}
@@ -80,7 +85,8 @@ def test_relationship_matures_fast_then_settles_for_that_user_only(api):
     promoted=[a for a in audit(api,'host','promoted') if a['kind']=='maturation'];assert promoted and all(a['actor']=='openape:maturation' for a in promoted)
 
 def test_core_habituates_to_its_work_within_budget(api):
-    make(api,'rev',archetype='balanced',maturation_rate={'relationship_horizon':10,'core_horizon':12})
+    # 14 identical sessions are ~10 units of effective experience: repetition matures more slowly than novelty.
+    make(api,'rev',archetype='balanced',maturation_rate={'relationship_horizon':10,'core_horizon':9})
     base=diag(api,'rev',None,'base',task_type='code_review')
     for i in range(14):
         for j in range(3):post(api,'/v1/express',solo(f'c{i}-{j}','rev',f'cs{i}',task_type='code_review',tags=['review']))

@@ -7,9 +7,15 @@ received an active decision), and it follows a square-root curve:
     m(t) = sqrt(min(t / T, 1))
 
 so a persona changes often and noticeably early on, then ever more rarely and by
-ever smaller amounts, and is settled once t >= T. Each step may move the latent by at
-most (m - m_last) * BUDGET[scope], so total maturation drift is bounded by the
-budget. The horizon T is the configurable maturation rate.
+ever smaller amounts. Development is complete at t >= T, but plasticity never reaches
+zero: growth g(t) = m(t) + ADULT_RATE * max(0, t - T) / T keeps a slow adult slope.
+Each step may move the latent by at most (g - g_last) * BUDGET[scope], so
+developmental drift is bounded by the budget and adult drift accrues slowly. The
+horizon T is the configurable maturation rate.
+
+t is effective experience (engine.learning.development): novel sessions count more
+than repeated ones and life events raise it for a while. Steps fall on whole units of
+it, so a backlog is replayed as the same sequence of steps.
 """
 import math
 import torch
@@ -20,7 +26,8 @@ from engine.learning.trainer import state_norm_limit
 # (relationship horizon, core horizon) in ended sessions.
 RATES = {'fast': (10, 30), 'normal': (30, 100), 'slow': (100, 300)}
 BUDGET = {'relationship': 1.0, 'core': 0.6}
-MIN_STEP = 0.05  # smallest maturity increase worth a new version
+MIN_STEP = 0.05  # smallest growth increase worth a new version
+ADULT_RATE = 0.15  # adult growth per further horizon of experience
 FAMILIARITY_MIX = 0.3
 HABIT_BETA, HABIT_TEMPERATURE = 0.5, 0.9
 REFERENCE_HOST = {'provider_family': 'other', 'adapter_id': 'maturation'}
@@ -40,24 +47,27 @@ def public_rate(stored):
 def maturity(t, horizon):
     return math.sqrt(min(max(t, 0) / horizon, 1.0))
 
-def due(t, horizon, last_m):
-    """Maturity level of the next step on the curve, or None if none is due.
+def growth(t, horizon):
+    return maturity(t, horizon) + ADULT_RATE * max(0.0, t - horizon) / horizon
+
+def due(t, horizon, last_g, last_t=0):
+    """Growth level of the next step on the curve, or None if none is due.
 
     Steps walk the curve in order: if several sessions ended while the worker was
-    busy, this returns the first threshold crossed, not the current maturity, so a
+    busy, this returns the first threshold crossed, not the current growth, so a
     backlog is replayed as the same sequence of shrinking steps instead of one jump."""
-    step = due_step(t, horizon, last_m)
+    step = due_step(t, horizon, last_g, last_t)
     return step and step[1]
 
-def due_step(t, horizon, last_m):
-    """(experience at which the next step falls, its maturity), or None."""
-    for s in range(1, t + 1):
-        m = maturity(s, horizon)
-        if m - last_m >= MIN_STEP - 1e-9 or (m >= 1.0 and last_m < 1.0 - 1e-9): return s, m
+def due_step(t, horizon, last_g, last_t=0):
+    """(experience at which the next step falls, its growth), or None."""
+    for s in range(int(last_t) + 1, int(t + 1e-9) + 1):
+        g = growth(s, horizon)
+        if g - last_g >= MIN_STEP - 1e-9 or (g >= 1.0 and last_g < 1.0 - 1e-9): return s, g
     return None
 
-def step_budget(scope, m, last_m):
-    return max(0.0, m - last_m) * BUDGET[scope]
+def step_budget(scope, g, last_g):
+    return max(0.0, g - last_g) * BUDGET[scope]
 
 def familiarity_profile(m):
     """Growing familiarity with one user: warmer, less formal, a little briefer."""
@@ -86,22 +96,25 @@ def fit_toward(decoder, core, rel, scope, rows, budget, steps=100):
             x.mul_(min(1.0, state_norm_limit(decoder, scope) / (float(x.norm()) + 1e-8)))
     return x.detach()
 
-def familiarize(decoder, core, rel, profile, m, budget):
-    """Relationship step: nudge toward the archetype plus familiarity at maturity m,
-    mixed with the current policy so learned feedback is preserved."""
-    rows = []
+def familiarize(decoder, core, rel, profile, m, budget, accommodation=None, weights=None):
+    """Relationship step: nudge toward the archetype plus familiarity at maturity m and
+    accommodation to the user, mixed with the current policy so learned feedback is
+    preserved. Optional per-trait weights apply development's sensitive periods."""
+    rows = []; scale = (lambda p: {t: (v, w * weights.get(t, 1.0)) for t, (v, w) in p.items()}) if weights else (lambda p: p)
+    profiles = [profile, scale(familiarity_profile(m))] + ([scale(accommodation)] if accommodation else [])
     with torch.no_grad():
         for context in reference_contexts():
             current = torch.softmax(decoder.logits(core, rel, context, REFERENCE_HOST), 0)
-            target = (1 - FAMILIARITY_MIX) * current + FAMILIARITY_MIX * target_distribution(context, profile, familiarity_profile(m))
+            target = (1 - FAMILIARITY_MIX) * current + FAMILIARITY_MIX * target_distribution(context, *profiles)
             rows.append((context, REFERENCE_HOST, target, 1.0))
     return fit_toward(decoder, core, rel, 'relationship', rows, budget)
 
-def habituate(decoder, core, experienced, budget):
+def habituate(decoder, core, experienced, budget, weights=None):
     """Core step: lean into the norms of the contexts this persona actually works in
-    (weighted by frequency) and settle slightly; reference contexts anchor the rest."""
+    (weighted by salience) and settle slightly; reference contexts anchor the rest.
+    Optional per-trait weights apply development's sensitive periods."""
     rel = torch.zeros(32); rows = []
-    norms = lambda context: torch.tensor([context_score(c, context) for c in CATALOGUE])
+    norms = lambda context: torch.tensor([context_score(c, context, weights) for c in CATALOGUE])
     with torch.no_grad():
         for context, host, count in experienced:
             logp = torch.log_softmax(decoder.logits(core, rel, context, host), 0)

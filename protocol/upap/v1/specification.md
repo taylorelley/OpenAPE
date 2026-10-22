@@ -57,7 +57,9 @@ Conflicting replay fails transactionally. Feedback binds an existing authorized
 decision and authenticated actor; owner/evaluator sources require training admin.
 Feedback may carry a UTC `occurred_at` and up to 8 `evidence_refs`.
 Learning requires explicit consent and core/relationship scope. Session and
-record-only feedback is retained but not trained in this release. Pairwise
+record-only feedback is retained but not trained in this release. Consented
+pairwise preferences and corrections in any scope but record-only also refit the
+open session's ephemeral state (response `session_adapted`); see Development. Pairwise
 options must be distinct approved catalogue indices. Latent learning uses canonical
 adapter/session groups, not caller-supplied claims of independent evidence.
 
@@ -97,8 +99,35 @@ Automatic evolution (personas with `evolution: automatic`) needs no operator:
    consented preferences (feedback wins). Audit actor `openape:maturation`,
    action `matured`. Maturation is a fixed prior, never reward; outcomes,
    engagement and text are never read.
+3. Development (docs/adr/0004-human-like-development.md).
+   * Creation records `individuality` {amount, seed} (request fields `individuality`
+     0-1, default 0.3, and optional `individuality_seed`). The creation version is
+     the temperament, and automatic core change stays within 1.6 latent units of
+     it.
+   * A session state is a bounded latent offset (relationship latent with a linked
+     user, else core) refitted from the newest 12 deduplicated consented
+     preferences of an open session. It is applied at express until the session
+     ends and is never a version.
+   * At session end the state, refitted from relationship/core-consented feedback
+     only, becomes a sample. Three or more consistent recent samples produce a
+     habit step whose evidence ids follow revocation lineage.
+   * Experience t is effective experience: novel context signatures count more,
+     and life events (`role_change`, `new_host`, `correction_burst`, `rupture`,
+     `long_absence`, audited as `life_event`) raise it and plasticity for a while.
+   * Growth is m(t) + 0.15·max(0, t−T)/T, so adult steps continue slowly.
+   * A maturation job is one consolidation pass, evaluated and promoted once. It
+     combines relationship cooling after 14+ days without a session (server
+     time), the next curve step (with per-trait sensitive periods and, for
+     relationships, accommodation to the user's tag mix), a consistent habit, and
+     a 25% pull toward a self anchor that absorbs deliberate change. The pull is
+     withheld if it would reduce feedback agreement.
+   * Rollback and operator promotion reset the anchor.
+   * Automatic candidates weight examples by recency and by source influence at
+     the scope's maturity (owner 2−m, users 0.5+0.5m, reflections 0.3+0.7m, with
+     reflection share 0.2+0.8m).
 Manual personas keep the operator path below. Session pins mean every automatic
-change applies from the next session.
+version change applies from the next session; session state is the only
+within-session change.
 
 Consolidation returns 202/job_id. The independent evaluator splits evidence by
 actor/session group; the trainer fits only the training split; the evaluator
@@ -128,5 +157,6 @@ byte-identical text; `conformance.json` carries golden `rendered` strings for bo
 Known conformance gaps: SDKs are hand-written (golden fixtures, not generated
 clients); write/read envelopes beyond decisions are not all modeled; source
 reliability is a credential class only; explicit relationship export unsupported;
-session vector adaptation/checkpointing not implemented; no cross-major migration
+session state is a latent offset, not the decoder's (untrained) session input, and
+is not checkpointed; no cross-major migration
 system. See docs/reports/open-issues.md.

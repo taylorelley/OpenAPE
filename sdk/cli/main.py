@@ -30,6 +30,8 @@ def main():
     persona.add_argument('--maturation-rate',choices=['fast','normal','slow'],help='how quickly natural maturation runs its course (default normal)')
     persona.add_argument('--manual',action='store_true',help='create: no automatic evolution; an operator runs learn/promote')
     persona.add_argument('--no-agent-feedback',action='store_true',help='create: refuse persona_feedback tool calls from agents')
+    persona.add_argument('--individuality',type=float,help='create: temperament variation around the archetype, 0-1 (default 0.3; 0 = the exact archetype)')
+    persona.add_argument('--individuality-seed',type=int,help='create: reproduce a specific individual variation')
     persona.add_argument('--pause',action='store_true',help='evolution: stop automatic evolution');persona.add_argument('--resume',action='store_true',help='evolution: resume automatic evolution')
     persona.add_argument('--agent-feedback',choices=['on','off'],help='evolution: allow or refuse agent persona_feedback')
     persona.add_argument('--user',help='inspect: include growth with this linked user')
@@ -97,6 +99,8 @@ def main():
                 if args.archetype:body['archetype']=args.archetype
                 if args.parent:body['parent_persona_id']=args.parent
                 if args.maturation_rate:body['maturation_rate']=args.maturation_rate
+                if args.individuality is not None:body['individuality']=args.individuality
+                if args.individuality_seed is not None:body['individuality_seed']=args.individuality_seed
                 result=client.request('POST','/v1/personas',body)
             elif args.action=='archetypes':result=client.request('GET','/v1/capabilities')['archetypes']
             elif args.action=='evolution':

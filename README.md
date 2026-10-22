@@ -24,7 +24,12 @@ engineer, concierge, …). From then on it evolves on its own:
   `persona_feedback` tool (trait moves only, no text);
 * it **matures** naturally with use, quickly at first and then ever more slowly
   (a square-root curve with a rate you choose), growing more familiar with each
-  linked user and settling into the work it does most.
+  linked user and settling into the work it does most;
+* it **develops like a person** in other ways too: individual temperament, moods
+  within a session that become traits only when they recur, change that slows but
+  never stops, bigger shifts around life events, relationships that adapt to the
+  person and cool with absence, and one-off learned change that fades unless it is
+  reinforced ([ADR 0004](docs/adr/0004-human-like-development.md)).
 
 Each change is checked by an independent evaluator before it is promoted, and
 takes effect from the next session. Personas can be versioned, paused, pinned,
@@ -42,8 +47,9 @@ LLM itself.
 > across providers, or leaves task quality and safety unchanged. See
 > [release status](docs/reports/release-status.md). Archetypes, automatic
 > evolution, maturation and the agent `persona_feedback` tool are unreleased
-> engineering features (see [CHANGELOG](CHANGELOG.md)). The maturation curve and
-> familiarity profile are fixed design priors with no human evidence behind them.
+> engineering features (see [CHANGELOG](CHANGELOG.md)). The maturation curve,
+> familiarity profile and the developmental processes of ADR 0004 are fixed design
+> priors with no human evidence behind them.
 
 ## How it works
 
@@ -69,7 +75,9 @@ LLM itself.
                              ─▶ independent evaluator on held-out groups
                              ─▶ automatic promotion (compare-and-swap)
                              ─▶ new immutable persona version
-  session ends ─▶ experience t ─▶ maturation step on sqrt(t/T) curve ─┘
+  consented in-session feedback ─▶ session state (this session only)
+  session ends ─▶ effective experience, life events, state sample
+              ─▶ consolidation pass: curve step + habit + cooling + self anchor ─┘
 ```
 
 1. **State.** Each persona has a 64-number *core latent*. Each linked user can
@@ -79,7 +87,9 @@ LLM itself.
    start from an **archetype** (`balanced`, `mentor`, `pragmatic_engineer`,
    `concierge`, `collaborator`, `analyst`, `critic`), from advanced seed
    preferences (`concise`, `warm`, `formal`, …), or as a snapshot of a parent
-   persona (for subagents).
+   persona (for subagents). A recorded `individuality` seed varies the archetype
+   a little (default 0.3, `0` for the exact archetype), and the creation version
+   is kept as the persona's temperament.
 2. **Expression.** The adapter sends the turn's context: task type, channel,
    stakes, turn origin, tags and provider family. Raw text and transcripts are
    never sent. A small frozen CPU network
@@ -118,6 +128,21 @@ LLM itself.
    tasks it actually does. Steps are bounded, never undo consented feedback, and
    use no outcomes, engagement or text. This is a fixed design prior, not
    something learned from or validated against people.
+   [ADR 0004](docs/adr/0004-human-like-development.md) adds more processes taken
+   from personality psychology:
+   * Consented feedback within a session moves an ephemeral *session state*. Only
+     states that recur consistently across sessions become a trait (a habit step).
+   * Experience is weighted by novelty, and growth continues slowly after `T`.
+     Surface style settles before interpersonal traits.
+   * A role change, a new host or a burst of corrections temporarily raises
+     plasticity.
+   * Relationships accommodate to the user's own pattern of work and cool after
+     long absences.
+   * Automatic change stays near the persona's temperament. Learned change that is
+     not reinforced fades a little at each consolidation pass, unless that would
+     undo consented feedback.
+   * Owners' feedback weighs more early and users' later. Agent reflections gain
+     weight with maturity.
 6. **Promotion, rollback and revocation.** With `evolution: automatic` (the
    default) eligible candidates and maturation steps are promoted by the engine
    with compare-and-swap. With `manual` (or after `openape persona evolution ID
@@ -244,7 +269,7 @@ deployments need TLS at a trusted reverse proxy. Shared SQLite replicas are unsu
 
 ## Design and evidence
 
-* ADRs: [0001 architecture](docs/adr/0001-architecture.md), [0002 decoder-v2, evaluator, lineage](docs/adr/0002-decoder-v2-evaluator-lineage.md), [0003 archetypes and automatic evolution](docs/adr/0003-automatic-evolution.md)
+* ADRs: [0001 architecture](docs/adr/0001-architecture.md), [0002 decoder-v2, evaluator, lineage](docs/adr/0002-decoder-v2-evaluator-lineage.md), [0003 archetypes and automatic evolution](docs/adr/0003-automatic-evolution.md), [0004 human-like development](docs/adr/0004-human-like-development.md)
 * [Protocol](protocol/upap/v1/specification.md), JSON Schemas, OpenAPI, conformance fixtures
 * [Model card](models/decoder-v2/MODEL_CARD.md) · [benchmarks](benchmarks/README.md)
 * [Release status](docs/reports/release-status.md) · [review of 0.1.0 against the brief](docs/reports/v0.2-review.md) · [open issues](docs/reports/open-issues.md)
