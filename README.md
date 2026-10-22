@@ -91,7 +91,8 @@ LLM itself.
    a little (default 0.3, `0` for the exact archetype), and the creation version
    is kept as the persona's temperament.
 2. **Expression.** The adapter sends the turn's context: task type, channel,
-   stakes, turn origin, tags and provider family. Raw text and transcripts are
+   stakes, turn origin, tags and provider family. Adapters derive it from host
+   metadata (see [Turn context](#turn-context)). Raw text and transcripts are
    never sent. A small frozen CPU network
    ([decoder-v2](models/decoder-v2/MODEL_CARD.md)) combines the context with the
    latents and picks one row of the audited
@@ -220,6 +221,29 @@ Code 2.1.308 it appears as a deferred MCP tool, in Hermes 0.19.0 as a direct too
 and in OpenClaw 2026.10.5 in its Tool Search catalog. In Pi 1.3.0 a call through
 Pi's own tool wrapper was recorded. All of this used a synthetic model, so no
 model has yet chosen to call it.
+
+### Turn context
+
+Adapters work out each turn's context from host metadata, using one shared rule
+table ([`context-rules.json`](protocol/upap/v1/context-rules.json)) that the
+Python and TypeScript SDKs apply identically:
+
+* **Tools used in the previous turn**, by name only (never arguments or results):
+  edit/write tools mean `coding` + `technical`, shell tools `technical`, read and
+  search tools `research`. Two or more failed tool calls raise stakes to `high`.
+* **Host state:** plan mode (Claude Code) means `research`; messaging platforms
+  (Hermes, OpenClaw channels) mean channel `chat`.
+* **Your declaration:** `OPENAPE_CONTEXT='{"task_type":"coding","tags":["expert"]}'`
+  (Claude Code also reads `.openape.json` in the project; the variable wins).
+  This is the only source of `beginner`/`expert` unless text classification is on,
+  and it overrides everything derived.
+* **Opt-in text classification:** with `OPENAPE_CONTEXT_TEXT=local` the adapter
+  matches the user's message against fixed keyword rules on the host (for example
+  "review this PR" → `code_review`, "asap" → `urgent`, "I'm new to" →
+  `beginner`). The text is never sent, logged or stored; only the derived labels
+  leave the host. Off by default.
+
+OpenCogni keeps its fixed planner context (background, system-initiated).
 
 `openape adapter doctor HOST --persona ID` checks a setup. Hermes users with an
 existing SOUL.md can run `openape adapter migrate-soul` (dry run; `--apply --persona

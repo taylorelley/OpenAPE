@@ -16,7 +16,20 @@ d23={**d,'control_set_id':'style-23','controls':CATALOGUE[23]}
 fixtures=[dict(name='valid active',valid=True,value=d,rendered=render(d)),dict(name='valid shadow',valid=True,value={**d,'mode':'shadow'},rendered=''),dict(name='valid frozen last catalogue row',valid=True,value={**d23,'mode':'frozen'},rendered=render({**d23,'mode':'frozen'})),
  dict(name='ineligible policy',valid=False,value={**d,'policy':{'eligible':False,'mask_reason':None}}),dict(name='missing control',valid=False,value={**d,'controls':{k:v for k,v in d['controls'].items() if k!='humour'}}),
  dict(name='cache ttl above bound',valid=False,value={**d,'cache_ttl_ms':999999}),dict(name='controls from another row',valid=False,value={**d,'controls':CATALOGUE[1]}),dict(name='disabled is not a wire mode',valid=False,value={**d,'mode':'disabled'}),dict(name='wrong protocol',valid=False,value={**d,'protocol_version':'upap/2'}),dict(name='unknown control',valid=False,value={**d,'controls':{**d['controls'],'warmth':'unbounded'}}),dict(name='catalogue mismatch',valid=False,value={**d,'control_set_id':'style-99'}),dict(name='wrong control schema',valid=False,value={**d,'control_schema':'unknown'})]
-(P/'conformance.json').write_text(json.dumps({'request':req,'decisions':fixtures},indent=2)+'\n')
 (ROOT/'examples/express.json').write_text(json.dumps(req,indent=2)+'\n')
-from sdk.python.lite import TOOL
+from sdk.python.lite import TOOL, CONTEXT_RULES, derive_context
 (P/'tools').mkdir(exist_ok=True);(P/'tools/persona_feedback.json').write_text(json.dumps(TOOL,indent=2)+'\n')
+(P/'context-rules.json').write_text(json.dumps(CONTEXT_RULES,indent=2)+'\n')
+# Context derivation parity: Python and TypeScript SDKs must produce identical contexts.
+cases=[('defaults',None,None,None),('edit tools mean coding',{'tools':['Edit','Bash']},None,None),('read-only tools mean research',{'tools':['Read','Grep','WebFetch']},None,None),
+ ('edit outranks read',{'tools':['grep','write']},None,None),('plan mode',{'tools':['Edit'],'plan_mode':True},None,None),('one failure keeps stakes',{'tools':['bash'],'failures':1},None,None),
+ ('repeated failures raise stakes',{'tools':['bash'],'failures':2},None,None),('host channel and origin',{'channel':'voice','turn_origin':'subagent'},None,None),
+ ('unknown signals ignored',{'channel':'fax','turn_origin':'x','tools':'Edit','failures':'9','plan_mode':'yes'},None,None),
+ ('declaration wins',{'tools':['Edit'],'failures':3},{'task_type':'support','stakes':'low','tags':['beginner','nonsense']},None),
+ ('malformed declaration dropped',None,'{not json',None),('declaration as JSON text',None,'{"tags":["expert"],"channel":"chat"}',None),
+ ('text review urgent',None,None,'Please review this PR asap, prod is down'),('text beats tools',{'tools':['Edit']},None,'Can you research how does tokio schedule tasks?'),
+ ('text sensitive',None,None,'rotate the production database password'),('text beginner',None,None,"I'm new to Rust, explain like I'm five"),
+ ('text expert',None,None,'tl;dr please, just the code'),('text word boundaries',None,None,'prepare the preview of reviewer stats'),
+ ('text non-ascii',None,None,'Révisez ce code, ÜRGENT'),('declaration beats text',None,{'task_type':'creative'},'review this')]
+contexts=[dict(name=n,signals=s,declared=d,text=t,context=derive_context(s,d,t)) for n,s,d,t in cases]
+(P/'conformance.json').write_text(json.dumps({'request':req,'decisions':fixtures,'contexts':contexts},indent=2)+'\n')

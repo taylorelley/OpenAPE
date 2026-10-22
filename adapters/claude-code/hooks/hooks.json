@@ -1,5 +1,5 @@
 {
-  "description": "OpenAPE style expression and lifecycle observations (fail-open, no transcript access)",
+  "description": "OpenAPE style expression, metadata-only turn context and lifecycle observations (fail-open, no transcript access)",
   "hooks": {
     "SessionStart": [
       {
@@ -13,6 +13,28 @@
       }
     ],
     "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hook.py\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hook.py\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
       {
         "hooks": [
           {

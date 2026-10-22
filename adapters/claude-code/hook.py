@@ -2,10 +2,16 @@
 """OpenAPE Claude Code plugin hook (all lifecycle events). Python stdlib only.
 
 Fail-open: always exits 0; on any failure it prints nothing. Never reads the
-transcript, prompt text, CLAUDE.md or AGENTS.md. Only UserPromptSubmit emits
+transcript, CLAUDE.md or AGENTS.md. Only UserPromptSubmit emits
 `hookSpecificOutput.additionalContext`; every other event is a best-effort
 observation carrying IDs and status only. UserPromptSubmit also records the latest
 active decision ID for the persona_feedback MCP tool (mcp_server.py).
+
+Turn context comes from metadata: the tool names (and failure count) of the previous
+turn, recorded by PostToolUse/PostToolUseFailure; plan mode; and the user's declared
+context (`.openape.json` in the project, overridden by OPENAPE_CONTEXT). Prompt text is
+read only with OPENAPE_CONTEXT_TEXT=local, matched in memory against fixed rules, and
+never sent, logged or stored; only the derived enum labels leave this process.
 """
 import hashlib
 import json
@@ -29,7 +35,15 @@ def config():
     token, persona = os.environ.get('OPENAPE_TOKEN'), os.environ.get('OPENAPE_PERSONA')
     if not token or not persona: return None
     return dict(token=token, persona=persona, url=os.environ.get('OPENAPE_URL', 'http://127.0.0.1:8765'), tenant=os.environ.get('OPENAPE_TENANT', 'local'),
-        user=os.environ.get('OPENAPE_LINKED_USER'), mode=os.environ.get('OPENAPE_MODE', 'shadow'), host_version=safe_id(os.environ.get('OPENAPE_HOST_VERSION'), 'unverified'))
+        user=os.environ.get('OPENAPE_LINKED_USER'), mode=os.environ.get('OPENAPE_MODE', 'shadow'), host_version=safe_id(os.environ.get('OPENAPE_HOST_VERSION'), 'unverified'),
+        context_text=os.environ.get('OPENAPE_CONTEXT_TEXT') == 'local')
+
+def declared_context(cwd):
+    """Project `.openape.json` (enum values only), then OPENAPE_CONTEXT on top."""
+    declared = {}
+    try: declared = upap_lite.parse_declared((Path(cwd) / '.openape.json').read_text()) if cwd else {}
+    except (OSError, ValueError): pass
+    return {**declared, **upap_lite.parse_declared(os.environ.get('OPENAPE_CONTEXT') or '{}')}
 
 def state_root():
     root = Path(os.environ.get('CLAUDE_PLUGIN_DATA') or Path.home() / '.openape' / 'claude-code-state')
@@ -68,13 +82,23 @@ def main():
         if data.get('model'): state['model'] = safe_id(data['model'], 'host-selected')
         save(path, state)
         observe(event(cfg, key, 'session.compacted' if data.get('source') == 'compact' else 'session.started'))
+    elif name in ('PostToolUse', 'PostToolUseFailure'):
+        # Previous-turn signals for the next prompt's context: tool names and a count only.
+        tools = state.setdefault('tools', [])
+        tool = safe_id(data.get('tool_name'), 'unknown')[:64]
+        if tool not in tools and len(tools) < 32: tools.append(tool)
+        if name == 'PostToolUseFailure': state['failures'] = state.get('failures', 0) + 1
+        save(path, state)
     elif name == 'UserPromptSubmit':
         prompt_id = data.get('prompt_id') or str(uuid.uuid4())
         if state.get('prompt_id') == prompt_id: return  # never inject twice for one prompt
+        signals = dict(tools=state.pop('tools', []), failures=state.pop('failures', 0), plan_mode=data.get('permission_mode') == 'plan')
+        text = data.get('prompt') if cfg['context_text'] else None
+        context = upap_lite.derive_context(signals, declared_context(data.get('cwd')), text)
         request = dict(request_id=stable(f'{key}:{prompt_id}'), identity=dict(tenant_id=cfg['tenant'], persona_id=cfg['persona']),
             session=dict(id=key, turn_id=stable(prompt_id)),
             host=dict(adapter_id=ADAPTER, adapter_version=VERSION, host_version=cfg['host_version'], provider_family='anthropic', model_id=state.get('model', 'host-selected')),
-            context=dict(task_type='general', channel='terminal', stakes='medium', turn_origin='user', tags=[]))
+            context=context)
         if cfg['user']: request['identity']['user_id'] = cfg['user']
         result = upap_lite.express(cfg['url'], cfg['token'], request, cfg['mode'])
         state.update(prompt_id=prompt_id, decision_id=(result['decision'] or {}).get('decision_id'), applied=bool(result['text'])); save(path, state)

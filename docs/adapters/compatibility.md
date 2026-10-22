@@ -43,6 +43,28 @@ persona, host binary and plugin files. Use `openape token add --actor HOST
 Outcome observations carry IDs and status only, never rewards or transcript text,
 and have no learning authority.
 
+## Turn context
+
+Each adapter derives the turn context with the SDK's `derive_context` /
+`deriveContext` from the shared
+[`context-rules.json`](../../protocol/upap/v1/context-rules.json) (parity fixtures in
+`conformance.json`). Signals are tool names and failure counts from the previous
+turn, host state and the user's declared context (`OPENAPE_CONTEXT`). Tool arguments
+and results are never read. The user's message is classified only with
+`OPENAPE_CONTEXT_TEXT=local`, in memory on the host; only enum labels are sent.
+
+| Host | Tool signal | Other signals | Message (opt-in) |
+|---|---|---|---|
+| Claude Code | `PostToolUse` / `PostToolUseFailure` (`tool_name`) | plan mode (`permission_mode`), `.openape.json` in `cwd` | `prompt` |
+| Hermes | `post_tool_call` (`tool_name`, `status`) | `platform` → terminal / chat / background | `user_message` |
+| OpenClaw | `after_tool_call` (`toolName`, `error`) | run `channel` / `messageProvider` → chat | `currentUserMessage` |
+| Pi | `tool_execution_end` (`toolName`, `isError`) | — | `prompt` |
+| OpenCogni | — | fixed planner context | — |
+
+The hook and field names were checked against the pinned host packages' sources
+and types. Derived context has not yet been exercised in the real-host smokes;
+each manifest lists it under `unverified`.
+
 ## Agent feedback tool (`persona_feedback`)
 
 In active mode, adapters offer the agent one tool, defined in

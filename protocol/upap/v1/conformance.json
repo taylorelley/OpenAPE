@@ -425,5 +425,353 @@
         "diagnostics": null
       }
     }
+  ],
+  "contexts": [
+    {
+      "name": "defaults",
+      "signals": null,
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": []
+      }
+    },
+    {
+      "name": "edit tools mean coding",
+      "signals": {
+        "tools": [
+          "Edit",
+          "Bash"
+        ]
+      },
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "coding",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "technical"
+        ]
+      }
+    },
+    {
+      "name": "read-only tools mean research",
+      "signals": {
+        "tools": [
+          "Read",
+          "Grep",
+          "WebFetch"
+        ]
+      },
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "research",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": []
+      }
+    },
+    {
+      "name": "edit outranks read",
+      "signals": {
+        "tools": [
+          "grep",
+          "write"
+        ]
+      },
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "coding",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "technical"
+        ]
+      }
+    },
+    {
+      "name": "plan mode",
+      "signals": {
+        "tools": [
+          "Edit"
+        ],
+        "plan_mode": true
+      },
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "research",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "technical"
+        ]
+      }
+    },
+    {
+      "name": "one failure keeps stakes",
+      "signals": {
+        "tools": [
+          "bash"
+        ],
+        "failures": 1
+      },
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "technical"
+        ]
+      }
+    },
+    {
+      "name": "repeated failures raise stakes",
+      "signals": {
+        "tools": [
+          "bash"
+        ],
+        "failures": 2
+      },
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "high",
+        "turn_origin": "user",
+        "tags": [
+          "technical"
+        ]
+      }
+    },
+    {
+      "name": "host channel and origin",
+      "signals": {
+        "channel": "voice",
+        "turn_origin": "subagent"
+      },
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "general",
+        "channel": "voice",
+        "stakes": "medium",
+        "turn_origin": "subagent",
+        "tags": []
+      }
+    },
+    {
+      "name": "unknown signals ignored",
+      "signals": {
+        "channel": "fax",
+        "turn_origin": "x",
+        "tools": "Edit",
+        "failures": "9",
+        "plan_mode": "yes"
+      },
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": []
+      }
+    },
+    {
+      "name": "declaration wins",
+      "signals": {
+        "tools": [
+          "Edit"
+        ],
+        "failures": 3
+      },
+      "declared": {
+        "task_type": "support",
+        "stakes": "low",
+        "tags": [
+          "beginner",
+          "nonsense"
+        ]
+      },
+      "text": null,
+      "context": {
+        "task_type": "support",
+        "channel": "terminal",
+        "stakes": "low",
+        "turn_origin": "user",
+        "tags": [
+          "technical",
+          "beginner"
+        ]
+      }
+    },
+    {
+      "name": "malformed declaration dropped",
+      "signals": null,
+      "declared": "{not json",
+      "text": null,
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": []
+      }
+    },
+    {
+      "name": "declaration as JSON text",
+      "signals": null,
+      "declared": "{\"tags\":[\"expert\"],\"channel\":\"chat\"}",
+      "text": null,
+      "context": {
+        "task_type": "general",
+        "channel": "chat",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "expert"
+        ]
+      }
+    },
+    {
+      "name": "text review urgent",
+      "signals": null,
+      "declared": null,
+      "text": "Please review this PR asap, prod is down",
+      "context": {
+        "task_type": "code_review",
+        "channel": "terminal",
+        "stakes": "high",
+        "turn_origin": "user",
+        "tags": [
+          "review",
+          "urgent"
+        ]
+      }
+    },
+    {
+      "name": "text beats tools",
+      "signals": {
+        "tools": [
+          "Edit"
+        ]
+      },
+      "declared": null,
+      "text": "Can you research how does tokio schedule tasks?",
+      "context": {
+        "task_type": "research",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "technical"
+        ]
+      }
+    },
+    {
+      "name": "text sensitive",
+      "signals": null,
+      "declared": null,
+      "text": "rotate the production database password",
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "high",
+        "turn_origin": "user",
+        "tags": [
+          "sensitive"
+        ]
+      }
+    },
+    {
+      "name": "text beginner",
+      "signals": null,
+      "declared": null,
+      "text": "I'm new to Rust, explain like I'm five",
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "beginner"
+        ]
+      }
+    },
+    {
+      "name": "text expert",
+      "signals": null,
+      "declared": null,
+      "text": "tl;dr please, just the code",
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "expert"
+        ]
+      }
+    },
+    {
+      "name": "text word boundaries",
+      "signals": null,
+      "declared": null,
+      "text": "prepare the preview of reviewer stats",
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": []
+      }
+    },
+    {
+      "name": "text non-ascii",
+      "signals": null,
+      "declared": null,
+      "text": "R\u00e9visez ce code, \u00dcRGENT",
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": []
+      }
+    },
+    {
+      "name": "declaration beats text",
+      "signals": null,
+      "declared": {
+        "task_type": "creative"
+      },
+      "text": "review this",
+      "context": {
+        "task_type": "creative",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "review"
+        ]
+      }
+    }
   ]
 }

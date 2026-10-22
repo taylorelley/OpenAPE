@@ -41,6 +41,70 @@ TOOL_PARAMETERS={'type':'object','additionalProperties':False,'required':['adjus
  'reason':{'type':'string','enum':['user_requested','user_corrected','observed_preference'],
   'description':'user_requested: the user asked; user_corrected: the user pushed back on your style; observed_preference: a repeated pattern.'}}}
 TOOL={'name':TOOL_NAME,'description':TOOL_DESCRIPTION,'parameters':TOOL_PARAMETERS}
+# Canonical context rules (protocol/upap/v1/context-rules.json is generated from this; the
+# TypeScript SDK applies the same file). Signals are IDs, tool names and counts only.
+# `text` rules run on the host only when the user opts in; only the resulting enum
+# labels are ever sent, never the text.
+CONTEXT_RULES={
+ 'vocab':{'task_type':['general','code_review','coding','support','creative','research'],'channel':['terminal','chat','voice','background'],
+  'stakes':['low','medium','high'],'turn_origin':['user','system','tool','subagent'],'tags':['technical','review','sensitive','urgent','beginner','expert']},
+ 'defaults':{'task_type':'general','channel':'terminal','stakes':'medium','turn_origin':'user'},
+ 'tools':[
+  {'names':['edit','multiedit','write','notebookedit','apply_patch','patch','str_replace_editor','edit_file','write_file'],'task_type':'coding','tags':['technical']},
+  {'names':['bash','shell','terminal','exec','run_command','execute_code'],'tags':['technical']},
+  {'names':['read','grep','glob','ls','find','search','read_file','search_files','websearch','webfetch','web_search','web_fetch','web_extract','browse','browser','browser_navigate'],'task_type':'research'}],
+ 'failures':{'at_least':2,'stakes':'high'},
+ 'plan_mode':{'task_type':'research'},
+ 'text':[
+  {'pattern':r'\b(review|pr|pull request|code review|lgtm)\b','task_type':'code_review','tags':['review']},
+  {'pattern':r'\b(story|poem|brainstorm|slogan|lyrics|creative)\b','task_type':'creative'},
+  {'pattern':r'\b(implement|refactor|debug|bug|compile|function|unit test|stack trace|traceback|exception)\b','task_type':'coding','tags':['technical']},
+  {'pattern':r'\b(research|compare|investigate|survey|what is|how does|why does)\b','task_type':'research'},
+  {'pattern':r'\b(stuck|confused|not working|frustrat\w*|help me)\b','task_type':'support'},
+  {'pattern':r'\b(urgent|asap|immediately|outage|hotfix|prod(uction)? is down)\b','stakes':'high','tags':['urgent']},
+  {'pattern':r'\b(security|vulnerabilit\w*|credentials?|password|legal|medical|production database)\b','stakes':'high','tags':['sensitive']},
+  {'pattern':r"\b(beginner|eli5|explain like|new to|first time|never used)\b",'tags':['beginner']},
+  {'pattern':r'\b(tl;?dr|just the (code|diff|answer)|skip the explanation|no explanation)\b','tags':['expert']}]}
+
+def _labels(value):
+    return [v for v in value if isinstance(v,str)] if isinstance(value,list) else []
+
+def parse_declared(raw):
+    """User-declared context (OPENAPE_CONTEXT or a project .openape.json): a JSON object of
+    known enum values. Anything malformed or unknown is dropped, never an error."""
+    try:value=json.loads(raw) if isinstance(raw,(str,bytes)) else raw
+    except ValueError:return {}
+    if not isinstance(value,dict):return {}
+    vocab=CONTEXT_RULES['vocab'];out={k:value[k] for k in ('task_type','channel','stakes','turn_origin') if isinstance(value.get(k),str) and value[k] in vocab[k]}
+    tags=[t for t in _labels(value.get('tags')) if t in vocab['tags']]
+    if tags:out['tags']=tags
+    return out
+
+def derive_context(signals=None,declared=None,text=None,rules=CONTEXT_RULES):
+    """Turn context from host signals. Precedence: defaults < tools/plan mode < opt-in
+    text < user declaration. Stakes only rise until the declaration; tags accumulate.
+    Never raises; the text is matched in memory and not returned or kept."""
+    s=signals if isinstance(signals,dict) else {};d=parse_declared(declared or {});vocab=rules['vocab'];ctx=dict(rules['defaults']);tags=set();task=None
+    def rise(stakes):
+        if stakes in vocab['stakes'] and vocab['stakes'].index(stakes)>vocab['stakes'].index(ctx['stakes']):ctx['stakes']=stakes
+    for k in ('channel','turn_origin'):
+        if s.get(k) in vocab[k]:ctx[k]=s[k]
+    names={n.lower() for n in _labels(s.get('tools'))}
+    for r in rules['tools']:
+        if names&set(r['names']):task=task or r.get('task_type');tags.update(r.get('tags',[]))
+    if s.get('plan_mode') is True:task=rules['plan_mode']['task_type']
+    failures=s.get('failures')
+    if type(failures) is int and failures>=rules['failures']['at_least']:rise(rules['failures']['stakes'])
+    if isinstance(text,str) and text:
+        found=None
+        for r in rules['text']:
+            if re.search(r['pattern'],text,re.I|re.A):  # ASCII semantics match JavaScript RegExp 'i'
+                found=found or r.get('task_type');tags.update(r.get('tags',[]));rise(r.get('stakes'))
+        task=found or task
+    if task:ctx['task_type']=task
+    ctx.update({k:v for k,v in d.items() if k!='tags'});tags.update(d.get('tags',[]))
+    ctx['tags']=[t for t in vocab['tags'] if t in tags]
+    return ctx
 
 def validate_decision(d):
     if not isinstance(d,dict) or d.get('protocol_version')!=PROTOCOL or d.get('control_schema')!='behaviour-controls/1':raise ValueError('Unsupported decision')

@@ -1,0 +1,157 @@
+{
+  "vocab": {
+    "task_type": [
+      "general",
+      "code_review",
+      "coding",
+      "support",
+      "creative",
+      "research"
+    ],
+    "channel": [
+      "terminal",
+      "chat",
+      "voice",
+      "background"
+    ],
+    "stakes": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "turn_origin": [
+      "user",
+      "system",
+      "tool",
+      "subagent"
+    ],
+    "tags": [
+      "technical",
+      "review",
+      "sensitive",
+      "urgent",
+      "beginner",
+      "expert"
+    ]
+  },
+  "defaults": {
+    "task_type": "general",
+    "channel": "terminal",
+    "stakes": "medium",
+    "turn_origin": "user"
+  },
+  "tools": [
+    {
+      "names": [
+        "edit",
+        "multiedit",
+        "write",
+        "notebookedit",
+        "apply_patch",
+        "patch",
+        "str_replace_editor",
+        "edit_file",
+        "write_file"
+      ],
+      "task_type": "coding",
+      "tags": [
+        "technical"
+      ]
+    },
+    {
+      "names": [
+        "bash",
+        "shell",
+        "terminal",
+        "exec",
+        "run_command",
+        "execute_code"
+      ],
+      "tags": [
+        "technical"
+      ]
+    },
+    {
+      "names": [
+        "read",
+        "grep",
+        "glob",
+        "ls",
+        "find",
+        "search",
+        "read_file",
+        "search_files",
+        "websearch",
+        "webfetch",
+        "web_search",
+        "web_fetch",
+        "web_extract",
+        "browse",
+        "browser",
+        "browser_navigate"
+      ],
+      "task_type": "research"
+    }
+  ],
+  "failures": {
+    "at_least": 2,
+    "stakes": "high"
+  },
+  "plan_mode": {
+    "task_type": "research"
+  },
+  "text": [
+    {
+      "pattern": "\\b(review|pr|pull request|code review|lgtm)\\b",
+      "task_type": "code_review",
+      "tags": [
+        "review"
+      ]
+    },
+    {
+      "pattern": "\\b(story|poem|brainstorm|slogan|lyrics|creative)\\b",
+      "task_type": "creative"
+    },
+    {
+      "pattern": "\\b(implement|refactor|debug|bug|compile|function|unit test|stack trace|traceback|exception)\\b",
+      "task_type": "coding",
+      "tags": [
+        "technical"
+      ]
+    },
+    {
+      "pattern": "\\b(research|compare|investigate|survey|what is|how does|why does)\\b",
+      "task_type": "research"
+    },
+    {
+      "pattern": "\\b(stuck|confused|not working|frustrat\\w*|help me)\\b",
+      "task_type": "support"
+    },
+    {
+      "pattern": "\\b(urgent|asap|immediately|outage|hotfix|prod(uction)? is down)\\b",
+      "stakes": "high",
+      "tags": [
+        "urgent"
+      ]
+    },
+    {
+      "pattern": "\\b(security|vulnerabilit\\w*|credentials?|password|legal|medical|production database)\\b",
+      "stakes": "high",
+      "tags": [
+        "sensitive"
+      ]
+    },
+    {
+      "pattern": "\\b(beginner|eli5|explain like|new to|first time|never used)\\b",
+      "tags": [
+        "beginner"
+      ]
+    },
+    {
+      "pattern": "\\b(tl;?dr|just the (code|diff|answer)|skip the explanation|no explanation)\\b",
+      "tags": [
+        "expert"
+      ]
+    }
+  ]
+}

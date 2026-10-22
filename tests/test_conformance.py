@@ -21,3 +21,25 @@ def test_vendored_lite_clients_identical():
     from sdk.python.lite import CATALOGUE
     from protocol.catalogue import CATALOGUE as SOURCE
     assert CATALOGUE==SOURCE
+
+@pytest.mark.parametrize('case',fixtures['contexts'],ids=lambda f:f['name'])
+def test_context_derivation_fixtures(case):
+    # The same fixtures are asserted against deriveContext in sdk/typescript/test.ts.
+    from sdk.python.lite import derive_context
+    assert derive_context(case['signals'],case['declared'],case['text'])==case['context']
+
+def test_context_rules_match_engine_vocabulary():
+    from sdk.python.lite import CONTEXT_RULES
+    from engine.neural.policy import VOCAB
+    from engine.api.contracts import Context
+    vocab=CONTEXT_RULES['vocab']
+    assert {k:tuple(vocab[k]) for k in VOCAB}==VOCAB and tuple(vocab['turn_origin'])==VOCAB['turn_origin']
+    Context(**CONTEXT_RULES['defaults'])
+    for rule in CONTEXT_RULES['tools']+CONTEXT_RULES['text']:
+        Context(**{k:rule[k] for k in ('task_type','stakes') if k in rule},tags=rule.get('tags',[]))
+    assert json.loads(Path('protocol/upap/v1/context-rules.json').read_text())==CONTEXT_RULES
+
+def test_derived_context_never_contains_text():
+    from sdk.python.lite import derive_context
+    secret='zz-private-marker review this asap'
+    assert 'zz-private-marker' not in json.dumps(derive_context({'tools':['Edit']},None,secret))

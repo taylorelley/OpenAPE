@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased — derived turn context (expressiveness upgrade, phase 1)
+
+* Adapters no longer send a fixed context. They derive task type, stakes, channel
+  and tags from host metadata with one shared rule table
+  (`protocol/upap/v1/context-rules.json`, generated from `sdk/python/lite.py`) and
+  `derive_context` / `deriveContext`, which conformance fixtures keep byte-identical.
+* Signals: previous-turn tool names and failure counts (Claude Code `PostToolUse` /
+  `PostToolUseFailure`, Hermes `post_tool_call`, OpenClaw `after_tool_call`, Pi
+  `tool_execution_end`), Claude Code plan mode, Hermes platform and OpenClaw channel,
+  and the user's declared context (`OPENAPE_CONTEXT`, or `.openape.json` for Claude
+  Code). Tool arguments and results are never read.
+* Opt-in `OPENAPE_CONTEXT_TEXT=local`: the user's message is matched against fixed
+  keyword rules on the host; only the derived labels are sent. Tests assert that no
+  prompt, tool argument or result text reaches requests or adapter state.
+* Same vocabulary and decoder-v2; no engine or protocol change.
+
 ## Unreleased — human-like development (see docs/adr/0004-human-like-development.md)
 
 * Temperament and individuality: the creation version is the persona's temperament

@@ -1,6 +1,9 @@
 /** OpenAPE OpenClaw plugin. Verified against openclaw 2026.10.5 (embedded runner).
  * `before_prompt_build` -> `appendContext` only; never systemPrompt, tool policy or
- * SOUL.md. Prompt text is never read or transmitted. Permission grants
+ * SOUL.md. Turn context comes from metadata: tool names and errors from
+ * `after_tool_call` (never params or results), the run's channel and the declared
+ * context (OPENAPE_CONTEXT). The current user message is read only with
+ * OPENAPE_CONTEXT_TEXT=local, classified in memory and never transmitted. Permission grants
  * (allowPromptInjection / allowConversationAccess) remain host-controlled.
  * In active mode it registers one tool, persona_feedback (declared in
  * contracts.tools; style feedback only; OPENAPE_AGENT_FEEDBACK=0 disables). */
@@ -15,11 +18,17 @@ export function turnIdentity(event:any,ctx:any):string|null{
  // otherwise the run id, so rebuilds/retries within one run reuse one decision.
  return event.currentUserMessageId??(ctx.runId?`run:${ctx.runId}`:null);
 }
+const TERMINAL_CHANNELS=['cli','local','terminal','tui'];
+export function channel(ctx:any):string|undefined{
+ const id=String(ctx?.channel??ctx?.messageProvider??'').toLowerCase();
+ return !id||TERMINAL_CHANNELS.includes(id)?undefined:'chat';
+}
 export function install(api:any,config:Config,binding=new Binding(config,'upap.openclaw')){
  if(typeof api.on!=='function')throw Error('Missing native OpenClaw hook API');
+ api.on('after_tool_call',(event:any,ctx:any)=>{binding.noteTool(ctx?.sessionId,event?.toolName??ctx?.toolName,Boolean(event?.error));});
  api.on('before_prompt_build',async(event:any,ctx:any)=>{
   const turn=turnIdentity(event,ctx);if(!turn)return;
-  const r=await binding.express(ctx.sessionId,turn,ctx.modelProviderId,ctx.modelId);
+  const r=await binding.express(ctx.sessionId,turn,ctx.modelProviderId,ctx.modelId,{channel:channel(ctx),text:event.currentUserMessage??event.prompt});
   ctx.hookInvocation?.assertActive();
   return r.text?{appendContext:r.text}:undefined;
  });

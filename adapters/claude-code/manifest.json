@@ -25,6 +25,12 @@
     "PostModelSwitch",
     "SessionEnd"
   ],
+  "context_hooks": [
+    "PostToolUse",
+    "PostToolUseFailure",
+    "UserPromptSubmit"
+  ],
+  "context_signals": "previous-turn tool names and failure count, plan mode, declared context (.openape.json, OPENAPE_CONTEXT); prompt text only with OPENAPE_CONTEXT_TEXT=local, classified locally and never sent",
   "verified_capabilities": [
     "real_cli_lifecycle_synthetic_model",
     "single_injection_per_turn",
@@ -36,7 +42,8 @@
   ],
   "unverified": [
     "PostModelSwitch (interactive /model only)",
-    "StopFailure path"
+    "StopFailure path",
+    "derived turn context against a real Claude Code build (PostToolUse/PostToolUseFailure signals)"
   ],
   "subagents": "opt out: no injection or observation inside agent_id contexts; bind a separately scoped child persona instead",
   "smoke": "python -m scripts.claude_code_host_smoke",

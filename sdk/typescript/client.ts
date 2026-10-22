@@ -1,7 +1,42 @@
 import catalogue from '../../renderers/controls-v1.json' with { type:'json' };
 import personaFeedbackTool from '../../protocol/upap/v1/tools/persona_feedback.json' with { type:'json' };
 /** Canonical agent tool: the model supplies trait moves, the adapter supplies the decision. */
+import contextRules from '../../protocol/upap/v1/context-rules.json' with { type:'json' };
 export {personaFeedbackTool};
+/** Host signals for context derivation: IDs, tool names and counts only, never text. */
+export type ContextSignals={tools?:string[];failures?:number;plan_mode?:boolean;channel?:string;turn_origin?:string};
+type Ctx=PersonalityContext['context'];
+const labels=(v:unknown):string[]=>Array.isArray(v)?v.filter((x):x is string=>typeof x==='string'):[];
+/** User-declared context (OPENAPE_CONTEXT): known enum values only; malformed input is dropped. */
+export function parseDeclared(raw:unknown):Partial<Ctx>{
+ let v:any=raw;if(typeof raw==='string'){try{v=JSON.parse(raw);}catch{return {};}}
+ if(!v||typeof v!=='object'||Array.isArray(v))return {};
+ const vocab:Record<string,string[]>=contextRules.vocab;const out:any={};
+ for(const k of ['task_type','channel','stakes','turn_origin'])if(typeof v[k]==='string'&&vocab[k].includes(v[k]))out[k]=v[k];
+ const tags=labels(v.tags).filter(t=>vocab.tags.includes(t));if(tags.length)out.tags=tags;
+ return out;
+}
+/** Mirror of sdk/python/lite.py derive_context (same rules file, same precedence). The
+ * opt-in text is matched in memory on the host and never returned or kept. */
+export function deriveContext(signals?:ContextSignals|null,declared?:unknown,text?:unknown,rules=contextRules):Ctx{
+ const s:any=signals&&typeof signals==='object'?signals:{};const d:any=parseDeclared(declared??{});const vocab:Record<string,string[]>=rules.vocab;
+ const ctx:any={...rules.defaults};const tags=new Set<string>();let task:string|undefined;
+ const rise=(stakes?:string)=>{if(stakes&&vocab.stakes.includes(stakes)&&vocab.stakes.indexOf(stakes)>vocab.stakes.indexOf(ctx.stakes))ctx.stakes=stakes;};
+ for(const k of ['channel','turn_origin'])if(vocab[k].includes(s[k]))ctx[k]=s[k];
+ const names=new Set(labels(s.tools).map(n=>n.toLowerCase()));
+ for(const r of rules.tools as any[])if(r.names.some((n:string)=>names.has(n))){task=task??r.task_type;for(const t of r.tags??[])tags.add(t);}
+ if(s.plan_mode===true)task=rules.plan_mode.task_type;
+ if(Number.isInteger(s.failures)&&s.failures>=rules.failures.at_least)rise(rules.failures.stakes);
+ if(typeof text==='string'&&text){
+  let found:string|undefined;
+  for(const r of rules.text as any[])if(new RegExp(r.pattern,'i').test(text)){found=found??r.task_type;for(const t of r.tags??[])tags.add(t);rise(r.stakes);}
+  task=found??task;
+ }
+ if(task)ctx.task_type=task;
+ for(const [k,v] of Object.entries(d))if(k!=='tags')ctx[k]=v;for(const t of d.tags??[])tags.add(t);
+ ctx.tags=vocab.tags.filter(t=>tags.has(t));
+ return ctx;
+}
 export type Reflection={adjustments:Record<string,'more'|'less'>;reason:'user_requested'|'user_corrected'|'observed_preference'};
 export type Mode = 'disabled'|'shadow'|'active'|'frozen';
 export type PersonalityContext = {
