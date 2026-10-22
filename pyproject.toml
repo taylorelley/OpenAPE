@@ -19,4 +19,4 @@ pythonpath = ["."]
 testpaths = ["tests"]
 
 [tool.setuptools.package-data]
-models = ["decoder-v1/*.safetensors", "decoder-v1/*.json", "decoder-v1/MODEL_CARD.md"]
+models = ["decoder-v2/*.safetensors", "decoder-v2/*.json", "decoder-v2/MODEL_CARD.md"]

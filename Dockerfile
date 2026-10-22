@@ -14,7 +14,7 @@ COPY protocol ./protocol
 RUN chmod -R a+rX /app && pip install --no-build-isolation --no-deps . && useradd --uid 10001 --create-home openape && mkdir /data && chown openape /data
 USER 10001:10001
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
-ENV OPENAPE_DATA=/data OPENAPE_DECODER=/app/models/decoder-v1/decoder.safetensors PYTHONDONTWRITEBYTECODE=1
+ENV OPENAPE_DATA=/data OPENAPE_DECODER=/app/models/decoder-v2/decoder.safetensors PYTHONDONTWRITEBYTECODE=1
 EXPOSE 8765
 HEALTHCHECK --interval=30s --timeout=3s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/health/ready', timeout=2)"
 CMD ["openape", "serve", "--host", "0.0.0.0", "--data", "/data"]

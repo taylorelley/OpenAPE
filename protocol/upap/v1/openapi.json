@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "OpenAPE \u2014 Agent Personality Engine",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "paths": {
     "/health/live": {
@@ -788,12 +788,30 @@
                 "concise",
                 "detailed",
                 "warm",
-                "formal"
+                "reserved",
+                "formal",
+                "casual",
+                "direct",
+                "gentle",
+                "playful",
+                "serious"
               ]
             },
             "type": "array",
-            "maxItems": 4,
+            "maxItems": 5,
             "title": "Seed Preferences"
+          },
+          "parent_persona_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Persona Id"
           }
         },
         "additionalProperties": false,
@@ -886,6 +904,31 @@
               "baseline_fallback"
             ],
             "title": "Engine Status"
+          },
+          "propensity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Propensity"
+          },
+          "diagnostics": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnostics"
           }
         },
         "additionalProperties": false,
@@ -1082,6 +1125,23 @@
             "type": "boolean",
             "title": "Exploration Consent",
             "default": false
+          },
+          "pinned_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pinned Version"
+          },
+          "debug": {
+            "type": "boolean",
+            "title": "Debug",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -1168,7 +1228,7 @@
             "anyOf": [
               {
                 "type": "integer",
-                "maximum": 19.0,
+                "maximum": 23.0,
                 "minimum": 0.0
               },
               {
@@ -1181,7 +1241,7 @@
             "anyOf": [
               {
                 "type": "integer",
-                "maximum": 19.0,
+                "maximum": 23.0,
                 "minimum": 0.0
               },
               {
@@ -1194,6 +1254,27 @@
             "type": "string",
             "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
             "title": "Evidence Group"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Evidence Refs"
           }
         },
         "additionalProperties": false,
