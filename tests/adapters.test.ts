@@ -43,7 +43,7 @@ test('Pi and OpenClaw register persona_feedback only in active mode',async()=>{
   install({on:()=>{},registerTool:(t:any,o?:any)=>tools.push([t,o])},{...config,mode},binding);
   assert.equal(tools.length,expected);if(!expected)continue;
   const [entry,opts]=tools[0];const tool=typeof entry==='function'?entry({sessionId:'s'}):entry;
-  assert.equal(tool.name,'persona_feedback');assert.deepEqual(Object.keys(tool.parameters.properties),['adjustments','reason']);
+  assert.equal(tool.name,'persona_feedback');assert.deepEqual(Object.keys(tool.parameters.properties),['adjustments','habits','reason']);
   if(install===claw)assert.equal(opts.name,'persona_feedback');
   const result=await tool.execute('call',{adjustments:{humour:'less'},reason:'user_corrected'},undefined,undefined,{sessionManager:{getSessionId:()=> 's'}});
   assert.equal(result.content[0].text,'Recorded.');assert.equal(reflected[0][0],'s');assert.deepEqual(reflected[0][1].adjustments,{humour:'less'});
@@ -61,7 +61,7 @@ test('OpenClaw derives context from tool metadata and never sends the message',a
  handlers.get('after_tool_call')!({toolName:'edit',params:{path:'zz-private'},result:'zz-private'},{sessionId:'s',toolName:'edit'});
  for(let i=0;i<2;i++)handlers.get('after_tool_call')!({toolName:'exec',params:{},error:'zz-private failure'},{sessionId:'s',toolName:'exec'});
  await handlers.get('before_prompt_build')!({currentUserMessage:'zz-private review this asap',currentUserMessageId:'u1'},ctx);
- assert.deepEqual(requests[0].context,{task_type:'coding',channel:'chat',stakes:'high',turn_origin:'user',tags:['technical','expert']});
+ assert.deepEqual(requests[0].context,{task_type:'debugging',channel:'chat',stakes:'high',turn_origin:'user',tags:['technical','expert','error_present']});
  await handlers.get('before_prompt_build')!({currentUserMessage:'zz-private review this asap',currentUserMessageId:'u2'},{sessionId:'s',trigger:'user'});
  assert.deepEqual(requests[1].context,{task_type:'general',channel:'terminal',stakes:'medium',turn_origin:'user',tags:['expert']});
  assert(!JSON.stringify(requests).includes('zz-private'));

@@ -22,7 +22,7 @@ def main():
                     except httpx.TransportError:pass
                     time.sleep(.1)
                 else:raise RuntimeError('engine startup timed out')
-                c.post('/v1/personas',json={'protocol_version':'upap/1','persona_id':'host-smoke','archetype':'balanced','evolution':'manual'}).raise_for_status()
+                c.post('/v1/personas',json={'protocol_version':'upap/2','persona_id':'host-smoke','archetype':'balanced','evolution':'manual'}).raise_for_status()
                 result=subprocess.run(['node','scripts/pi_host_smoke.mjs'],cwd=ROOT,env={**env,'OPENAPE_SMOKE_ENGINE_PID':str(proc.pid)},capture_output=True,text=True,timeout=45)
                 print(result.stdout);print(result.stderr,file=sys.stderr)
                 if result.returncode:raise SystemExit(result.returncode)

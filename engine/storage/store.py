@@ -9,6 +9,10 @@ from pathlib import Path
 import torch
 from safetensors.torch import save, load
 
+# Version 3 holds personas for behaviour-controls/2 and decoder-v3. Older stores hold
+# latents for another decoder and must be reset (`openape migrate --reset`) first.
+SCHEMA = 'openape-store/3'
+
 class Store:
     def __init__(self,root):
         self.root=Path(root); self.root.mkdir(parents=True,exist_ok=True)
@@ -31,6 +35,7 @@ class Store:
         CREATE TABLE IF NOT EXISTS maturation(tenant TEXT,persona TEXT,user_id TEXT,experience INTEGER DEFAULT 0,last_m REAL DEFAULT 0,last_decision INTEGER DEFAULT 0,PRIMARY KEY(tenant,persona,user_id));
         CREATE TABLE IF NOT EXISTS states(tenant TEXT,persona TEXT,user_id TEXT,adapter TEXT,session TEXT,delta TEXT,feedback TEXT,updates INTEGER,PRIMARY KEY(tenant,persona,user_id,adapter,session));
         CREATE TABLE IF NOT EXISTS samples(tenant TEXT,persona TEXT,user_id TEXT,session TEXT,delta TEXT,feedback TEXT,consumed INTEGER DEFAULT 0);
+        CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT);
         ''')
         self.db.row_factory=sqlite3.Row
         # Additive migrations from the 0.1.0 schema. Lineage columns drive revocation.
@@ -38,11 +43,15 @@ class Store:
         for table,column,decl in (('personas','parent','TEXT'),('versions','job','TEXT'),('versions','core_base','TEXT'),('versions','revoked','INTEGER DEFAULT 0'),
                 ('personas','archetype','TEXT'),('personas','seeds',"TEXT DEFAULT '[]'"),('personas','evolution',"TEXT DEFAULT 'manual'"),('personas','maturation','TEXT'),('personas','agent_feedback','INTEGER DEFAULT 0'),
                 ('personas','temperament','TEXT'),('personas','individuality','TEXT'),('maturation','effective','REAL'),('maturation','last_e','REAL DEFAULT 0'),
-                ('maturation','life','TEXT'),('maturation','anchor','TEXT')):
+                ('maturation','life','TEXT'),('maturation','anchor','TEXT'),('sessions','turns','INTEGER DEFAULT 0')):
             if column not in {r['name'] for r in self.db.execute(f'PRAGMA table_info({table})')}:
                 self.db.execute(f'ALTER TABLE {table} ADD COLUMN {column} {decl}')
         # Experience recorded before effective experience counts one unit per session.
         self.db.execute('UPDATE maturation SET effective=experience WHERE effective IS NULL')
+        row=self.db.execute("SELECT value FROM meta WHERE key='schema'").fetchone()
+        if not row and not self.db.execute('SELECT 1 FROM personas LIMIT 1').fetchone():
+            self.db.execute("INSERT INTO meta VALUES('schema',?)",(SCHEMA,));row={'value':SCHEMA}
+        self.legacy=row is None or row['value']!=SCHEMA
     @contextmanager
     def tx(self):
         with self.lock:

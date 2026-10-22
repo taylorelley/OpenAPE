@@ -2,7 +2,7 @@
   "additionalProperties": false,
   "properties": {
     "protocol_version": {
-      "const": "upap/1",
+      "const": "upap/2",
       "title": "Protocol Version",
       "type": "string"
     },
@@ -25,7 +25,6 @@
         "type": "string"
       },
       "maxProperties": 3,
-      "minProperties": 1,
       "propertyNames": {
         "enum": [
           "directness",
@@ -38,6 +37,38 @@
         ]
       },
       "title": "Adjustments",
+      "type": "object"
+    },
+    "habits": {
+      "additionalProperties": {
+        "enum": [
+          "more_often",
+          "less_often"
+        ],
+        "type": "string"
+      },
+      "maxProperties": 2,
+      "propertyNames": {
+        "enum": [
+          "summary_first",
+          "risks_first",
+          "next_step",
+          "confirm_goal",
+          "clarify_once",
+          "acknowledge_constraints",
+          "concrete_examples",
+          "analogies",
+          "structured",
+          "plain_words",
+          "precise_terms",
+          "tradeoffs",
+          "acknowledge_progress",
+          "light_aside",
+          "recap_end",
+          "flag_uncertainty"
+        ]
+      },
+      "title": "Habits",
       "type": "object"
     },
     "reason": {
@@ -70,7 +101,6 @@
     "protocol_version",
     "reflection_id",
     "decision_id",
-    "adjustments",
     "reason"
   ],
   "title": "Reflection",

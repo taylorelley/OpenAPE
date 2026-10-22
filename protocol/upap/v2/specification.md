@@ -1,10 +1,11 @@
-# UPAP/1 — OpenAPE experimental profile
+# UPAP/2 — OpenAPE experimental profile
 
 JSON Schemas in `schema/` and `openapi.json` describe this implementation. Regenerate
 with `python -m scripts.generate_protocol`; common positive/negative fixtures are
 in `conformance.json`. This is not an established standard or full v1 conformance.
 
-Every write body MUST declare `protocol_version: "upap/1"`. Every response,
+Every write body MUST declare `protocol_version: "upap/2"`; `upap/1` bodies are
+rejected with UNSUPPORTED_PROTOCOL. Every response,
 including errors and health, declares the version. Unknown fields are rejected.
 IDs are bounded ASCII strings. Observation dates must carry UTC offsets and be
 within seven days; clocks outside that window receive INVALID_CONTEXT.
@@ -41,13 +42,29 @@ horizon, maturity) for the core and, when scoped to that user, the relationship.
 Personas stored by 0.2.0 keep manual evolution and no agent feedback until changed.
 
 Express requests identify tenant/persona/user, adapter, provider, session and turn.
+The context (encoder/3) is task type (general, code_review, coding, support, creative,
+research, debugging, planning, writing), channel, stakes, turn origin and tags
+(technical, review, sensitive, urgent, beginner, expert, error_present, first_turn,
+long_session). `first_turn` and `long_session` (20 or more earlier turns) are set by
+the engine from its session record; host values are ignored. Adapters derive the
+rest from host metadata with the shared `context-rules.json`.
+
+Decisions carry `control_schema: "behaviour-controls/2"`, the `catalogue_hash` of
+`protocol/catalogue.py`, `controls` (an integer level 0-4 for each of seven traits:
+directness, warmth, verbosity, humour, formality, explanation_depth, assertiveness)
+and `habits` (at most 3 habit ids in catalogue order). Controls must form an approved
+configuration (no forbidden level pair); each habit must be eligible for those levels
+and not exclusive with another. Context masks cap humour at 1 for high stakes or
+`sensitive`, verbosity at 2 for `urgent`, and drop habits that do not fit (for example
+no clarifying question on urgent or non-user turns). SDKs validate all of this
+before rendering, and render the prefix, one sentence per trait and one per habit.
 Versions pin per scoped session. Ordinary inference changes neither persistent
 core nor relationship state; it writes a decision/audit ledger and session pin.
 `selection: sample` requires seed and exploration_consent; propensity stays in
 server ledger. `frozen` disallows exploration and its decisions cannot train; it may
 name `pinned_version` to evaluate an explicit immutable core version. `debug: true`
 (training:admin only) returns the logging propensity and decoder diagnostics
-(probability-weighted trait levels).
+(expected trait levels 0-4 and `habit:<id>` probabilities).
 Disabled is SDK-local and makes no HTTP call. Shadow decisions render to empty.
 
 Request deduplication is scoped `(tenant, persona, actor, request_id)` with a full
@@ -60,15 +77,18 @@ Learning requires explicit consent and core/relationship scope. Session and
 record-only feedback is retained but not trained in this release. Consented
 pairwise preferences and corrections in any scope but record-only also refit the
 open session's ephemeral state (response `session_adapted`); see Development. Pairwise
-options must be distinct approved catalogue indices. Latent learning uses canonical
+options (`preferred`, `rejected`) are distinct `{controls, habits}` choices whose
+controls form approved configurations. Latent learning uses canonical
 adapter/session groups, not caller-supplied claims of independent evidence.
 
 Agent reflections (`POST /v1/reflections`, scope `reflection:write`) are how a host
 exposes the `persona_feedback` tool (`tools/persona_feedback.json`) to its agent.
-The body names a decision, 1-3 `adjustments` (trait to `more`/`less`) and a `reason`
-enum; there is no free text. The engine moves the served catalogue row one level
-per trait, picks the nearest approved row valid under that context's mask, and
-records it as a consented pairwise preference with source `agent_reflection` (that
+The body names a decision, up to 3 `adjustments` (trait to `more`/`less`), up to 2
+`habits` (habit id to `more_often`/`less_often`; at least one move in total) and a
+`reason` enum; there is no free text. The engine moves the served configuration at
+least one level per named trait to the nearest approved configuration valid under
+that context's mask, adds or drops the named habits, and records the result against
+the served choice as a consented pairwise preference with source `agent_reflection` (that
 source is refused on `/v1/feedback`). Rules: only user-originated, non-frozen,
 non-fallback decisions by the same actor; one reflection per decision (replaying
 the same one deduplicates) and 3 per session (RATE_LIMITED); the persona's
@@ -158,5 +178,5 @@ Known conformance gaps: SDKs are hand-written (golden fixtures, not generated
 clients); write/read envelopes beyond decisions are not all modeled; source
 reliability is a credential class only; explicit relationship export unsupported;
 session state is a latent offset, not the decoder's (untrained) session input, and
-is not checkpointed; no cross-major migration
-system. See docs/reports/open-issues.md.
+is not checkpointed. Cross-major migration is a reset (`openape migrate --reset`), not
+a state conversion. See docs/reports/open-issues.md.

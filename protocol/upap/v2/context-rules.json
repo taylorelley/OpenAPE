@@ -6,7 +6,10 @@
       "coding",
       "support",
       "creative",
-      "research"
+      "research",
+      "debugging",
+      "planning",
+      "writing"
     ],
     "channel": [
       "terminal",
@@ -31,9 +34,16 @@
       "sensitive",
       "urgent",
       "beginner",
-      "expert"
+      "expert",
+      "error_present",
+      "first_turn",
+      "long_session"
     ]
   },
+  "engine_tags": [
+    "first_turn",
+    "long_session"
+  ],
   "defaults": {
     "task_type": "general",
     "channel": "terminal",
@@ -93,12 +103,21 @@
       "task_type": "research"
     }
   ],
-  "failures": {
-    "at_least": 2,
-    "stakes": "high"
-  },
+  "failures": [
+    {
+      "at_least": 1,
+      "tags": [
+        "error_present"
+      ]
+    },
+    {
+      "at_least": 2,
+      "task_type": "debugging",
+      "stakes": "high"
+    }
+  ],
   "plan_mode": {
-    "task_type": "research"
+    "task_type": "planning"
   },
   "text": [
     {
@@ -109,11 +128,27 @@
       ]
     },
     {
+      "pattern": "\\b(debug|bug|traceback|exception|stack trace|segfault|error|failing|crash(es|ed)?)\\b",
+      "task_type": "debugging",
+      "tags": [
+        "technical",
+        "error_present"
+      ]
+    },
+    {
       "pattern": "\\b(story|poem|brainstorm|slogan|lyrics|creative)\\b",
       "task_type": "creative"
     },
     {
-      "pattern": "\\b(implement|refactor|debug|bug|compile|function|unit test|stack trace|traceback|exception)\\b",
+      "pattern": "\\b(plan|roadmap|architecture|design doc|milestones?)\\b",
+      "task_type": "planning"
+    },
+    {
+      "pattern": "\\b(draft|rewrite|proofread|email|blog post|essay|documentation)\\b",
+      "task_type": "writing"
+    },
+    {
+      "pattern": "\\b(implement|refactor|compile|function|unit test)\\b",
       "task_type": "coding",
       "tags": [
         "technical"

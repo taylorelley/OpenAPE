@@ -2,8 +2,10 @@
 import json
 from datetime import datetime,timezone
 from conftest import *
-from engine.neural.policy import CATALOGUE,mask
-from engine.learning.reflection import adjusted_control,LEVEL
+import random
+from engine.neural.policy import ACTIONS,APPROVED_LEVELS,TRAITS,INDEX,NEUTRAL_ACTION,mask
+from engine.learning.reflection import adjusted_choice
+PATIENT=dict(warmth=3,verbosity=3,formality=1,explanation_depth=3,assertiveness=1)
 from test_evolution import make,solo,audit
 
 HOST_TOKEN='host-agent-token-000000000000000000'
@@ -13,18 +15,29 @@ def host_app(tmp_path,scopes=('persona:express','observations:write','reflection
 def reflection(rid,decision,**kw):
     return dict(reflection_id=rid,decision_id=decision,adjustments=kw.pop('adjustments',{'verbosity':'less'}),reason=kw.pop('reason','user_requested'),**kw)
 
-def test_adjustment_maps_to_nearest_approved_row():
+def test_adjustment_maps_to_nearest_approved_configuration():
     ctx=dict(task_type='general',channel='terminal',stakes='low',turn_origin='user',tags=[])
-    for served in range(len(CATALOGUE)):
-        for trait in CATALOGUE[0]:
+    for served in random.Random(0).sample(range(ACTIONS),150):
+        for k,trait in enumerate(TRAITS):
             for way,sign in (('more',1),('less',-1)):
-                row=adjusted_control(served,{trait:way},ctx)
-                if row is None:continue
-                assert row!=served and (LEVEL[CATALOGUE[row][trait]]-LEVEL[CATALOGUE[served][trait]])*sign>=1
-                assert row==adjusted_control(served,{trait:way},ctx)
-    urgent=dict(ctx,tags=['urgent']);served=16
-    row=adjusted_control(served,{'verbosity':'more'},urgent);assert row is None or mask(urgent)[row]
-    assert adjusted_control(1,{'verbosity':'less'},ctx) is None  # already as brief as the catalogue allows
+                moved=adjusted_choice((served,()),{trait:way},ctx)
+                if moved is None:continue
+                row=moved[0];delta=APPROVED_LEVELS[row]-APPROVED_LEVELS[served]
+                assert row!=served and int(delta[k])*sign>=1 and mask(ctx)[row]
+                assert int(delta.abs().sum())-abs(int(delta[k]))<=2  # other traits barely move
+                assert moved==adjusted_choice((served,()),{trait:way},ctx)
+    neutral=(NEUTRAL_ACTION,());urgent=dict(ctx,tags=['urgent'])
+    assert adjusted_choice(neutral,{'verbosity':'more'},urgent) is None  # urgent turns cap verbosity
+    brief=INDEX[(2,2,0,0,2,2,2)];assert adjusted_choice((brief,()),{'verbosity':'less'},ctx) is None  # already as brief as it gets
+
+def test_habit_moves():
+    ctx=dict(task_type='general',channel='terminal',stakes='low',turn_origin='user',tags=[]);neutral=(NEUTRAL_ACTION,())
+    assert adjusted_choice(neutral,{},ctx,{'next_step':'more_often'})==(NEUTRAL_ACTION,('next_step',))
+    assert adjusted_choice((NEUTRAL_ACTION,('next_step','flag_uncertainty')),{},ctx,{'next_step':'less_often'})==(NEUTRAL_ACTION,('flag_uncertainty',))
+    assert adjusted_choice(neutral,{},ctx,{'light_aside':'more_often'}) is None  # needs some humour
+    wry=INDEX[(2,2,2,1,2,2,2)];assert adjusted_choice((wry,()),{'humour':'more'},ctx,{'light_aside':'more_often'})==(INDEX[(2,2,2,2,2,2,2)],('light_aside',))
+    assert adjusted_choice(neutral,{},dict(ctx,tags=['urgent']),{'clarify_once':'more_often'}) is None
+    assert adjusted_choice(neutral,{},ctx,{'next_step':'less_often'}) is None  # nothing changes
 
 def test_agent_reflection_guardrails(tmp_path):
     with TestClient(host_app(tmp_path),headers={'Authorization':'Bearer '+TOKEN}) as api:
@@ -32,12 +45,13 @@ def test_agent_reflection_guardrails(tmp_path):
         api.headers['Authorization']='Bearer '+HOST_TOKEN
         d=post(api,'/v1/express',expression(request_id='h1',session='hs')).json()
         r=post(api,'/v1/reflections',reflection('one',d['decision_id']));assert r.status_code==200,r.text
-        out=r.json();assert out['scope']=='relationship' and LEVEL[CATALOGUE[out['preferred_control']]['verbosity']]<LEVEL[d['controls']['verbosity']]
+        out=r.json();assert out['scope']=='relationship' and out['preferred']['controls']['verbosity']<d['controls']['verbosity']
+        assert out['rejected']=={'controls':d['controls'],'habits':d['habits']}
         assert post(api,'/v1/reflections',reflection('one',d['decision_id'])).json()['deduplicated']
         assert post(api,'/v1/reflections',reflection('two',d['decision_id'],adjustments={'warmth':'less'})).status_code==429  # one per decision
         for i in range(2,5):
             d=post(api,'/v1/express',expression(request_id=f'h{i}',session='hs')).json()
-            r=post(api,'/v1/reflections',reflection(f'r{i}',d['decision_id']))
+            r=post(api,'/v1/reflections',reflection(f'r{i}',d['decision_id'],adjustments={'formality':'more' if i%2 else 'less'}))
             assert r.status_code==(200 if i<4 else 429),r.text  # three per session
         tool=expression(request_id='tool',session='ts');tool['context']['turn_origin']='tool'
         d=post(api,'/v1/express',tool).json();assert post(api,'/v1/reflections',reflection('t',d['decision_id'])).status_code==400
@@ -46,7 +60,7 @@ def test_agent_reflection_guardrails(tmp_path):
         d=post(api,'/v1/express',expression(request_id='c',session='cs')).json()
         assert post(api,'/v1/reflections',reflection('c',d['decision_id'],scope='core')).status_code==403  # core needs admin on a user's turn
         bad=reflection('x',d['decision_id']);bad['note']='be ruder';assert post(api,'/v1/reflections',bad).status_code==422  # no free text
-        f=dict(feedback_id='spoof',decision_id=d['decision_id'],source='agent_reflection',kind='pairwise_preference',actor_id='agent-host',preferred_control=1,rejected_control=0,evidence_group='g')
+        f=dict(feedback_id='spoof',decision_id=d['decision_id'],source='agent_reflection',kind='pairwise_preference',actor_id='agent-host',preferred=option(**TERSE),rejected=option(),evidence_group='g')
         api.headers['Authorization']='Bearer '+TOKEN;assert post(api,'/v1/feedback',f).status_code==403
     with TestClient(host_app(tmp_path/'b',scopes=('persona:express',)),headers={'Authorization':'Bearer '+TOKEN}) as api:
         make(api,'ape',archetype='mentor');api.headers['Authorization']='Bearer '+HOST_TOKEN
@@ -80,7 +94,8 @@ def test_reflections_never_outweigh_people(api):
     for i in range(30):
         d=post(api,'/v1/express',expression(request_id=f'w{i}',session=f'ws{i}')).json()
         if i<6:
-            f=dict(feedback_id=f'u{i}',decision_id=d['decision_id'],source='explicit_user',kind='pairwise_preference',actor_id='owner',consent_scope='relationship',learning_consent=True,preferred_control=9,rejected_control=int(d['control_set_id'][-2:]) or 1,evidence_group=f'ws{i}')
+            served={'controls':d['controls'],'habits':d['habits']}
+            f=dict(feedback_id=f'u{i}',decision_id=d['decision_id'],source='explicit_user',kind='pairwise_preference',actor_id='owner',consent_scope='relationship',learning_consent=True,preferred=option(**PATIENT),rejected=served if served!=option(**PATIENT) else option(**TERSE),evidence_group=f'ws{i}')
             assert post(api,'/v1/feedback',f).status_code==200
         else:assert post(api,'/v1/reflections',reflection(f'w{i}',d['decision_id'],adjustments={'verbosity':'less'})).status_code==200
     api.app.state.drain()

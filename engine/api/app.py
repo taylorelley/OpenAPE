@@ -1,4 +1,4 @@
-"""OpenAPE UPAP/1 API. Run with `openape serve`, not a permissive default app."""
+"""OpenAPE UPAP/2 API. Run with `openape serve`, not a permissive default app."""
 import hashlib
 import json
 import os
@@ -18,17 +18,20 @@ from fastapi.exceptions import RequestValidationError
 from engine.api.contracts import *
 from engine.security.auth import Auth, Principal
 from engine.storage.store import Store
-from engine.neural.policy import Decoder, CATALOGUE, ACTIONS, CORE_DIM, REL_DIM, VOCAB, mask_reason
-from engine.neural.profiles import fit_seed_latent, seed_profile, ARCHETYPES
+from protocol.catalogue import SCHEMA, CATALOGUE_HASH, HABIT_IDS
+from engine.neural.policy import Decoder, ACTIONS, NEUTRAL_ACTION, CORE_DIM, REL_DIM, VOCAB, ENGINE_TAGS, mask_reason, joint, select_habits, levels_of, choice
+from engine.neural.profiles import fit_seed_latent, seed_profile, ARCHETYPES, ARCHETYPE_HABITS
 from engine.learning.trainer import fit_candidate, state_norm_limit
 from engine.learning import maturation, development as dev
-from engine.learning.reflection import adjusted_control
+from engine.learning.reflection import adjusted_choice
 from engine.evaluation.policy import group_split, evaluate_candidate, evaluate_maturation, policy_for
 
 ROOT=Path(__file__).resolve().parents[2]
-DEFAULT_DECODER=ROOT/'models/decoder-v2/decoder.safetensors'
+DEFAULT_DECODER=ROOT/'models/decoder-v3/decoder.safetensors'
+PROTOCOL='upap/2'
+LONG_SESSION=20  # turns after which the engine tags a session long_session
 def uid(): return str(uuid.uuid4())
-def wire(**kwargs): return {'protocol_version':'upap/1',**kwargs}
+def wire(**kwargs): return {'protocol_version':PROTOCOL,**kwargs}
 class Fault(Exception):
     def __init__(self,code,message,status=400,retryable=False): self.code,self.message,self.status,self.retryable=code,message,status,retryable
 VERSION_COLUMNS='(tenant,persona,id,hash,parent,scope,user_id,job,core_base)'
@@ -41,13 +44,19 @@ def system_principal(tenant,persona_id,actor):
     return Principal(tenant,actor,frozenset({'training:admin'}),(persona_id,),('*',))
 def short_id(value): return value if len(value)<=100 else hashlib.sha256(value.encode()).hexdigest()
 
+class LegacyStore(RuntimeError):
+    pass
 def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_minute=600):
     auth=Auth(credentials); store=Store(data_dir or os.environ.get('OPENAPE_DATA','.openape'))
+    if store.legacy:
+        store.db.close()
+        raise LegacyStore('This data directory holds personas from an earlier OpenAPE release (behaviour-controls/1). '
+            'Run `openape migrate --reset` to re-create them from their recorded archetypes, then start the engine again.')
     decoder_location=decoder_path or os.environ.get('OPENAPE_DECODER',str(DEFAULT_DECODER))
     try:decoder=Decoder(decoder_location)
     except (ValueError,OSError,RuntimeError,KeyError):decoder=Decoder('/nonexistent-openape-approved-fallback')
     engine_status='experimental_synthetic' if decoder.model else 'baseline_fallback'
-    app=FastAPI(title='OpenAPE — Agent Personality Engine',version='0.2.0')
+    app=FastAPI(title='OpenAPE — Agent Personality Engine',version='0.3.0')
     app.state.store=store; app.state.decoder=decoder
     pool=ThreadPoolExecutor(max_workers=1,thread_name_prefix='openape-training')
     def drain():
@@ -69,7 +78,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
     @app.exception_handler(RequestValidationError)
     async def invalid(request,exc):
         code='UNSUPPORTED_PROTOCOL' if any('protocol_version' in e['loc'] for e in exc.errors()) else 'INVALID_CONTEXT'
-        return JSONResponse(status_code=422,content=wire(error=dict(code=code,message='Request does not conform to UPAP/1',retryable=False,request_id=getattr(request.state,'request_id',None))))
+        return JSONResponse(status_code=422,content=wire(error=dict(code=code,message='Request does not conform to UPAP/2',retryable=False,request_id=getattr(request.state,'request_id',None))))
     @app.middleware('http')
     async def bounds(request,call_next):
         request.state.request_id=uid()
@@ -81,8 +90,8 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
             request._body=body
             try:
                 data=json.loads(body)
-                if data.get('protocol_version')!='upap/1':
-                    return JSONResponse(status_code=422,content=wire(error={'code':'UNSUPPORTED_PROTOCOL','message':'Explicit upap/1 required','retryable':False,'request_id':request.state.request_id}))
+                if data.get('protocol_version')!=PROTOCOL:
+                    return JSONResponse(status_code=422,content=wire(error={'code':'UNSUPPORTED_PROTOCOL','message':'Explicit upap/2 required','retryable':False,'request_id':request.state.request_id}))
             except (ValueError,AttributeError):
                 return JSONResponse(status_code=422,content=wire(error={'code':'INVALID_CONTEXT','message':'Expected JSON object','retryable':False,'request_id':request.state.request_id}))
         return await call_next(request)
@@ -113,9 +122,9 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
     def ready(): return wire(status='ready',engine_status=engine_status)
     @app.get('/v1/capabilities')
     def capabilities(p=Depends(principal)):
-        return wire(protocol_versions=['upap/1'],control_schema='behaviour-controls/1',controls=len(CATALOGUE),encoder=decoder.meta.get('encoder'),decoder_hash=decoder.hash,engine_status=engine_status,
+        return wire(protocol_versions=[PROTOCOL],control_schema=SCHEMA,catalogue_hash=CATALOGUE_HASH,controls=ACTIONS,habits=list(HABIT_IDS),encoder=decoder.meta.get('encoder'),decoder_hash=decoder.hash,engine_status=engine_status,
             max_payload_bytes=65536,modes=['disabled','shadow','active','frozen'],initializations=['archetype','seed_preferences','snapshot','imported','neutral_prior'],
-            archetypes={k:list(v) for k,v in ARCHETYPES.items()},maturation_rates={k:dict(relationship_horizon=v[0],core_horizon=v[1]) for k,v in maturation.RATES.items()},
+            archetypes={k:list(v) for k,v in ARCHETYPES.items()},archetype_habits={k:list(v) for k,v in ARCHETYPE_HABITS.items()},maturation_rates={k:dict(relationship_horizon=v[0],core_horizon=v[1]) for k,v in maturation.RATES.items()},
             features=['pairwise_learning','logged_bandit_learning','independent_evaluator','cas_promotion','rollback','lineage_revocation','core_export','subagent_snapshot','automatic_evolution','maturation','agent_reflection',
                 'temperament','individuality','session_state','habit_consolidation','life_events','relationship_accommodation','relationship_cooling','elastic_self','maturity_weighted_influence'],
             session_state='ephemeral latent offset from consented in-session preferences; sampled at session end, never a version',automatic_promotion='persona_policy')
@@ -143,7 +152,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         else:
             seeds=list(ARCHETYPES[archetype]) if archetype else req.seed_preferences
             individuality=dict(amount=req.individuality,seed=dev.default_seed(p.tenant,req.persona_id) if req.individuality_seed is None else req.individuality_seed)
-            try:x=fit_seed_latent(decoder,seeds,profile=dev.individual_profile(seed_profile(seeds),individuality['seed'],individuality['amount']))
+            try:x=fit_seed_latent(decoder,seeds,profile=dev.individual_profile(seed_profile(seeds,archetype),individuality['seed'],individuality['amount']))
             except ValueError as exc:raise Fault('INVALID_CONTEXT',str(exc))
             initialization='archetype' if archetype else 'seed_preferences'
         rate=req.maturation_rate.model_dump() if isinstance(req.maturation_rate,BaseModel) else req.maturation_rate or os.environ.get('OPENAPE_MATURATION_RATE')
@@ -203,8 +212,15 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
                 pin=db.execute('SELECT * FROM sessions WHERE tenant=? AND persona=? AND user_id=? AND adapter=? AND id=?',(p.tenant,i.persona_id,user,req.host.adapter_id,req.session.id)).fetchone()
                 cv=pin['version'] if pin else r['active']; rv=pin['rel_version'] if pin else (rel['active'] if rel else None)
                 if pin and pin['decoder']!=decoder.hash: raise Fault('DECODER_INCOMPATIBLE','Pinned decoder unavailable; start a new session',409)
-                if not pin:db.execute('INSERT INTO sessions VALUES(?,?,?,?,?,?,?,?)',(p.tenant,i.persona_id,user,req.host.adapter_id,req.session.id,cv,rv,decoder.hash))
-            status=engine_status; diagnostics=None; session_state=None
+                if not pin:db.execute('INSERT INTO sessions(tenant,persona,user_id,adapter,id,version,rel_version,decoder,turns) VALUES(?,?,?,?,?,?,?,?,0)',(p.tenant,i.persona_id,user,req.host.adapter_id,req.session.id,cv,rv,decoder.hash))
+                turns=pin['turns'] if pin else 0
+                db.execute('UPDATE sessions SET turns=turns+1 WHERE tenant=? AND persona=? AND user_id=? AND adapter=? AND id=?',(p.tenant,i.persona_id,user,req.host.adapter_id,req.session.id))
+            # Session-position tags come from the engine's own session record, never the host.
+            context=req.context.model_dump();context['tags']=[t for t in context['tags'] if t not in ENGINE_TAGS]
+            if not req.pinned_version:context['tags']+=(['first_turn'] if turns==0 else [])+(['long_session'] if turns>=LONG_SESSION else [])
+            context['tags']=[t for t in VOCAB['tags'] if t in context['tags']]
+            host=req.host.model_dump()
+            status=engine_status; diagnostics=None; session_state=None; habits=[]
             try:
                 core=latent(p,i.persona_id,cv,CORE_DIM); relationship=latent(p,i.persona_id,rv,REL_DIM) if rv else torch.zeros(REL_DIM)
                 if req.mode!='frozen' and not req.pinned_version:
@@ -215,16 +231,17 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
                         if user:relationship=relationship+offset
                         else:core=core+offset
                 with torch.no_grad():
-                    logits=decoder.logits(core,relationship,req.context.model_dump(),req.host.model_dump()); probs=torch.softmax(logits,0)
+                    traits,habit_logits=decoder.heads(core,relationship,context,host); logits=joint(traits); probs=torch.softmax(logits,0)
                     action=int(torch.multinomial(probs,1,generator=torch.Generator().manual_seed(req.seed)).item()) if req.selection=='sample' else int(logits.argmax())
-                    if req.debug:diagnostics=decoder.diagnostics(core,relationship,req.context.model_dump(),req.host.model_dump())
+                    habits=select_habits(habit_logits,action,context)
+                    if req.debug:diagnostics=decoder.diagnostics(core,relationship,context,host)
             except (ValueError,OSError,RuntimeError,KeyError,Fault):
                 # Corrupt/missing artifacts fail closed to the approved neutral configuration.
-                action=0;probs=torch.zeros(ACTIONS);probs[0]=1;status='baseline_fallback'
+                action=NEUTRAL_ACTION;probs=torch.zeros(ACTIONS);probs[action]=1;status='baseline_fallback';habits=[]
             propensity=float(probs[action]) if req.selection=='sample' and status!='baseline_fallback' else None
-            response=Decision(request_id=req.request_id,decision_id=uid(),persona_version=cv,relationship_version=rv,decoder_hash=decoder.hash,control_set_id=f'style-{action:02}',controls=Controls(**CATALOGUE[action]),mode=req.mode,policy=Policy(eligible=True,mask_reason=mask_reason(req.context.model_dump())),engine_status=status,
+            response=Decision(request_id=req.request_id,decision_id=uid(),persona_version=cv,relationship_version=rv,decoder_hash=decoder.hash,catalogue_hash=CATALOGUE_HASH,controls=Controls(**levels_of(action)),habits=habits,mode=req.mode,policy=Policy(eligible=True,mask_reason=mask_reason(context)),engine_status=status,
                 propensity=propensity if req.debug else None,diagnostics=diagnostics).model_dump()
-            data=dict(response=response,context=req.context.model_dump(),host=req.host.model_dump(),session=req.session.model_dump(),fingerprint=fingerprint,action=action,selection=req.selection,propensity=propensity,session_state=session_state)
+            data=dict(response=response,context=context,host=host,session=req.session.model_dump(),fingerprint=fingerprint,action=action,habits=habits,selection=req.selection,propensity=propensity,session_state=session_state)
             db.execute('INSERT INTO requests VALUES(?,?,?,?,?,?)',(p.tenant,i.persona_id,p.actor,req.request_id,response['decision_id'],fingerprint))
             db.execute('INSERT INTO decisions VALUES(?,?,?,?,?,?)',(p.tenant,response['decision_id'],i.persona_id,i.user_id,p.actor,json.dumps(data)))
         return response
@@ -241,7 +258,10 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         if d['actor']!=p.actor and 'training:admin' not in p.scopes:raise Fault('FORBIDDEN_SCOPE','Decision actor mismatch',403)
         if req.consent_scope=='relationship' and not d['user_id']:raise Fault('INVALID_CONTEXT','Relationship feedback requires linked user')
         if req.kind=='rating' and req.value is None:raise Fault('INVALID_CONTEXT','Rating requires value')
-        if req.kind!='rating' and (req.preferred_control is None or req.rejected_control is None or req.preferred_control==req.rejected_control):raise Fault('INVALID_CONTEXT','Distinct preference options required')
+        if req.kind!='rating':
+            if req.preferred is None or req.rejected is None or req.preferred==req.rejected:raise Fault('INVALID_CONTEXT','Distinct preference options required')
+            for c in (req.preferred,req.rejected):
+                if choice(c.controls.model_dump(),c.habits) is None:raise Fault('INVALID_CONTEXT','Preference options must be approved configurations')
         if req.occurred_at:
             try:
                 stamp=datetime.fromisoformat(req.occurred_at.replace('Z','+00:00'))
@@ -381,7 +401,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
             # As in training, one judgement per (decision, actor, kind) counts once; newest wins.
             if (f['decision_id'],f['actor_id'],f['kind']) in seen:continue
             seen.add((f['decision_id'],f['actor_id'],f['kind']))
-            out.append({**f,'weight':dev.influence(f['source'],m),**{k:d[k] for k in ('context','host','action')}})
+            out.append({**f,'weight':dev.influence(f['source'],m),**{k:d[k] for k in ('context','host','action','habits')}})
             if len(out)==dev.STATE_WINDOW:break
         return out[::-1]
     def pinned_latents(db,tenant,persona_id,pin):
@@ -418,7 +438,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
     def profile_of(r):
         """The persona's declared profile with its recorded individual variation."""
         ind=json.loads(r['individuality'] or 'null') or dict(amount=0,seed=0)
-        return dev.individual_profile(seed_profile(json.loads(r['seeds'] or '[]')),ind['seed'],ind['amount'])
+        return dev.individual_profile(seed_profile(json.loads(r['seeds'] or '[]'),r['archetype']),ind['seed'],ind['amount'])
     def habit_window(tenant,persona_id,user):
         """Newest unconsumed state samples within the habit window, and older ones."""
         rows=store.all('SELECT rowid,delta,feedback FROM samples WHERE tenant=? AND persona=? AND user_id=? AND consumed=0 ORDER BY rowid DESC',(tenant,persona_id,user))
@@ -447,7 +467,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
             if data['response']['decoder_hash']!=decoder.hash:continue
             if data['response']['mode']=='frozen' or data['response']['engine_status']=='baseline_fallback':continue
             seen.add(key)
-            examples.append({**f,'evidence_group':data['host']['adapter_id']+':'+data['session']['id'],**{k:data[k] for k in ('context','host','action','selection','propensity')}})
+            examples.append({**f,'evidence_group':data['host']['adapter_id']+':'+data['session']['id'],**{k:data[k] for k in ('context','host','action','habits','selection','propensity')}})
         if auto:
             # Newer evidence weighs more; owners weigh more early and users later; agent
             # reflections gain weight and share with maturity and never outweigh
@@ -684,31 +704,34 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         if not r['agent_feedback']:raise Fault('FORBIDDEN_SCOPE','Agent feedback is disabled for this persona',403)
         data=json.loads(d['data'])
         if data['context']['turn_origin']!='user':raise Fault('INVALID_CONTEXT','Reflections apply only to user-originated turns')
-        if data['response']['mode']=='frozen' or data['response']['engine_status']=='baseline_fallback':raise Fault('INVALID_CONTEXT','Decision cannot be learned from')
+        if data['response']['mode']=='frozen' or data['response']['engine_status']=='baseline_fallback' or data['response']['decoder_hash']!=decoder.hash:raise Fault('INVALID_CONTEXT','Decision cannot be learned from')
         scope_name=req.scope or ('relationship' if d['user_id'] else 'core')
         if scope_name=='relationship' and not d['user_id']:raise Fault('INVALID_CONTEXT','Relationship reflection requires linked user')
         if scope_name=='core' and d['user_id'] and 'training:admin' not in p.scopes:raise Fault('FORBIDDEN_SCOPE','Core reflections on a linked user\'s turn require training administrator',403)
-        preferred=adjusted_control(data['action'],req.adjustments,data['context'])
-        if preferred is None:raise Fault('INVALID_CONTEXT','No approved style moves that way in this context')
+        served=(data['action'],tuple(data['habits']))
+        moved=adjusted_choice(served,req.adjustments,data['context'],req.habits)
+        if moved is None:raise Fault('INVALID_CONTEXT','No approved style moves that way in this context')
+        as_choice=lambda c:Choice(controls=Controls(**levels_of(c[0])),habits=list(c[1]))
+        preferred,rejected=as_choice(moved),as_choice(served)
         group=short_id(data['host']['adapter_id']+':'+data['session']['id']);fid=short_id('reflection:'+req.reflection_id);adapted=False
-        f=Feedback(protocol_version='upap/1',feedback_id=fid,decision_id=req.decision_id,source='agent_reflection',kind='pairwise_preference',actor_id=p.actor,consent_scope=scope_name,
-            learning_consent=True,preferred_control=preferred,rejected_control=data['action'],evidence_group=group,occurred_at=datetime.now(timezone.utc).isoformat().replace('+00:00','Z'))
+        f=Feedback(protocol_version=PROTOCOL,feedback_id=fid,decision_id=req.decision_id,source='agent_reflection',kind='pairwise_preference',actor_id=p.actor,consent_scope=scope_name,
+            learning_consent=True,preferred=preferred,rejected=rejected,evidence_group=group,occurred_at=datetime.now(timezone.utc).isoformat().replace('+00:00','Z'))
         with store.tx() as db:
             old=db.execute('SELECT data FROM feedback WHERE tenant=? AND id=?',(p.tenant,fid)).fetchone()
             if old:
                 prior=json.loads(old['data'])
-                if (prior['decision_id'],prior['preferred_control'],prior['consent_scope'])!=(req.decision_id,preferred,scope_name):raise Fault('VERSION_CONFLICT','Reflection id reused',409)
+                if (prior['decision_id'],prior['preferred'],prior['consent_scope'])!=(req.decision_id,preferred.model_dump(),scope_name):raise Fault('VERSION_CONFLICT','Reflection id reused',409)
             else:
                 reflected="SELECT COUNT(*) FROM feedback WHERE tenant=? AND persona=? AND json_extract(data,'$.source')='agent_reflection' AND "
                 if db.execute(reflected+"json_extract(data,'$.decision_id')=?",(p.tenant,d['persona'],req.decision_id)).fetchone()[0]:raise Fault('RATE_LIMITED','One reflection per decision',429)
                 if db.execute(reflected+"json_extract(data,'$.evidence_group')=?",(p.tenant,d['persona'],group)).fetchone()[0]>=REFLECTIONS_PER_SESSION:raise Fault('RATE_LIMITED',f'At most {REFLECTIONS_PER_SESSION} reflections per session',429)
                 db.execute('INSERT INTO feedback VALUES(?,?,?,?,?,?,1)',(p.tenant,fid,d['persona'],d['user_id'],p.actor,f.model_dump_json()))
-                store.audit(db,p.tenant,d['persona'],'reflection_recorded',{'feedback_id':fid,'actor':p.actor,'reason':req.reason,'adjustments':req.adjustments,'consent_scope':scope_name,
-                    'preferred_control':preferred,'rejected_control':data['action'],'received_at':datetime.now(timezone.utc).isoformat()})
+                store.audit(db,p.tenant,d['persona'],'reflection_recorded',{'feedback_id':fid,'actor':p.actor,'reason':req.reason,'adjustments':req.adjustments,'habits':req.habits,'consent_scope':scope_name,
+                    'preferred':preferred.model_dump(),'rejected':rejected.model_dump(),'received_at':datetime.now(timezone.utc).isoformat()})
                 adapted=adapt_session(db,p.tenant,d['persona'],d['user_id'],data['host']['adapter_id'],data['session']['id'])
         if not old:maybe_learn(p.tenant,d['persona'],scope_name,d['user_id'] if scope_name=='relationship' else None)
-        return wire(reflection_id=req.reflection_id,feedback_id=fid,deduplicated=bool(old),scope=scope_name,preferred_control=preferred,rejected_control=data['action'],
-            control_set_id=f'style-{preferred:02}',controls=CATALOGUE[preferred],learning_recorded=True,session_adapted=adapted)
+        return wire(reflection_id=req.reflection_id,feedback_id=fid,deduplicated=bool(old),scope=scope_name,preferred=preferred.model_dump(),rejected=rejected.model_dump(),
+            learning_recorded=True,session_adapted=adapted)
     @app.post('/v1/personas/{id}/rollbacks')
     def rollback(id:str,req:Rollback,p=Depends(principal)):
         scope(p,'persona:admin',id);persona(p,id);v=version(p,id,req.version);scope(p,'persona:admin',id,v['user_id'])

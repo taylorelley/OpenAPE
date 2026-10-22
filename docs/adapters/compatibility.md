@@ -47,7 +47,7 @@ and have no learning authority.
 
 Each adapter derives the turn context with the SDK's `derive_context` /
 `deriveContext` from the shared
-[`context-rules.json`](../../protocol/upap/v1/context-rules.json) (parity fixtures in
+[`context-rules.json`](../../protocol/upap/v2/context-rules.json) (parity fixtures in
 `conformance.json`). Signals are tool names and failure counts from the previous
 turn, host state and the user's declared context (`OPENAPE_CONTEXT`). Tool arguments
 and results are never read. The user's message is classified only with
@@ -68,8 +68,8 @@ each manifest lists it under `unverified`.
 ## Agent feedback tool (`persona_feedback`)
 
 In active mode, adapters offer the agent one tool, defined in
-[`protocol/upap/v1/tools/persona_feedback.json`](../../protocol/upap/v1/tools/persona_feedback.json).
-The model supplies trait moves only; the adapter attaches the turn's decision.
+[`protocol/upap/v2/tools/persona_feedback.json`](../../protocol/upap/v2/tools/persona_feedback.json).
+The model supplies trait and habit moves only; the adapter attaches the turn's decision.
 `OPENAPE_AGENT_FEEDBACK=0` disables it, and the host token needs `reflection:write`.
 
 | Host | How the tool is offered | Smoke evidence (synthetic model) |

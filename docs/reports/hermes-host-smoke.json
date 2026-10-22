@@ -52,7 +52,7 @@
     "checks": {
       "engine_ready": "experimental_synthetic",
       "token_valid": true,
-      "decoder": "sha256:dda6b8441ab83f351c7b2488fb314c611339a575bbe0433b825eec692862b643",
+      "decoder": "sha256:74f8d3946857e2726a18bff273225d51252569d779cb6fabdaddea4e34776cde",
       "engine_status": "experimental_synthetic",
       "persona_visible": true,
       "host_binary": "/home/user/OpenAPE/.host-test/hermes-venv/bin/hermes",

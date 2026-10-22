@@ -9,84 +9,84 @@
   "evaluator_rejections": 28,
   "rates": {
     "A": {
-      "preference_satisfied": 0.013,
-      "mean_regret": 1.6941
+      "preference_satisfied": 0.0,
+      "mean_regret": 2.2326
     },
     "B": {
-      "preference_satisfied": 0.3438,
-      "mean_regret": 1.3139
+      "preference_satisfied": 0.0417,
+      "mean_regret": 2.2307
     },
     "C": {
-      "preference_satisfied": 0.1432,
-      "mean_regret": 1.6822
+      "preference_satisfied": 0.0182,
+      "mean_regret": 2.305
     },
     "D": {
-      "preference_satisfied": 0.4297,
-      "mean_regret": 0.8191
+      "preference_satisfied": 0.099,
+      "mean_regret": 1.3291
     }
   },
   "paired_differences": {
     "D-B": {
       "satisfied": {
-        "mean": 0.0859,
+        "mean": 0.0573,
         "ci95": [
-          -0.112,
-          0.2943
+          -0.0261,
+          0.151
         ]
       },
       "regret": {
-        "mean": -0.4948,
+        "mean": -0.9016,
         "ci95": [
-          -1.0221,
-          -0.0247
+          -1.4795,
+          -0.373
         ]
       }
     },
     "D-C": {
       "satisfied": {
-        "mean": 0.2865,
+        "mean": 0.0807,
         "ci95": [
-          0.1432,
-          0.4193
+          0.026,
+          0.1615
         ]
       },
       "regret": {
-        "mean": -0.8631,
+        "mean": -0.9758,
         "ci95": [
-          -1.2418,
-          -0.4931
+          -1.4366,
+          -0.5573
         ]
       }
     },
     "D-A": {
       "satisfied": {
-        "mean": 0.4167,
+        "mean": 0.099,
         "ci95": [
-          0.2994,
-          0.5339
+          0.0339,
+          0.1823
         ]
       },
       "regret": {
-        "mean": -0.875,
+        "mean": -0.9035,
         "ci95": [
-          -1.3495,
-          -0.3622
+          -1.458,
+          -0.3818
         ]
       }
     },
     "C-B": {
       "satisfied": {
-        "mean": -0.2005,
+        "mean": -0.0234,
         "ci95": [
-          -0.3698,
-          -0.0285
+          -0.0703,
+          0.0
         ]
       },
       "regret": {
-        "mean": 0.3683,
+        "mean": 0.0742,
         "ci95": [
-          -0.1729,
-          0.9017
+          -0.1442,
+          0.2634
         ]
       }
     }
@@ -95,6 +95,7 @@
     "Simulated users with synthetic utilities; no human raters or live LLM outputs",
     "A is approximated by the closest catalogue row; real markdown effects are unmeasured",
     "Task correctness and safety are not simulated",
+    "Habits are not simulated",
     "User-clustered bootstrap over 24 users; provisional sample size"
   ],
   "measured_behavioral_benefit": false

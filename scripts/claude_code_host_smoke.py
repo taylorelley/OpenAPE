@@ -57,7 +57,7 @@ def main():
         c['persona_feedback_tool_only_in_active_mode']=offered(first['requests'][-1]) and not offered(shadow['requests'][-1])
         c['shadow_records_without_injection']=shadow['code']==0 and count_marker(shadow['requests'][-1]['body'])==0 and decisions('cc-terse')[-1]['mode']=='shadow'
         kind=run('Fixture request one. Reply briefly.',persona='cc-kind')
-        terse_choice=decisions('cc-terse')[0]['control_set_id'];kind_choice=decisions('cc-kind')[0]['control_set_id']
+        terse_choice=decisions('cc-terse')[0]['controls'];kind_choice=decisions('cc-kind')[0]['controls']
         c['two_personas_distinct_controls']=terse_choice!=kind_choice and kind['code']==0
         report['controls']={'cc-terse':decisions('cc-terse')[0]['controls'],'cc-kind':decisions('cc-kind')[0]['controls']}
         obs=[(json.loads(r['data'])['type'],json.loads(r['data']).get('decision_id')) for r in engine.rows('SELECT data FROM observations ORDER BY rowid')]
@@ -65,7 +65,7 @@ def main():
         c['decision_linked_turn_completed']=any(t=='turn.completed' and d==decisions('cc-terse')[0]['decision_id'] for t,d in obs)
         c['session_lifecycle_observed']={'session.started','turn.completed','session.ended'}<=set(report['observations'])
         report['compaction_observed']='session.compacted' in report['observations']
-        fb=engine.post('/v1/feedback',dict(feedback_id='cc-smoke-feedback',decision_id=decisions('cc-terse')[0]['decision_id'],source='owner',kind='pairwise_preference',actor_id='host-smoke',consent_scope='core',learning_consent=True,preferred_control=9,rejected_control=int(terse_choice[-2:]) or 1,evidence_group='cc-smoke'))
+        fb=engine.post('/v1/feedback',dict(feedback_id='cc-smoke-feedback',decision_id=decisions('cc-terse')[0]['decision_id'],source='owner',kind='pairwise_preference',actor_id='host-smoke',consent_scope='core',learning_consent=True,preferred={'controls':dict(directness=2,warmth=3,verbosity=3,humour=0,formality=1,explanation_depth=3,assertiveness=1),'habits':[]},rejected={'controls':terse_choice,'habits':decisions('cc-terse')[0]['habits']},evidence_group='cc-smoke'))
         c['approved_feedback_linked_to_host_decision']=fb['learning_recorded'] is True
         engine.stop()
         outage=run('Engine outage fixture request.')

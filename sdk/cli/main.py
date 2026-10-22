@@ -43,7 +43,13 @@ def main():
     adapter.add_argument('action',choices=['install','uninstall','doctor','migrate-soul']);adapter.add_argument('host',nargs='?',choices=['claude-code','hermes','pi','openclaw','opencogni'],default='hermes')
     adapter.add_argument('--hermes-home');adapter.add_argument('--persona');adapter.add_argument('--apply',action='store_true');adapter.add_argument('--force',action='store_true')
     sub.add_parser('bridge')
+    migrate=sub.add_parser('migrate',help='reset a data directory from an earlier release for decoder-v3 (learned state is dropped)')
+    migrate.add_argument('--reset',action='store_true',required=True,help='re-create personas from their recorded archetypes');migrate.add_argument('--data',default='.openape')
     args=parser.parse_args()
+    if args.cmd=='migrate':
+        from engine.api.app import DEFAULT_DECODER
+        from engine.storage.migrate import reset
+        print(json.dumps(reset(args.data,os.environ.get('OPENAPE_DECODER',str(DEFAULT_DECODER))),indent=2));return
     if args.cmd=='init':
         root=Path('.openape');root.mkdir(mode=0o700,exist_ok=True);root.chmod(0o700)
         if CREDENTIALS.exists():parser.error('Credentials already exist; refusing overwrite')
@@ -120,7 +126,7 @@ def main():
                 # Exactly the text an adapter would inject for this request (decision is ledgered).
                 out=client.express(data,args.mode)
                 if out['status']=='unavailable':raise SystemExit('engine unavailable or request rejected; no style would be injected')
-                result={'status':out['status'],'injected_text':out['text'],'control_set_id':out['decision']['control_set_id'],'controls':out['decision']['controls'],'persona_version':out['decision']['persona_version']}
+                result={'status':out['status'],'injected_text':out['text'],'controls':out['decision']['controls'],'habits':out['decision']['habits'],'persona_version':out['decision']['persona_version']}
             else:
                 route={'express':'express','feedback':'feedback','learn':'consolidations','observe':'observations','import':'personas/import'}.get(args.cmd)
                 if route is None:

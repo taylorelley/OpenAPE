@@ -1,9 +1,9 @@
 # Corpus provenance
 
 `decoder-corpus.jsonl` lists the 544 synthetic personas (group, partition, persona
-profile and two relationship profiles) that `scripts/train_decoder.py` generates
-from seed 42. Training rows are regenerated deterministically from the same seed;
-their SHA-256 is recorded as `training.corpus_sha256` in `models/decoder-v2/decoder.json`.
+profile and two relationship profiles; five-level trait targets and habit
+preferences) that `scripts/train_decoder.py` generates for decoder-v3 from seed 42. Training rows are regenerated deterministically from the same seed;
+their SHA-256 is recorded as `training.corpus_sha256` in `models/decoder-v3/decoder.json`.
 
 Creator: OpenAPE project build, 2026-10-22. Dedication: **CC0-1.0**
 (https://creativecommons.org/publicdomain/zero/1.0/). No external text, model or

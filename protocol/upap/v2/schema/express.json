@@ -11,7 +11,10 @@
             "coding",
             "support",
             "creative",
-            "research"
+            "research",
+            "debugging",
+            "planning",
+            "writing"
           ],
           "title": "Task Type",
           "type": "string"
@@ -56,11 +59,14 @@
               "sensitive",
               "urgent",
               "beginner",
-              "expert"
+              "expert",
+              "error_present",
+              "first_turn",
+              "long_session"
             ],
             "type": "string"
           },
-          "maxItems": 6,
+          "maxItems": 9,
           "title": "Tags",
           "type": "array"
         }
@@ -172,7 +178,7 @@
   "additionalProperties": false,
   "properties": {
     "protocol_version": {
-      "const": "upap/1",
+      "const": "upap/2",
       "title": "Protocol Version",
       "type": "string"
     },

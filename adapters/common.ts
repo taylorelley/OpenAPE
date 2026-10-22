@@ -27,7 +27,7 @@ export class Binding {
   return deriveContext({...seen,...signals},this.config.context??{},this.config.contextText?text:undefined);
  }
  async express(session:string,turn:string,provider='other',model='unspecified',signals:TurnSignals={}){
-  const req:PersonalityContext={protocol_version:'upap/1',request_id:stableId(`${this.adapter}:${session}:${turn}`),identity:{tenant_id:this.config.tenant,persona_id:this.config.persona,...(this.config.user?{user_id:this.config.user}:{})},session:{id:stableId(`${this.adapter}:${session}:${this.config.persona}`),turn_id:stableId(turn)},host:{adapter_id:this.adapter,adapter_version:'0.2.0',host_version:this.config.hostVersion,provider_family:(['openai','anthropic','google','qwen'].includes(provider)?provider:'other') as any,model_id:stableId(model)},context:this.context(session,signals)};
+  const req:PersonalityContext={protocol_version:'upap/2',request_id:stableId(`${this.adapter}:${session}:${turn}`),identity:{tenant_id:this.config.tenant,persona_id:this.config.persona,...(this.config.user?{user_id:this.config.user}:{})},session:{id:stableId(`${this.adapter}:${session}:${this.config.persona}`),turn_id:stableId(turn)},host:{adapter_id:this.adapter,adapter_version:'0.3.0',host_version:this.config.hostVersion,provider_family:(['openai','anthropic','google','qwen'].includes(provider)?provider:'other') as any,model_id:stableId(model)},context:this.context(session,signals)};
   const result=await this.client.express(req,this.config.mode??'shadow');this.last.set(session,result);
   if(this.last.size>128)this.last.delete(this.last.keys().next().value!);return result;
  }

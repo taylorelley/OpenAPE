@@ -30,8 +30,10 @@ import math
 import random
 from datetime import datetime
 import torch
+import torch.nn.functional as F
 from protocol.catalogue import TRAITS
-from engine.neural.policy import SESSION_DIM, features, mask
+from engine.neural.policy import features, level_mask, habit_vector, choice_score, APPROVED_LEVELS
+from engine.learning.trainer import pair
 
 SURFACE = ('verbosity', 'formality', 'explanation_depth')
 INTERPERSONAL = ('warmth', 'directness', 'assertiveness', 'humour')
@@ -75,7 +77,7 @@ def individual_profile(profile, seed, amount):
     out = {t: (target, round(w * rng.uniform(1 - 0.4 * amount, 1 + 0.4 * amount), 3)) for t, (target, w) in sorted(profile.items())}
     free = [t for t in TRAITS if t not in out]
     for t in rng.sample(free, min(len(free), rng.randint(1, 2))):
-        out[t] = (rng.choice([0, 0, 1]) if t == 'humour' else rng.choice([0, 1, 2]), round(rng.uniform(0.3, 0.9) * amount, 3))
+        out[t] = (rng.choice([0, 0, 1]) if t == 'humour' else rng.choice([1, 2, 3]), round(rng.uniform(0.3, 0.9) * amount, 3))
     return out
 
 def within(x, centre, radius):
@@ -102,19 +104,19 @@ def fit_state(decoder, core, rel, scope, examples, steps=20):
     pairwise preferences (one batched decoder pass per step). Never stored as a
     version; discarded when the session ends."""
     base = core if scope == 'core' else rel
-    usable = [e for e in examples if e['kind'] in ('pairwise_preference', 'correction') and None not in (e['preferred_control'], e['rejected_control'])
-        and e['preferred_control'] != e['rejected_control'] and bool(mask(e['context'])[e['preferred_control']]) and bool(mask(e['context'])[e['rejected_control']])]
+    usable = [(e, p) for e in examples if (p := pair(e)) is not None]
     if not usable or decoder.model is None: return torch.zeros_like(base)
-    weights = torch.tensor([e.get('weight', 1.0) for e in usable]); weights = weights / weights.sum()
-    feats = torch.stack([features(e['context'], e['host']) for e in usable]); masks = torch.stack([mask(e['context']) for e in usable])
-    pairs = torch.tensor([[e['preferred_control'], e['rejected_control']] for e in usable]); n = len(usable)
+    weights = torch.tensor([e.get('weight', 1.0) for e, _ in usable]); weights = weights / weights.sum()
+    feats = torch.stack([features(e['context'], e['host']) for e, _ in usable]); lm = torch.stack([level_mask(e['context']) for e, _ in usable])
+    la, lb = (torch.stack([APPROVED_LEVELS[p[k][0]] for _, p in usable]) for k in (0, 1))
+    ha, hb = (torch.stack([habit_vector(p[k][1]) for _, p in usable]) for k in (0, 1))
     x = torch.zeros_like(base).requires_grad_(True)
     optimizer = torch.optim.Adam([x], lr=0.15)
     for _ in range(steps):
         optimizer.zero_grad()
         c, r = (core + x, rel) if scope == 'core' else (core, rel + x)
-        logits = decoder.model(torch.cat((c.expand(n, -1), r.expand(n, -1), torch.zeros(n, SESSION_DIM), feats), 1)).masked_fill(~masks, -1e9)
-        loss = -(weights * torch.log_softmax(logits.gather(1, pairs), 1)[:, 0]).sum() + 0.01 * x.square().sum()
+        t, h = decoder.batch(c, r, feats, lm)
+        loss = -(weights * F.logsigmoid(choice_score(t, h, la, ha) - choice_score(t, h, lb, hb))).sum() + 0.01 * x.square().sum()
         loss.backward(); optimizer.step()
         with torch.no_grad(): x.mul_(min(1.0, STATE_BUDGET / (float(x.norm()) + 1e-8)))
     return x.detach()
@@ -187,7 +189,7 @@ def accommodation_profile(tags, m):
     sensitive or beginner work leans warm. Grows with the relationship's maturity."""
     brief = tags.get('expert', 0) + tags.get('urgent', 0); teach = tags.get('beginner', 0)
     care = tags.get('sensitive', 0) + 0.5 * teach; net = teach - brief; out = {}
-    if net > 0.05: out.update(explanation_depth=(2, 1.2 * min(1, net) * m), verbosity=(1, 0.4 * min(1, net) * m))
-    if net < -0.05: out.update(verbosity=(0, 1.2 * min(1, -net) * m), explanation_depth=(0, 0.6 * min(1, -net) * m))
-    if care > 0.05: out['warmth'] = (2, 0.8 * min(1, care) * m)
+    if net > 0.05: out.update({'explanation_depth': (3, 1.2 * min(1, net) * m), 'verbosity': (2, 0.4 * min(1, net) * m), 'habit:concrete_examples': (1, 0.6 * min(1, net) * m)})
+    if net < -0.05: out.update({'verbosity': (1, 1.2 * min(1, -net) * m), 'explanation_depth': (1, 0.6 * min(1, -net) * m), 'habit:summary_first': (1, 0.4 * min(1, -net) * m)})
+    if care > 0.05: out['warmth'] = (3, 0.8 * min(1, care) * m)
     return out

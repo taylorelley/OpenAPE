@@ -1,0 +1,1241 @@
+{
+  "request": {
+    "protocol_version": "upap/2",
+    "request_id": "req-conformance",
+    "identity": {
+      "tenant_id": "local",
+      "persona_id": "ape",
+      "user_id": "alice"
+    },
+    "session": {
+      "id": "s",
+      "turn_id": "t"
+    },
+    "host": {
+      "adapter_id": "custom",
+      "adapter_version": "0.1",
+      "host_version": "fixture",
+      "provider_family": "other",
+      "model_id": "fixture"
+    },
+    "context": {
+      "task_type": "general",
+      "channel": "terminal",
+      "stakes": "low",
+      "turn_origin": "user",
+      "tags": []
+    }
+  },
+  "decisions": [
+    {
+      "name": "valid active neutral",
+      "valid": true,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 2,
+          "verbosity": 2,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      },
+      "rendered": "Style preferences only. Host, system, developer, safety and user task requirements take precedence. Be clear. Be considerate. Use moderate detail. Avoid humour. Use plain professional language. Explain key reasoning. State recommendations clearly without changing factual certainty."
+    },
+    {
+      "name": "valid habits",
+      "valid": true,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 4,
+          "verbosity": 3,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [
+          "next_step",
+          "recap_end"
+        ],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      },
+      "rendered": "Style preferences only. Host, system, developer, safety and user task requirements take precedence. Be clear. Use a very warm, encouraging tone. Include useful detail. Avoid humour. Use plain professional language. Explain key reasoning. State recommendations clearly without changing factual certainty. End with a suggested next step when one is useful. Close long answers with a short recap."
+    },
+    {
+      "name": "valid shadow",
+      "valid": true,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 2,
+          "verbosity": 2,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [],
+        "mode": "shadow",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      },
+      "rendered": ""
+    },
+    {
+      "name": "valid frozen extreme with three habits",
+      "valid": true,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 4,
+          "warmth": 3,
+          "verbosity": 4,
+          "humour": 4,
+          "formality": 0,
+          "explanation_depth": 4,
+          "assertiveness": 4
+        },
+        "habits": [
+          "acknowledge_constraints",
+          "acknowledge_progress",
+          "light_aside"
+        ],
+        "mode": "frozen",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      },
+      "rendered": "Style preferences only. Host, system, developer, safety and user task requirements take precedence. Lead with the answer and skip preamble. Use a warm, supportive tone. Be thorough and comprehensive. Be playful and use humour freely when appropriate. Use relaxed, conversational language. Explain reasoning step by step with examples. Give firm recommendations without changing factual certainty. Acknowledge the user's stated constraints before advising. Briefly acknowledge progress and good decisions. Allow an occasional light aside."
+    },
+    {
+      "name": "ineligible policy",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 2,
+          "verbosity": 2,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": false,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    },
+    {
+      "name": "missing control",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 2,
+          "verbosity": 2,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    },
+    {
+      "name": "level out of range",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 5,
+          "verbosity": 2,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    },
+    {
+      "name": "level as text",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": "high",
+          "verbosity": 2,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    },
+    {
+      "name": "level as boolean",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 2,
+          "verbosity": 2,
+          "humour": false,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    },
+    {
+      "name": "incoherent configuration",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 2,
+          "verbosity": 0,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 4,
+          "assertiveness": 2
+        },
+        "habits": [],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    },
+    {
+      "name": "unknown habit",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 2,
+          "verbosity": 2,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [
+          "summarise_everything"
+        ],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    },
+    {
+      "name": "habits out of catalogue order",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 4,
+          "verbosity": 3,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [
+          "recap_end",
+          "next_step"
+        ],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    },
+    {
+      "name": "duplicate habit",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 2,
+          "verbosity": 2,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [
+          "next_step",
+          "next_step"
+        ],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    },
+    {
+      "name": "habit ineligible for levels",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 2,
+          "verbosity": 2,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [
+          "light_aside"
+        ],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    },
+    {
+      "name": "mutually exclusive habits",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 2,
+          "verbosity": 2,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [
+          "plain_words",
+          "precise_terms"
+        ],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    },
+    {
+      "name": "four habits",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 4,
+          "verbosity": 3,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [
+          "risks_first",
+          "next_step",
+          "structured",
+          "recap_end"
+        ],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    },
+    {
+      "name": "habits missing",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 2,
+          "verbosity": 2,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    },
+    {
+      "name": "cache ttl above bound",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 2,
+          "verbosity": 2,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 999999,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    },
+    {
+      "name": "disabled is not a wire mode",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 2,
+          "verbosity": 2,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [],
+        "mode": "disabled",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    },
+    {
+      "name": "wrong protocol",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/1",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 2,
+          "verbosity": 2,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    },
+    {
+      "name": "wrong control schema",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/1",
+        "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+        "controls": {
+          "directness": 2,
+          "warmth": 2,
+          "verbosity": 2,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    },
+    {
+      "name": "wrong catalogue hash",
+      "valid": false,
+      "value": {
+        "protocol_version": "upap/2",
+        "request_id": "req-conformance",
+        "decision_id": "decision-1",
+        "persona_version": "version-1",
+        "relationship_version": null,
+        "decoder_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "control_schema": "behaviour-controls/2",
+        "catalogue_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "controls": {
+          "directness": 2,
+          "warmth": 2,
+          "verbosity": 2,
+          "humour": 0,
+          "formality": 2,
+          "explanation_depth": 2,
+          "assertiveness": 2
+        },
+        "habits": [],
+        "mode": "active",
+        "applies_to": "next_model_request",
+        "policy": {
+          "eligible": true,
+          "mask_reason": null
+        },
+        "cache_ttl_ms": 30000,
+        "engine_status": "experimental_synthetic",
+        "propensity": null,
+        "diagnostics": null
+      }
+    }
+  ],
+  "contexts": [
+    {
+      "name": "defaults",
+      "signals": null,
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": []
+      }
+    },
+    {
+      "name": "one failure tags an error",
+      "signals": {
+        "tools": [
+          "bash"
+        ],
+        "failures": 1
+      },
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "technical",
+          "error_present"
+        ]
+      }
+    },
+    {
+      "name": "engine tags cannot be declared",
+      "signals": null,
+      "declared": {
+        "tags": [
+          "first_turn",
+          "long_session",
+          "expert"
+        ]
+      },
+      "text": null,
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "expert"
+        ]
+      }
+    },
+    {
+      "name": "text debugging",
+      "signals": null,
+      "declared": null,
+      "text": "this test is failing with a traceback",
+      "context": {
+        "task_type": "debugging",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "technical",
+          "error_present"
+        ]
+      }
+    },
+    {
+      "name": "text planning",
+      "signals": null,
+      "declared": null,
+      "text": "help me plan the migration roadmap",
+      "context": {
+        "task_type": "planning",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": []
+      }
+    },
+    {
+      "name": "text writing",
+      "signals": null,
+      "declared": null,
+      "text": "draft an email to the team",
+      "context": {
+        "task_type": "writing",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": []
+      }
+    },
+    {
+      "name": "edit tools mean coding",
+      "signals": {
+        "tools": [
+          "Edit",
+          "Bash"
+        ]
+      },
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "coding",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "technical"
+        ]
+      }
+    },
+    {
+      "name": "read-only tools mean research",
+      "signals": {
+        "tools": [
+          "Read",
+          "Grep",
+          "WebFetch"
+        ]
+      },
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "research",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": []
+      }
+    },
+    {
+      "name": "edit outranks read",
+      "signals": {
+        "tools": [
+          "grep",
+          "write"
+        ]
+      },
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "coding",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "technical"
+        ]
+      }
+    },
+    {
+      "name": "plan mode",
+      "signals": {
+        "tools": [
+          "Edit"
+        ],
+        "plan_mode": true
+      },
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "planning",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "technical"
+        ]
+      }
+    },
+    {
+      "name": "one failure keeps stakes",
+      "signals": {
+        "tools": [
+          "bash"
+        ],
+        "failures": 1
+      },
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "technical",
+          "error_present"
+        ]
+      }
+    },
+    {
+      "name": "repeated failures raise stakes",
+      "signals": {
+        "tools": [
+          "bash"
+        ],
+        "failures": 2
+      },
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "debugging",
+        "channel": "terminal",
+        "stakes": "high",
+        "turn_origin": "user",
+        "tags": [
+          "technical",
+          "error_present"
+        ]
+      }
+    },
+    {
+      "name": "host channel and origin",
+      "signals": {
+        "channel": "voice",
+        "turn_origin": "subagent"
+      },
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "general",
+        "channel": "voice",
+        "stakes": "medium",
+        "turn_origin": "subagent",
+        "tags": []
+      }
+    },
+    {
+      "name": "unknown signals ignored",
+      "signals": {
+        "channel": "fax",
+        "turn_origin": "x",
+        "tools": "Edit",
+        "failures": "9",
+        "plan_mode": "yes"
+      },
+      "declared": null,
+      "text": null,
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": []
+      }
+    },
+    {
+      "name": "declaration wins",
+      "signals": {
+        "tools": [
+          "Edit"
+        ],
+        "failures": 3
+      },
+      "declared": {
+        "task_type": "support",
+        "stakes": "low",
+        "tags": [
+          "beginner",
+          "nonsense"
+        ]
+      },
+      "text": null,
+      "context": {
+        "task_type": "support",
+        "channel": "terminal",
+        "stakes": "low",
+        "turn_origin": "user",
+        "tags": [
+          "technical",
+          "beginner",
+          "error_present"
+        ]
+      }
+    },
+    {
+      "name": "malformed declaration dropped",
+      "signals": null,
+      "declared": "{not json",
+      "text": null,
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": []
+      }
+    },
+    {
+      "name": "declaration as JSON text",
+      "signals": null,
+      "declared": "{\"tags\":[\"expert\"],\"channel\":\"chat\"}",
+      "text": null,
+      "context": {
+        "task_type": "general",
+        "channel": "chat",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "expert"
+        ]
+      }
+    },
+    {
+      "name": "text review urgent",
+      "signals": null,
+      "declared": null,
+      "text": "Please review this PR asap, prod is down",
+      "context": {
+        "task_type": "code_review",
+        "channel": "terminal",
+        "stakes": "high",
+        "turn_origin": "user",
+        "tags": [
+          "review",
+          "urgent"
+        ]
+      }
+    },
+    {
+      "name": "text beats tools",
+      "signals": {
+        "tools": [
+          "Edit"
+        ]
+      },
+      "declared": null,
+      "text": "Can you research how does tokio schedule tasks?",
+      "context": {
+        "task_type": "research",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "technical"
+        ]
+      }
+    },
+    {
+      "name": "text sensitive",
+      "signals": null,
+      "declared": null,
+      "text": "rotate the production database password",
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "high",
+        "turn_origin": "user",
+        "tags": [
+          "sensitive"
+        ]
+      }
+    },
+    {
+      "name": "text beginner",
+      "signals": null,
+      "declared": null,
+      "text": "I'm new to Rust, explain like I'm five",
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "beginner"
+        ]
+      }
+    },
+    {
+      "name": "text expert",
+      "signals": null,
+      "declared": null,
+      "text": "tl;dr please, just the code",
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "expert"
+        ]
+      }
+    },
+    {
+      "name": "text word boundaries",
+      "signals": null,
+      "declared": null,
+      "text": "prepare the preview of reviewer stats",
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": []
+      }
+    },
+    {
+      "name": "text non-ascii",
+      "signals": null,
+      "declared": null,
+      "text": "R\u00e9visez ce code, \u00dcRGENT",
+      "context": {
+        "task_type": "general",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": []
+      }
+    },
+    {
+      "name": "declaration beats text",
+      "signals": null,
+      "declared": {
+        "task_type": "creative"
+      },
+      "text": "review this",
+      "context": {
+        "task_type": "creative",
+        "channel": "terminal",
+        "stakes": "medium",
+        "turn_origin": "user",
+        "tags": [
+          "review"
+        ]
+      }
+    }
+  ]
+}

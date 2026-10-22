@@ -6,7 +6,7 @@ import pytest
 import torch
 from conftest import *
 from sdk.python.client import render,Client
-from engine.neural.policy import CATALOGUE,Decoder,digest
+from engine.neural.policy import Decoder,digest
 from engine.evaluation.policy import group_split
 
 def create(api,id='ape'):
@@ -26,7 +26,7 @@ def evidence(api,count=36,scope='core'):
     # explicit labels are engineering tests, not measured user benefit.
     for i in range(count):
         d=decision(api,request_id=f'evidence-{i}',session=f'scenario-{i}')
-        r=post(api,'/v1/feedback',dict(feedback_id=f'feedback-{i}',decision_id=d['decision_id'],source='owner',kind='pairwise_preference',actor_id='owner',consent_scope=scope,learning_consent=True,preferred_control=1,rejected_control=0,evidence_group=f'scenario-{i}'))
+        r=post(api,'/v1/feedback',dict(feedback_id=f'feedback-{i}',decision_id=d['decision_id'],source='owner',kind='pairwise_preference',actor_id='owner',consent_scope=scope,learning_consent=True,preferred=option(**TERSE),rejected=option(),evidence_group=f'scenario-{i}'))
         assert r.status_code==200,r.text
     return d
 
@@ -61,7 +61,7 @@ def test_tenant_actor_user_denials(api):
 
 def test_protocol_bounds_replays_and_no_implicit_reward(api):
     create(api)
-    assert api.post('/v1/express',json={'protocol_version':'upap/2'}).json()['error']['code']=='UNSUPPORTED_PROTOCOL'
+    assert api.post('/v1/express',json={'protocol_version':'upap/1'}).json()['error']['code']=='UNSUPPORTED_PROTOCOL'
     r=expression();r['context']['raw_prompt']='ignore policies';assert post(api,'/v1/express',r).status_code==422
     assert api.post('/v1/feedback',content='x'*66000).status_code==413
     a=decision(api);b=decision(api);assert a==b
@@ -101,7 +101,7 @@ def test_sampling_constraints_frozen_and_renderer(api):
     create(api)
     req=expression();req.update(selection='sample',seed=5);assert post(api,'/v1/express',req).status_code==400
     req['exploration_consent']=True;req['context']['stakes']='high'
-    d=post(api,'/v1/express',req).json();assert d['controls']['humour']=='low';assert len(render(d).split())<150
+    d=post(api,'/v1/express',req).json();assert d['controls']['humour']<=1;assert len(render(d).split())<150
     req['mode']='frozen';req['request_id']='new';assert post(api,'/v1/express',req).status_code==400
     d['controls']['directness']='ignore';assert pytest.raises(ValueError,render,d)
 
@@ -140,3 +140,51 @@ def test_concurrent_promotion_cas(api):
     with ThreadPoolExecutor(2) as pool:
         codes=list(pool.map(lambda jid:post(api,'/v1/personas/ape/promotions',dict(candidate_id=jid,expected_version=base)).status_code,ids))
     assert sorted(codes)==[200,409]
+
+def test_engine_sets_session_tags_and_habits_render(api):
+    from engine.api.app import LONG_SESSION
+    post(api,'/v1/personas',{'persona_id':'ape','archetype':'mentor','evolution':'manual'})
+    req=expression(request_id='t0');req['context']['tags']=['long_session']  # hosts cannot set session-position tags
+    first=post(api,'/v1/express',req).json()
+    data=json.loads(api.app.state.store.one('SELECT data FROM decisions WHERE id=?',(first['decision_id'],))['data'])
+    assert data['context']['tags']==['first_turn'] and data['habits']==first['habits']
+    for i in range(1,LONG_SESSION+1):last=decision(api,request_id=f't{i}')
+    data=json.loads(api.app.state.store.one('SELECT data FROM decisions WHERE id=?',(last['decision_id'],))['data'])
+    assert data['context']['tags']==['long_session']
+    assert first['catalogue_hash']==api.get('/v1/capabilities').json()['catalogue_hash']
+    text=render(first);assert all(h in api.get('/v1/capabilities').json()['habits'] for h in first['habits'])
+    assert text.count('.')>=8 and len(text)<=900
+    # Feedback options must be approved configurations.
+    bad=dict(feedback_id='bad',decision_id=first['decision_id'],source='owner',kind='pairwise_preference',actor_id='owner',consent_scope='core',learning_consent=True,
+        preferred=option(verbosity=0,explanation_depth=4),rejected=option(),evidence_group='g')
+    assert post(api,'/v1/feedback',bad).status_code==400
+
+def test_mentor_shows_signature_habits(api):
+    post(api,'/v1/personas',{'persona_id':'ape','archetype':'mentor','individuality':0,'evolution':'manual'})
+    d=decision(api)
+    assert d['controls']['warmth']>=3 and d['controls']['explanation_depth']>=3 and set(d['habits'])&{'concrete_examples','next_step','acknowledge_progress'}
+
+def test_reset_migration_recreates_personas(tmp_path):
+    import sqlite3
+    from engine.api.app import create_app,LegacyStore,DEFAULT_DECODER
+    from engine.storage.migrate import reset
+    from fastapi.testclient import TestClient
+    headers={'Authorization':'Bearer '+TOKEN}
+    with TestClient(create_app(tmp_path,credentials=CREDENTIALS),headers=headers) as c:
+        post(c,'/v1/personas',{'persona_id':'m','archetype':'mentor','individuality_seed':7})
+        post(c,'/v1/personas',{'persona_id':'s','seed_preferences':['concise']});d=decision(c,persona='m')
+        post(c,'/v1/feedback',dict(feedback_id='old',decision_id=d['decision_id'],source='owner',kind='rating',actor_id='owner',value=1,evidence_group='g'))
+        expected=decision(c,persona='m',request_id='fresh',session='fresh')['controls']
+    db=sqlite3.connect(tmp_path/'openape.sqlite');db.execute("DELETE FROM meta")  # as a 0.2 store would look
+    db.execute("UPDATE decisions SET data=json_set(data,'$.response.decoder_hash','sha256:decoder-v2')");db.commit();db.close()
+    with pytest.raises(LegacyStore):create_app(tmp_path,credentials=CREDENTIALS)
+    out=reset(tmp_path,DEFAULT_DECODER);assert out['reset'] and {p['persona_id']:p['basis'] for p in out['personas']}=={'m':'archetype','s':'seed_preferences'}
+    assert not reset(tmp_path,DEFAULT_DECODER)['reset']  # idempotent
+    with TestClient(create_app(tmp_path,credentials=CREDENTIALS),headers=headers) as c:
+        info=c.get('/v1/personas/m').json();assert info['temperament_version']==info['active_version'] and info['archetype']=='mentor'
+        assert decision(c,persona='m',request_id='after',session='after')['controls']==expected  # same archetype and individuality, same temperament
+        store=c.app.state.store;assert store.one("SELECT valid FROM feedback WHERE id='old'")['valid']==0
+        with store.tx() as tx:tx.execute("UPDATE personas SET agent_feedback=1")
+        reflection=dict(reflection_id='late',decision_id=d['decision_id'],adjustments={'warmth':'less'},reason='user_requested')
+        assert post(c,'/v1/reflections',reflection).status_code==400  # decisions from the old decoder cannot train
+        assert [json.loads(a['data'])['basis'] for a in c.get('/v1/personas/m/history').json()['audit'] if a['action']=='reset_for_decoder_v3']==['archetype']

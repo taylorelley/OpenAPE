@@ -7,14 +7,19 @@ stays the same whatever model or provider is behind them.
 A "persona" in OpenAPE is not a system prompt someone wrote. It is a small
 numeric state held by a local service. On every turn, the host agent asks the
 engine how this persona should talk in the current context. The engine answers
-with one of 24 hand-reviewed style settings (how direct, warm, verbose, formal,
-humorous, explanatory and assertive to be). The host turns that into a short
-fixed-template note and adds it to the model's context:
+with style controls: a level from 0 to 4 for each of seven traits (how direct,
+warm, verbose, humorous, formal, explanatory and assertive to be) and up to three
+signature habits. Every combination comes from a reviewed catalogue: 35 level
+sentences, coherence rules and 16 habits, about 52,000 approved configurations. The
+host turns them into a short fixed-template note and adds it to the model's context.
+For a mentor persona on a coding turn:
 
 > Style preferences only. Host, system, developer, safety and user task
-> requirements take precedence. Be clear. Be considerate. Use moderate detail.
-> Avoid humour. Use plain professional language. Explain key reasoning. State
-> recommendations clearly without changing factual certainty.
+> requirements take precedence. Use gentle phrasing. Use a warm, supportive tone.
+> Include useful detail. Avoid humour. Use casual language. Explain reasoning with
+> examples. Offer suggestions gently. End with a suggested next step when one is
+> useful. Prefer concrete examples over abstractions. Briefly acknowledge progress
+> and good decisions.
 
 Every persona starts from an archetype you pick at creation (mentor, pragmatic
 engineer, concierge, …). From then on it evolves on its own:
@@ -38,10 +43,10 @@ rolled back, exported and deleted.
 It runs locally on a CPU, needs no GPU or provider API keys, and never calls an
 LLM itself.
 
-> **Status: experimental 0.2.0.** This is not the finished v1 release. The neural
+> **Status: experimental 0.3.0.** This is not the finished v1 release. The neural
 > decoder is trained only on synthetic persona profiles. Held-out synthetic
-> personas can be fitted from 16 preferences (top-1 agreement 0.66, against 0.12
-> for a neutral persona). All five host adapters have been run against real host
+> personas can be fitted from 16 preferences (per-trait level agreement 0.65,
+> against 0.54 for a neutral persona). All five host adapters have been run against real host
 > builds, but with a synthetic model endpoint. There is **no live-model or
 > independent human evidence yet** that it improves user preference, carries over
 > across providers, or leaves task quality and safety unchanged. See
@@ -54,7 +59,7 @@ LLM itself.
 ## How it works
 
 ```
- host agent (Claude Code, Hermes, …)            OpenAPE engine (local HTTP, UPAP/1)
+ host agent (Claude Code, Hermes, …)            OpenAPE engine (local HTTP, UPAP/2)
  ──────────────────────────────────            ────────────────────────────────────
  user turn ─▶ adapter ── POST /v1/express ───▶ encode context (task, channel,
                 │        persona, user,         stakes, tags, provider)
@@ -62,7 +67,7 @@ LLM itself.
                 │                                      ▼
                 │                         persona latent ─┐
                 │                    + relationship latent ├─▶ frozen decoder (MLP)
-                │                                         │   ─▶ 24-way choice
+                │                                         │   ─▶ 7 trait levels + habits
                 │                                         │   ─▶ safety mask
                 │◀── decision: approved style controls ───┘
                 ▼
@@ -94,11 +99,13 @@ LLM itself.
    stakes, turn origin, tags and provider family. Adapters derive it from host
    metadata (see [Turn context](#turn-context)). Raw text and transcripts are
    never sent. A small frozen CPU network
-   ([decoder-v2](models/decoder-v2/MODEL_CARD.md)) combines the context with the
-   latents and picks one row of the audited
-   [style catalogue](protocol/catalogue.py). Fixed rules then mask unsafe choices,
-   for example no humour when stakes are high and no long answers when the turn
-   is urgent. The engine returns only these controls, never free text,
+   ([decoder-v3](models/decoder-v3/MODEL_CARD.md)) combines the context with the
+   latents. It scores each trait's five levels and each habit, then picks the best
+   approved configuration of the audited [style catalogue](protocol/catalogue.py)
+   and the eligible habits above one half (at most three). Fixed rules mask unsafe
+   choices, for example no more than light humour when stakes are high and no long
+   answers when the turn is urgent. The engine also tags a session's first turn and
+   long sessions itself. It returns only these controls, never free text,
    permissions or instructions. The SDK renders them with fixed templates in
    Python and TypeScript, and both produce byte-identical output. A session pins
    its persona and decoder versions until it ends.
@@ -111,8 +118,8 @@ LLM itself.
    preferences, corrections and ratings that carry `learning_consent`, plus
    *agent reflections*: the host gives its agent a `persona_feedback` tool, and
    when the user asks for or reacts to a style change ("shorter please"), the
-   agent records "verbosity: less". The engine turns that into a preference
-   between approved catalogue rows. It is rate-limited, takes no free text, and
+   agent records "verbosity: less" (or a habit such as "next_step: more_often").
+   The engine turns that into a preference between approved configurations. It is rate-limited, takes no free text, and
    never outweighs people's own feedback. Task success, tool results and inferred
    satisfaction are never used as reward. Once enough new evidence has built up,
    the engine fits a *candidate* latent with the decoder frozen. A separate
@@ -158,8 +165,8 @@ LLM itself.
    `persona:express`, `observations:write` and `reflection:write`. Exports contain core state only,
    with no raw feedback, relationships or secrets.
 
-The wire protocol, **UPAP/1** (Universal Personality Adapter Protocol), is
-specified in [`protocol/upap/v1`](protocol/upap/v1/specification.md) with JSON
+The wire protocol, **UPAP/2** (Universal Personality Adapter Protocol), is
+specified in [`protocol/upap/v2`](protocol/upap/v2/specification.md) with JSON
 Schemas, OpenAPI and shared conformance fixtures. For the reasoning behind these
 choices, see the [architecture ADRs](#design-and-evidence).
 
@@ -168,11 +175,11 @@ choices, see the [architecture ADRs](#design-and-evidence).
 | Path | Contents |
 |---|---|
 | `engine/` | FastAPI service: `api`, `neural` (decoder + encoder), `learning` (trainer), `evaluation` (independent evaluator), `storage` (SQLite + artifacts), `security` |
-| `protocol/` | UPAP/1 spec, schemas, OpenAPI, conformance fixtures, style catalogue |
+| `protocol/` | UPAP/2 spec, schemas, OpenAPI, conformance fixtures, style catalogue |
 | `sdk/` | Python client (`client.py`, stdlib `lite.py`), TypeScript client, `openape` CLI |
 | `adapters/` | Host integrations for Claude Code, Hermes, OpenClaw, Pi, OpenCogni |
 | `adapter-kit/` | Templates, mock host and conformance notes for writing new adapters |
-| `models/decoder-v2/` | Trained decoder weights, manifest and model card |
+| `models/decoder-v3/` | Trained decoder weights, manifest and model card |
 | `benchmarks/`, `scripts/`, `tests/` | Synthetic corpus and benchmark, smoke tests, reproducibility checks |
 | `docs/` | ADRs, walkthrough, adapter compatibility, verification reports |
 
@@ -214,7 +221,7 @@ your persona. Interactive API docs: `http://127.0.0.1:8765/docs`.
 
 In active mode the Claude Code (stdio MCP server bundled with the plugin), Hermes,
 Pi and OpenClaw adapters also give the agent the `persona_feedback` tool
-([definition](protocol/upap/v1/tools/persona_feedback.json)).
+([definition](protocol/upap/v2/tools/persona_feedback.json)).
 `OPENAPE_AGENT_FEEDBACK=0` turns it off. OpenCogni has no tool hook in its patch.
 The host smokes show the tool offered to the model in active mode only. In Claude
 Code 2.1.308 it appears as a deferred MCP tool, in Hermes 0.19.0 as a direct tool,
@@ -225,7 +232,7 @@ model has yet chosen to call it.
 ### Turn context
 
 Adapters work out each turn's context from host metadata, using one shared rule
-table ([`context-rules.json`](protocol/upap/v1/context-rules.json)) that the
+table ([`context-rules.json`](protocol/upap/v2/context-rules.json)) that the
 Python and TypeScript SDKs apply identically:
 
 * **Tools used in the previous turn**, by name only (never arguments or results):
@@ -270,22 +277,30 @@ result = client.express(request, mode='shadow')  # request as in examples/expres
 # Inject result['text'] once at an approved context hook if non-empty.
 # Task success is never feedback; submit explicit authorised feedback separately.
 # Give the agent sdk.python.lite.TOOL; on a call, record it for this turn's decision:
-client.reflect(result['decision']['decision_id'], {'verbosity': 'less'}, 'user_requested')
+client.reflect(result['decision']['decision_id'], {'verbosity': 'less'}, 'user_requested',
+               habits={'next_step': 'more_often'})
 ```
 
 TypeScript (Node 22.18+/24) exports `Client`, `render` and `PersonalityAdapter` from
 `sdk/typescript/client.ts`. Both SDKs pass the same golden fixtures in
-`protocol/upap/v1/conformance.json`. `openape bridge` is a JSONL stdin/stdout bridge,
+`protocol/upap/v2/conformance.json`. `openape bridge` is a JSONL stdin/stdout bridge,
 not an automatic native hook.
 
 ## Operations
 
 `openape init | serve | token add | persona create/list/inspect/history/delete/archetypes/evolution |
 express | preview | feedback | observe | learn | job | promote | rollback | export |
-import | adapter install/uninstall/doctor/migrate-soul | bridge`. Write commands take
+import | adapter install/uninstall/doctor/migrate-soul | bridge | migrate --reset`. Write commands take
 `--file request.json` (or stdin). The engine promotes automatically only for personas
 with `evolution: automatic`; `learn`/`promote` remain for manual personas. Feedback
 is record-only unless `learning_consent: true` with an authorised scope.
+
+Upgrading from 0.2: the engine refuses to start on a 0.2 data directory. Run
+`openape migrate --reset --data DIR` once. It re-creates each persona from its recorded
+archetype, seeds and individuality (the same temperament), keeps its settings, and
+keeps old decisions and feedback as history only. Learned state from 0.2 cannot carry
+over to the new decoder. Hosts need the 0.3 adapters; 0.2 clients fail open (inject
+nothing).
 
 Docker: `openape init`, then `docker compose up --build` (loopback port, unprivileged,
 read-only root, data volume; add `-f compose.limits.yaml` for limits). Remote
@@ -293,9 +308,9 @@ deployments need TLS at a trusted reverse proxy. Shared SQLite replicas are unsu
 
 ## Design and evidence
 
-* ADRs: [0001 architecture](docs/adr/0001-architecture.md), [0002 decoder-v2, evaluator, lineage](docs/adr/0002-decoder-v2-evaluator-lineage.md), [0003 archetypes and automatic evolution](docs/adr/0003-automatic-evolution.md), [0004 human-like development](docs/adr/0004-human-like-development.md)
-* [Protocol](protocol/upap/v1/specification.md), JSON Schemas, OpenAPI, conformance fixtures
-* [Model card](models/decoder-v2/MODEL_CARD.md) · [benchmarks](benchmarks/README.md)
+* ADRs: [0001 architecture](docs/adr/0001-architecture.md), [0002 decoder-v2, evaluator, lineage](docs/adr/0002-decoder-v2-evaluator-lineage.md), [0003 archetypes and automatic evolution](docs/adr/0003-automatic-evolution.md), [0004 human-like development](docs/adr/0004-human-like-development.md), [0005 expressive controls](docs/adr/0005-expressive-controls.md)
+* [Protocol](protocol/upap/v2/specification.md), JSON Schemas, OpenAPI, conformance fixtures
+* [Model card](models/decoder-v3/MODEL_CARD.md) · [benchmarks](benchmarks/README.md)
 * [Release status](docs/reports/release-status.md) · [review of 0.1.0 against the brief](docs/reports/v0.2-review.md) · [open issues](docs/reports/open-issues.md)
 * [10-minute walkthrough](docs/walkthrough.md)
 

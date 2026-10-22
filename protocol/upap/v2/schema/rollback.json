@@ -2,26 +2,27 @@
   "additionalProperties": false,
   "properties": {
     "protocol_version": {
-      "const": "upap/1",
+      "const": "upap/2",
       "title": "Protocol Version",
       "type": "string"
     },
-    "candidate_id": {
+    "version": {
       "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
-      "title": "Candidate Id",
+      "title": "Version",
       "type": "string"
     },
-    "expected_version": {
-      "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
-      "title": "Expected Version",
+    "reason": {
+      "maxLength": 300,
+      "minLength": 3,
+      "title": "Reason",
       "type": "string"
     }
   },
   "required": [
     "protocol_version",
-    "candidate_id",
-    "expected_version"
+    "version",
+    "reason"
   ],
-  "title": "Promote",
+  "title": "Rollback",
   "type": "object"
 }

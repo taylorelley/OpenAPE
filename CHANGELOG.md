@@ -1,6 +1,33 @@
 # Changelog
 
-## Unreleased — derived turn context (expressiveness upgrade, phase 1)
+## 0.3.0 — expressive controls, decoder-v3, upap/2 (see docs/adr/0005-expressive-controls.md)
+
+Breaking: a clean break from upap/1 and behaviour-controls/1.
+
+* behaviour-controls/2 (`protocol/catalogue.py`): seven traits on a five-level scale
+  with one reviewed sentence per level, six reviewed coherence rules (51 788
+  approved configurations), and 16 signature habits with eligibility and
+  exclusions (at most three per turn). `catalogue_hash` binds decisions to the
+  catalogue; `renderers/controls-v2.json` is generated from it.
+* decoder-v3 / encoder/3 (`models/decoder-v3`): trait-level and habit heads, joint
+  selection over approved configurations, eligible habits above one half. New
+  context values: `debugging`, `planning`, `writing`, `error_present`, and the
+  engine-set `first_turn` and `long_session` tags. Archetypes carry signature habits.
+* Learning works on `{controls, habits}` choices: pairwise feedback, reflections
+  (now also `habits: {id: more_often|less_often}`), session states, maturation and
+  the evaluator. Constraint masks are cached (four fixed variants).
+* upap/2: decisions carry integer `controls`, `habits` and `catalogue_hash`;
+  feedback carries `preferred`/`rejected` choices; reflections `adjustments` and/or
+  `habits`. upap/1 requests are rejected; 0.2 clients fail open.
+* `openape migrate --reset` re-creates personas of a 0.2 data directory from their
+  recorded archetype, seeds and individuality; the engine refuses an unreset store.
+* Context rules add `debugging` (two or more failed tool calls or error words),
+  `planning` (plan mode, planning words), `writing`, and `error_present`.
+* Benchmarks: the simulated-user benchmark scores five-level utilities; the
+  development benchmark adds expression smoothness. Python and TypeScript SDKs,
+  adapters (0.3.0) and the agent tool definition are updated.
+
+## 0.3.0 groundwork — derived turn context (expressiveness upgrade, phase 1)
 
 * Adapters no longer send a fixed context. They derive task type, stakes, channel
   and tags from host metadata with one shared rule table

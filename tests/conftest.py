@@ -11,6 +11,11 @@ def api(tmp_path):
     with TestClient(app,headers={'Authorization':'Bearer '+TOKEN}) as c:
         yield c
 
-def post(api,path,data):return api.post(path,json={'protocol_version':'upap/1',**data})
+def post(api,path,data):return api.post(path,json={'protocol_version':'upap/2',**data})
 def expression(request_id='req-1',persona='ape',user='alice',session='session-1',mode='active'):
-    return dict(protocol_version='upap/1',request_id=request_id,identity={'tenant_id':'local','persona_id':persona,'user_id':user},session={'id':session,'turn_id':'turn-1'},host={'adapter_id':'custom','adapter_version':'0.1','host_version':'fixture','provider_family':'anthropic','model_id':'fixture'},context={'task_type':'general','channel':'terminal','stakes':'low','turn_origin':'user','tags':[]},mode=mode)
+    return dict(protocol_version='upap/2',request_id=request_id,identity={'tenant_id':'local','persona_id':persona,'user_id':user},session={'id':session,'turn_id':'turn-1'},host={'adapter_id':'custom','adapter_version':'0.1','host_version':'fixture','provider_family':'anthropic','model_id':'fixture'},context={'task_type':'general','channel':'terminal','stakes':'low','turn_origin':'user','tags':[]},mode=mode)
+from protocol.catalogue import NEUTRAL
+def option(habits=(),**levels):
+    """A feedback option: an approved configuration (neutral plus overrides) and its habits."""
+    return {'controls':{**NEUTRAL,**levels},'habits':list(habits)}
+TERSE=dict(directness=3,warmth=1,verbosity=1,explanation_depth=1,assertiveness=3)

@@ -42,12 +42,12 @@ class FakeEngine:
         import threading
         from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
         from pathlib import Path
-        decision=json.loads(Path('protocol/upap/v1/conformance.json').read_text())['decisions'][0]['value'];self.bodies=[];outer=self
+        decision=json.loads(Path('protocol/upap/v2/conformance.json').read_text())['decisions'][0]['value'];self.bodies=[];outer=self
         class Handler(BaseHTTPRequestHandler):
             def log_message(self,*a):pass
             def do_POST(self):
                 body=json.loads(self.rfile.read(int(self.headers['content-length'])));outer.bodies.append((self.path,body))
-                reply={**decision,'request_id':body.get('request_id'),'mode':body.get('mode','active')} if self.path=='/v1/express' else {'protocol_version':'upap/1','accepted':1}
+                reply={**decision,'request_id':body.get('request_id'),'mode':body.get('mode','active')} if self.path=='/v1/express' else {'protocol_version':'upap/2','accepted':1}
                 data=json.dumps(reply).encode();self.send_response(200);self.send_header('content-type','application/json');self.send_header('content-length',str(len(data)));self.end_headers();self.wfile.write(data)
         self.server=ThreadingHTTPServer(('127.0.0.1',0),Handler);self.url=f'http://127.0.0.1:{self.server.server_port}'
         threading.Thread(target=self.server.serve_forever,daemon=True).start()
@@ -69,10 +69,10 @@ def test_claude_hook_derives_context_from_metadata_without_reading_prompt(tmp_pa
         out=run_hook(env,{**base,'hook_event_name':'UserPromptSubmit','prompt_id':'p1','prompt':'zz-private-prompt please review this PR asap'})
         assert json.loads(out)['hookSpecificOutput']['additionalContext']
         context=engine.express()[-1]['context']
-        assert context==dict(task_type='coding',channel='terminal',stakes='high',turn_origin='user',tags=['technical','expert'])
+        assert context==dict(task_type='debugging',channel='terminal',stakes='high',turn_origin='user',tags=['technical','expert','error_present'])
         run_hook(env,{**base,'hook_event_name':'UserPromptSubmit','prompt_id':'p2','prompt':'zz-private-prompt','permission_mode':'plan'})
         context=engine.express()[-1]['context']  # tool signals were consumed by the previous turn
-        assert context==dict(task_type='research',channel='terminal',stakes='medium',turn_origin='user',tags=['expert'])
+        assert context==dict(task_type='planning',channel='terminal',stakes='medium',turn_origin='user',tags=['expert'])
         sent=json.dumps(engine.bodies);stored=''.join(p.read_text() for p in state.iterdir())
         assert 'zz-private' not in sent and 'zz-private' not in stored
     finally:engine.server.shutdown()
@@ -107,7 +107,7 @@ def test_hermes_derives_context_from_tool_calls_and_platform(monkeypatch):
     hooks['post_tool_call'](session_id='h',tool_name='terminal',args={},result='',status='error')
     hooks['post_tool_call'](session_id='h',tool_name='terminal',args={},result='',status='error')
     hooks['pre_llm_call'](session_id='h',turn_id='t1',model='m',user_message='zz-private review this',platform='telegram')
-    assert sent[-1]['context']==dict(task_type='research',channel='chat',stakes='high',turn_origin='user',tags=['technical','beginner'])
+    assert sent[-1]['context']==dict(task_type='debugging',channel='chat',stakes='high',turn_origin='user',tags=['technical','beginner','error_present'])
     hooks['pre_llm_call'](session_id='h',turn_id='t2',model='m',user_message='zz-private review this',platform='cli')
     assert sent[-1]['context']==dict(task_type='general',channel='terminal',stakes='medium',turn_origin='user',tags=['beginner'])
     monkeypatch.setenv('OPENAPE_CONTEXT_TEXT','local')

@@ -1,6 +1,6 @@
 name: openape
-version: "0.2.0"
-description: "Experimental OpenAPE (UPAP/1) style context appended to the current user message. Coexists with SOUL.md; never edits it."
+version: "0.3.0"
+description: "Experimental OpenAPE (UPAP/2) style context appended to the current user message. Coexists with SOUL.md; never edits it."
 requires_env:
   - OPENAPE_TOKEN
   - OPENAPE_PERSONA

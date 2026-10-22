@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import upap_lite  # noqa: E402  (vendored, byte-identical to sdk/python/lite.py)
 
 ADAPTER = 'upap.hermes'
-VERSION = '0.2.0'
+VERSION = '0.3.0'
 HOST_VERSION = '0.19.0'
 
 def stable(value): return hashlib.sha256(value.encode()).hexdigest()[:48]

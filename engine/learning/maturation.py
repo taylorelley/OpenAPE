@@ -19,8 +19,8 @@ it, so a backlog is replayed as the same sequence of steps.
 """
 import math
 import torch
-from engine.neural.policy import CATALOGUE, SESSION_DIM, features, mask
-from engine.neural.profiles import reference_contexts, target_distribution, context_score
+from engine.neural.policy import features, level_mask
+from engine.neural.profiles import reference_contexts, trait_targets, habit_targets, context_table, context_habits, distribution_loss
 from engine.learning.trainer import state_norm_limit
 
 # (relationship horizon, core horizon) in ended sessions.
@@ -71,30 +71,33 @@ def step_budget(scope, g, last_g):
 
 def familiarity_profile(m):
     """Growing familiarity with one user: warmer, less formal, a little briefer."""
-    return {'warmth': (2, 1.0 * m), 'formality': (0, 0.8 * m), 'verbosity': (0, 0.4 * m)}
+    return {'warmth': (3, 1.0 * m), 'formality': (1, 0.8 * m), 'verbosity': (1, 0.4 * m)}
 
 def fit_toward(decoder, core, rel, scope, rows, budget, steps=100):
-    """Fit one latent (decoder frozen) toward weighted target distributions, then
-    project onto the step budget and the absolute state-norm bound."""
+    """Fit one latent (decoder frozen) toward weighted per-trait level and habit targets,
+    then project onto the step budget and the absolute state-norm bound. rows:
+    (context, host, (trait target (7, 5), habit target (H,)), weight)."""
     if decoder.model is None: raise ValueError('trained decoder required')
     original = (core if scope == 'core' else rel).clone()
-    feats = torch.stack([features(c, h) for c, h, *_ in rows]); masks = torch.stack([mask(c) for c, *_ in rows])
-    targets = torch.stack([t for *_, t, _ in rows]); weights = torch.tensor([w for *_, w in rows]); weights = weights / weights.sum()
-    other = (rel if scope == 'core' else core).expand(len(rows), -1); session = torch.zeros(len(rows), SESSION_DIM)
+    feats = torch.stack([features(c, h) for c, h, *_ in rows]); lm = torch.stack([level_mask(c) for c, *_ in rows])
+    tt = torch.stack([t[0] for *_, t, _ in rows]); ht = torch.stack([t[1] for *_, t, _ in rows])
+    weights = torch.tensor([w for *_, w in rows]); weights = weights / weights.sum()
     x = original.clone().requires_grad_(True)
     optimizer = torch.optim.Adam([x], lr=0.05)
     for _ in range(steps):
         optimizer.zero_grad()
-        own = x.expand(len(rows), -1)
-        latents = (own, other) if scope == 'core' else (other, own)
-        logp = torch.log_softmax(decoder.model(torch.cat((*latents, session, feats), 1)).masked_fill(~masks, -1e9), 1)
-        loss = -(weights * (targets * logp.masked_fill(targets == 0, 0)).sum(1)).sum()
+        t, h = decoder.batch(x, rel, feats, lm) if scope == 'core' else decoder.batch(core, x, feats, lm)
+        loss = (weights * distribution_loss(t, h, tt, ht)).sum()
         loss.backward(); optimizer.step()
         with torch.no_grad():
             delta = x - original
             x.copy_(original + delta * min(1.0, budget * 0.98 / (float(delta.norm()) + 1e-8)))
             x.mul_(min(1.0, state_norm_limit(decoder, scope) / (float(x.norm()) + 1e-8)))
     return x.detach()
+
+def current(decoder, core, rel, context, host):
+    t, h = decoder.heads(core, rel, context, host)
+    return t.exp(), torch.sigmoid(h)
 
 def familiarize(decoder, core, rel, profile, m, budget, accommodation=None, weights=None):
     """Relationship step: nudge toward the archetype plus familiarity at maturity m and
@@ -104,8 +107,8 @@ def familiarize(decoder, core, rel, profile, m, budget, accommodation=None, weig
     profiles = [profile, scale(familiarity_profile(m))] + ([scale(accommodation)] if accommodation else [])
     with torch.no_grad():
         for context in reference_contexts():
-            current = torch.softmax(decoder.logits(core, rel, context, REFERENCE_HOST), 0)
-            target = (1 - FAMILIARITY_MIX) * current + FAMILIARITY_MIX * target_distribution(context, *profiles)
+            ct, ch = current(decoder, core, rel, context, REFERENCE_HOST)
+            target = ((1 - FAMILIARITY_MIX) * ct + FAMILIARITY_MIX * trait_targets(context, *profiles), (1 - FAMILIARITY_MIX) * ch + FAMILIARITY_MIX * habit_targets(context, *profiles))
             rows.append((context, REFERENCE_HOST, target, 1.0))
     return fit_toward(decoder, core, rel, 'relationship', rows, budget)
 
@@ -114,13 +117,13 @@ def habituate(decoder, core, experienced, budget, weights=None):
     (weighted by salience) and settle slightly; reference contexts anchor the rest.
     Optional per-trait weights apply development's sensitive periods."""
     rel = torch.zeros(32); rows = []
-    norms = lambda context: torch.tensor([context_score(c, context, weights) for c in CATALOGUE])
     with torch.no_grad():
         for context, host, count in experienced:
-            logp = torch.log_softmax(decoder.logits(core, rel, context, host), 0)
-            target = torch.softmax(((logp + HABIT_BETA * norms(context)) / HABIT_TEMPERATURE).masked_fill(~mask(context), float('-inf')), 0)
+            t, h = decoder.heads(core, rel, context, host)
+            target = (torch.softmax(((t + HABIT_BETA * context_table(context, weights)) / HABIT_TEMPERATURE).masked_fill(~level_mask(context), float('-inf')), 1),
+                torch.sigmoid(h + HABIT_BETA * context_habits(context)))
             rows.append((context, host, target, float(count)))
         anchor = sum(c for *_, c in experienced) * 0.25 / len(reference_contexts())
         for context in reference_contexts():
-            rows.append((context, REFERENCE_HOST, torch.softmax(decoder.logits(core, rel, context, REFERENCE_HOST), 0), anchor))
+            rows.append((context, REFERENCE_HOST, current(decoder, core, rel, context, REFERENCE_HOST), anchor))
     return fit_toward(decoder, core, rel, 'core', rows, budget)

@@ -1,21 +1,24 @@
 {
-  "hash": "sha256:dda6b8441ab83f351c7b2488fb314c611339a575bbe0433b825eec692862b643",
+  "hash": "sha256:74f8d3946857e2726a18bff273225d51252569d779cb6fabdaddea4e34776cde",
   "seed": 42,
-  "encoder": "encoder/2",
-  "catalogue": "behaviour-controls/1",
-  "actions": 24,
+  "encoder": "encoder/3",
+  "catalogue": "behaviour-controls/2",
+  "catalogue_hash": "sha256:f3dfa8c12fafb75ffc7859a73167652275b2df62a021abb814562808fb4ae86e",
+  "actions": 51788,
+  "habits": 16,
   "status": "experimental_synthetic",
-  "latent_norm_limit": 2.377,
+  "latent_norm_limit": 2.808,
   "training": {
     "rows": 28576,
     "train_personas": 384,
     "relationship_rows": 9216,
     "neutral_rows": 4000,
     "steps": 700,
-    "top1_agreement_train": 0.7493,
-    "core_latent_norm_median": 1.376,
-    "relationship_latent_norm_median": 0.815,
-    "corpus_sha256": "961eb471cee63d1bd8b063ed3ea99f563aae8d842afb07c169a8a37eff0f4c81"
+    "trait_level_accuracy_train": 0.9902,
+    "habit_accuracy_train": 0.9993,
+    "core_latent_norm_median": 1.401,
+    "relationship_latent_norm_median": 0.798,
+    "corpus_sha256": "bd83e2c75b7251ee982a50c46c007c9dab07080e65aaf78744aa91bb754b5089"
   },
   "license": "Apache-2.0 weights; original CC0 synthetic corpus",
   "limitations": [
@@ -28,30 +31,36 @@
       "personas": 64,
       "support_pairs_per_persona": 16,
       "query_contexts_per_persona": 32,
-      "top1_agreement_neutral": 0.1367,
-      "top1_agreement_fixed_default": 0.0654,
-      "top1_agreement_fitted": 0.6182
+      "metric": "mean per-trait level agreement of the selected configuration",
+      "trait_agreement_neutral": 0.5424,
+      "trait_agreement_fixed_default": 0.5302,
+      "trait_agreement_fitted": 0.6331,
+      "habit_f1_neutral": 0.6094,
+      "habit_f1_fitted": 0.6305
     },
     "validation": {
       "personas": 96,
       "support_pairs_per_persona": 16,
       "query_contexts_per_persona": 32,
-      "top1_agreement_neutral": 0.1221,
-      "top1_agreement_fixed_default": 0.0485,
-      "top1_agreement_fitted": 0.6569
+      "metric": "mean per-trait level agreement of the selected configuration",
+      "trait_agreement_neutral": 0.5661,
+      "trait_agreement_fixed_default": 0.5399,
+      "trait_agreement_fitted": 0.6548,
+      "habit_f1_neutral": 0.625,
+      "habit_f1_fitted": 0.6044
     }
   },
-  "seed_initialization_top1_agreement": {
-    "casual": 0.7188,
-    "concise": 0.3438,
-    "detailed": 0.6875,
-    "direct": 0.4062,
-    "formal": 0.8906,
-    "gentle": 1.0,
-    "playful": 0.75,
-    "reserved": 0.9844,
-    "serious": 0.4688,
+  "seed_initialization_trait_agreement": {
+    "casual": 0.8371,
+    "concise": 0.8839,
+    "detailed": 0.904,
+    "direct": 0.9911,
+    "formal": 0.9241,
+    "gentle": 0.9955,
+    "playful": 0.9487,
+    "reserved": 0.8862,
+    "serious": 0.904,
     "warm": 0.8594
   }
 }
-PASS: decoder reproduction hash sha256:dda6b8441ab83f351c7b2488fb314c611339a575bbe0433b825eec692862b643
+PASS: decoder reproduction hash sha256:74f8d3946857e2726a18bff273225d51252569d779cb6fabdaddea4e34776cde

@@ -1,8 +1,14 @@
-import catalogue from '../../renderers/controls-v1.json' with { type:'json' };
-import personaFeedbackTool from '../../protocol/upap/v1/tools/persona_feedback.json' with { type:'json' };
-/** Canonical agent tool: the model supplies trait moves, the adapter supplies the decision. */
-import contextRules from '../../protocol/upap/v1/context-rules.json' with { type:'json' };
+import {createHash} from 'node:crypto';
+import controls from '../../renderers/controls-v2.json' with { type:'json' };
+import personaFeedbackTool from '../../protocol/upap/v2/tools/persona_feedback.json' with { type:'json' };
+/** Canonical agent tool: the model supplies trait and habit moves, the adapter supplies the decision. */
+import contextRules from '../../protocol/upap/v2/context-rules.json' with { type:'json' };
 export {personaFeedbackTool};
+export const PROTOCOL='upap/2';
+/** Same canonical form as Python json.dumps(sort_keys=True, separators=(',',':')). */
+const canonical=(v:any):string=>Array.isArray(v)?`[${v.map(canonical).join(',')}]`:v&&typeof v==='object'?`{${Object.keys(v).sort().map(k=>`${JSON.stringify(k)}:${canonical(v[k])}`).join(',')}}`:JSON.stringify(v);
+export const CONTROLS_HASH='sha256:'+createHash('sha256').update(canonical(controls)).digest('hex');
+const traits:string[]=controls.traits;const habits:Record<string,any>=Object.fromEntries(controls.habits.map((h:any)=>[h.id,h]));const habitIds=Object.keys(habits);
 /** Host signals for context derivation: IDs, tool names and counts only, never text. */
 export type ContextSignals={tools?:string[];failures?:number;plan_mode?:boolean;channel?:string;turn_origin?:string};
 type Ctx=PersonalityContext['context'];
@@ -13,7 +19,7 @@ export function parseDeclared(raw:unknown):Partial<Ctx>{
  if(!v||typeof v!=='object'||Array.isArray(v))return {};
  const vocab:Record<string,string[]>=contextRules.vocab;const out:any={};
  for(const k of ['task_type','channel','stakes','turn_origin'])if(typeof v[k]==='string'&&vocab[k].includes(v[k]))out[k]=v[k];
- const tags=labels(v.tags).filter(t=>vocab.tags.includes(t));if(tags.length)out.tags=tags;
+ const tags=labels(v.tags).filter(t=>vocab.tags.includes(t)&&!contextRules.engine_tags.includes(t));if(tags.length)out.tags=tags;
  return out;
 }
 /** Mirror of sdk/python/lite.py derive_context (same rules file, same precedence). The
@@ -25,8 +31,8 @@ export function deriveContext(signals?:ContextSignals|null,declared?:unknown,tex
  for(const k of ['channel','turn_origin'])if(vocab[k].includes(s[k]))ctx[k]=s[k];
  const names=new Set(labels(s.tools).map(n=>n.toLowerCase()));
  for(const r of rules.tools as any[])if(r.names.some((n:string)=>names.has(n))){task=task??r.task_type;for(const t of r.tags??[])tags.add(t);}
+ for(const r of rules.failures as any[])if(Number.isInteger(s.failures)&&s.failures>=r.at_least){task=r.task_type??task;for(const t of r.tags??[])tags.add(t);rise(r.stakes);}
  if(s.plan_mode===true)task=rules.plan_mode.task_type;
- if(Number.isInteger(s.failures)&&s.failures>=rules.failures.at_least)rise(rules.failures.stakes);
  if(typeof text==='string'&&text){
   let found:string|undefined;
   for(const r of rules.text as any[])if(new RegExp(r.pattern,'i').test(text)){found=found??r.task_type;for(const t of r.tags??[])tags.add(t);rise(r.stakes);}
@@ -37,16 +43,16 @@ export function deriveContext(signals?:ContextSignals|null,declared?:unknown,tex
  ctx.tags=vocab.tags.filter(t=>tags.has(t));
  return ctx;
 }
-export type Reflection={adjustments:Record<string,'more'|'less'>;reason:'user_requested'|'user_corrected'|'observed_preference'};
+export type Reflection={adjustments?:Record<string,'more'|'less'>;habits?:Record<string,'more_often'|'less_often'>;reason:'user_requested'|'user_corrected'|'observed_preference'};
 export type Mode = 'disabled'|'shadow'|'active'|'frozen';
 export type PersonalityContext = {
- protocol_version:'upap/1'; request_id:string;
+ protocol_version:'upap/2'; request_id:string;
  identity:{tenant_id:string;persona_id:string;user_id?:string};session:{id:string;turn_id:string};
  host:{adapter_id:string;adapter_version:string;host_version:string;provider_family:'openai'|'anthropic'|'google'|'qwen'|'other';model_id:string};
  context:{task_type:string;channel:string;stakes:string;turn_origin:string;tags:string[]};
 };
-export type Decision = {protocol_version:'upap/1'; request_id:string; decision_id:string; persona_version:string;
- decoder_hash:string;control_schema:'behaviour-controls/1'; control_set_id:string; controls:Record<string,string>;
+export type Decision = {protocol_version:'upap/2'; request_id:string; decision_id:string; persona_version:string;
+ decoder_hash:string;control_schema:'behaviour-controls/2';catalogue_hash:string;controls:Record<string,number>;habits:string[];
  mode:Exclude<Mode,'disabled'>;applies_to:'next_model_request';policy:{eligible:boolean;mask_reason:string|null};cache_ttl_ms:number;engine_status:string};
 export type RenderedExpression = {text:string;status:string;decision:Decision|null};
 export type AdapterManifest = {adapter_id:string;version:string;verified:boolean;insertion_levels:string[];host_commit:string|null};
@@ -57,27 +63,28 @@ export interface PersonalityAdapter<HostEvent> {
  observe(event:HostEvent):Record<string,unknown>|null;
  dispose():Promise<void>;
 }
-const prefix='Style preferences only. Host, system, developer, safety and user task requirements take precedence. ';
-const templates:Record<string,Record<string,string>>={
- directness:{low:'Use gentle phrasing.',moderate:'Be clear.',high:'Lead with the answer.'},
- warmth:{low:'Use a neutral tone.',moderate:'Be considerate.',high:'Use a warm, supportive tone.'},
- verbosity:{low:'Keep responses concise.',moderate:'Use moderate detail.',high:'Include useful detail.'},
- humour:{low:'Avoid humour.',moderate:'Use light humour when appropriate.',high:'Use humour when appropriate.'},
- formality:{low:'Use casual language.',moderate:'Use plain professional language.',high:'Use formal language.'},
- explanation_depth:{low:'Give essential explanation.',moderate:'Explain key reasoning.',high:'Explain reasoning with examples.'},
- assertiveness:{low:'Offer suggestions gently.',moderate:'State recommendations clearly without changing factual certainty.',high:'Be decisive without changing factual certainty.'}};
+/** A complete, in-range configuration that passes the catalogue's coherence rules. */
+export function coherent(c:any):boolean{
+ if(!c||typeof c!=='object'||Array.isArray(c)||Object.keys(c).length!==traits.length||traits.some(t=>!Number.isInteger(c[t])||c[t]<0||c[t]>=controls.levels))return false;
+ return !(controls.rules as any[]).some(([a,la,b,lb])=>la.includes(c[a])&&lb.includes(c[b]));
+}
+/** Known, unique, at most max_habits, in catalogue order, eligible and not mutually exclusive. */
+export function habitsValid(ids:any,c:Record<string,number>):boolean{
+ if(!Array.isArray(ids)||ids.length>controls.max_habits||ids.some(i=>typeof i!=='string'||!habitIds.includes(i)))return false;
+ const ordered=habitIds.filter(i=>ids.includes(i));if(ordered.length!==ids.length||ordered.some((i,k)=>ids[k]!==i))return false;
+ return ids.every((i:string)=>Object.entries(habits[i].requires as Record<string,number[]>).every(([t,[lo,hi]])=>c[t]>=lo&&c[t]<=hi)&&!habits[i].excludes.some((x:string)=>ids.includes(x)));
+}
 export function validateDecision(raw:unknown):Decision {
  const d=raw as Decision;
- if(!d || d.protocol_version!=='upap/1'||d.control_schema!=='behaviour-controls/1'||!/^style-\d{2}$/.test(d.control_set_id))throw Error('Unsupported decision');
- const idx=Number(d.control_set_id.slice(6));const expected=catalogue[idx];
- if(!expected||!d.controls||Object.keys(d.controls).length!==7||Object.entries(expected).some(([k,v])=>d.controls[k]!==v))throw Error('Catalogue mismatch');
+ if(!d||d.protocol_version!=='upap/2'||d.control_schema!==controls.schema||d.catalogue_hash!==CONTROLS_HASH)throw Error('Unsupported decision');
+ if(!coherent(d.controls)||!habitsValid(d.habits,d.controls))throw Error('Catalogue mismatch');
  if(!['shadow','active','frozen'].includes(d.mode)||d.applies_to!=='next_model_request'||!d.policy?.eligible||!Number.isInteger(d.cache_ttl_ms)||d.cache_ttl_ms<0||d.cache_ttl_ms>30000||typeof d.request_id!=='string'||typeof d.decision_id!=='string'||typeof d.persona_version!=='string'||typeof d.decoder_hash!=='string')throw Error('Invalid decision');
  return d;
 }
 export function render(raw:unknown):string {
  const d=validateDecision(raw);if(d.mode==='shadow')return '';
- const text=prefix+Object.keys(catalogue[0]).map(k=>templates[k][d.controls[k]]).join(' ');
- if(text.length>900)throw Error('Style size bound');return text;
+ const text=[controls.prefix,...traits.map(t=>(controls.templates as Record<string,string[]>)[t][d.controls[t]]),...d.habits.map(h=>habits[h].text)].join(' ');
+ if(text.length>controls.max_style_chars)throw Error('Style size bound');return text;
 }
 export class Client {
  url:string;token:string;timeout:number;fetcher:typeof fetch;
@@ -90,20 +97,22 @@ export class Client {
   const signal=AbortSignal.timeout(this.timeout);
   for(let attempt=0;attempt<(retry?2:1);attempt++){
    try{
-    const r=await this.fetcher(this.url+path,{method,headers:{Authorization:`Bearer ${this.token}`,'Content-Type':'application/json'},signal,body:data?JSON.stringify({protocol_version:'upap/1',...data}):undefined});
+    const r=await this.fetcher(this.url+path,{method,headers:{Authorization:`Bearer ${this.token}`,'Content-Type':'application/json'},signal,body:data?JSON.stringify({protocol_version:'upap/2',...data}):undefined});
     if(r.status>=500&&retry&&attempt===0)continue;
     if(!r.ok)throw Error(`UPAP HTTP ${r.status}`);
-    const result=await r.json();if(result.protocol_version!=='upap/1')throw Error('Unsupported protocol');return result;
+    const result=await r.json();if(result.protocol_version!==PROTOCOL)throw Error('Unsupported protocol');return result;
    }catch(e){if(!retry||attempt||signal.aborted)throw e;}
   }throw Error('Engine unavailable');
  }
  /** Record a persona_feedback tool call for one decision; returns a short model-facing result. */
  async reflect(decisionId:string|undefined,args:Reflection,scope?:'core'|'relationship'):Promise<string>{
   if(!decisionId)return 'Not recorded: no persona decision for this turn.';
-  const traits=Object.keys(catalogue[0]);const moves=Object.entries(args?.adjustments??{});
-  if(!moves.length||moves.length>3||moves.some(([k,v])=>!traits.includes(k)||!['more','less'].includes(v)))return 'Not recorded: adjustments must map 1-3 style traits to "more" or "less".';
+  const adjustments=args?.adjustments??{};const habitMoves=args?.habits??{};
+  if(!adjustments||typeof adjustments!=='object'||Array.isArray(adjustments)||Object.keys(adjustments).length>3||Object.entries(adjustments).some(([k,v])=>!traits.includes(k)||!['more','less'].includes(v)))return 'Not recorded: adjustments must map up to 3 style traits to "more" or "less".';
+  if(!habitMoves||typeof habitMoves!=='object'||Array.isArray(habitMoves)||Object.keys(habitMoves).length>2||Object.entries(habitMoves).some(([k,v])=>!habitIds.includes(k)||!['more_often','less_often'].includes(v)))return 'Not recorded: habits must map up to 2 known habits to "more_often" or "less_often".';
+  if(!Object.keys(adjustments).length&&!Object.keys(habitMoves).length)return 'Not recorded: give at least one trait or habit move.';
   const saved=this.timeout;this.timeout=Math.max(saved,2000);
-  try{await this.request('POST','/v1/reflections',{reflection_id:decisionId,decision_id:decisionId,adjustments:args.adjustments,reason:args.reason,...(scope?{scope}:{})});return 'Recorded. Your persona will adapt gradually in future sessions if this preference is consistent.';}
+  try{await this.request('POST','/v1/reflections',{reflection_id:decisionId,decision_id:decisionId,adjustments,reason:args.reason,...(Object.keys(habitMoves).length?{habits:habitMoves}:{}),...(scope?{scope}:{})});return 'Recorded. Your persona will adapt gradually in future sessions if this preference is consistent.';}
   catch(e){return `Not recorded: ${String((e as Error).message).slice(0,200)}`;}
   finally{this.timeout=saved;}
  }

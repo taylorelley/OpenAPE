@@ -5,7 +5,7 @@
     {
       "name": "openape",
       "source": "./adapters/claude-code",
-      "description": "Experimental OpenAPE (UPAP/1) bounded style context with lifecycle observations. Fail-open; never edits CLAUDE.md or AGENTS.md."
+      "description": "Experimental OpenAPE (UPAP/2) bounded style context with lifecycle observations. Fail-open; never edits CLAUDE.md or AGENTS.md."
     }
   ]
 }

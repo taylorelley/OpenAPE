@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "OpenAPE \u2014 Agent Personality Engine",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "paths": {
     "/health/live": {
@@ -675,11 +675,51 @@
   },
   "components": {
     "schemas": {
+      "Choice": {
+        "properties": {
+          "controls": {
+            "$ref": "#/components/schemas/Controls"
+          },
+          "habits": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "summary_first",
+                "risks_first",
+                "next_step",
+                "confirm_goal",
+                "clarify_once",
+                "acknowledge_constraints",
+                "concrete_examples",
+                "analogies",
+                "structured",
+                "plain_words",
+                "precise_terms",
+                "tradeoffs",
+                "acknowledge_progress",
+                "light_aside",
+                "recap_end",
+                "flag_uncertainty"
+              ]
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Habits"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "controls"
+        ],
+        "title": "Choice",
+        "description": "One rendered style: an approved trait configuration and its habits (catalogue order)."
+      },
       "Consolidate": {
         "properties": {
           "protocol_version": {
             "type": "string",
-            "const": "upap/1",
+            "const": "upap/2",
             "title": "Protocol Version"
           },
           "persona_id": {
@@ -732,7 +772,10 @@
               "coding",
               "support",
               "creative",
-              "research"
+              "research",
+              "debugging",
+              "planning",
+              "writing"
             ],
             "title": "Task Type",
             "default": "general"
@@ -778,11 +821,14 @@
                 "sensitive",
                 "urgent",
                 "beginner",
-                "expert"
+                "expert",
+                "error_present",
+                "first_turn",
+                "long_session"
               ]
             },
             "type": "array",
-            "maxItems": 6,
+            "maxItems": 9,
             "title": "Tags"
           }
         },
@@ -793,66 +839,45 @@
       "Controls": {
         "properties": {
           "directness": {
-            "type": "string",
-            "enum": [
-              "low",
-              "moderate",
-              "high"
-            ],
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
             "title": "Directness"
           },
           "warmth": {
-            "type": "string",
-            "enum": [
-              "low",
-              "moderate",
-              "high"
-            ],
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
             "title": "Warmth"
           },
           "verbosity": {
-            "type": "string",
-            "enum": [
-              "low",
-              "moderate",
-              "high"
-            ],
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
             "title": "Verbosity"
           },
           "humour": {
-            "type": "string",
-            "enum": [
-              "low",
-              "moderate",
-              "high"
-            ],
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
             "title": "Humour"
           },
           "formality": {
-            "type": "string",
-            "enum": [
-              "low",
-              "moderate",
-              "high"
-            ],
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
             "title": "Formality"
           },
           "explanation_depth": {
-            "type": "string",
-            "enum": [
-              "low",
-              "moderate",
-              "high"
-            ],
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
             "title": "Explanation Depth"
           },
           "assertiveness": {
-            "type": "string",
-            "enum": [
-              "low",
-              "moderate",
-              "high"
-            ],
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
             "title": "Assertiveness"
           }
         },
@@ -873,7 +898,7 @@
         "properties": {
           "protocol_version": {
             "type": "string",
-            "const": "upap/1",
+            "const": "upap/2",
             "title": "Protocol Version"
           },
           "persona_id": {
@@ -999,9 +1024,9 @@
         "properties": {
           "protocol_version": {
             "type": "string",
-            "const": "upap/1",
+            "const": "upap/2",
             "title": "Protocol Version",
-            "default": "upap/1"
+            "default": "upap/2"
           },
           "request_id": {
             "type": "string",
@@ -1036,16 +1061,42 @@
           },
           "control_schema": {
             "type": "string",
-            "const": "behaviour-controls/1",
+            "const": "behaviour-controls/2",
             "title": "Control Schema",
-            "default": "behaviour-controls/1"
+            "default": "behaviour-controls/2"
           },
-          "control_set_id": {
+          "catalogue_hash": {
             "type": "string",
-            "title": "Control Set Id"
+            "title": "Catalogue Hash"
           },
           "controls": {
             "$ref": "#/components/schemas/Controls"
+          },
+          "habits": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "summary_first",
+                "risks_first",
+                "next_step",
+                "confirm_goal",
+                "clarify_once",
+                "acknowledge_constraints",
+                "concrete_examples",
+                "analogies",
+                "structured",
+                "plain_words",
+                "precise_terms",
+                "tradeoffs",
+                "acknowledge_progress",
+                "light_aside",
+                "recap_end",
+                "flag_uncertainty"
+              ]
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Habits"
           },
           "mode": {
             "type": "string",
@@ -1111,8 +1162,9 @@
           "decision_id",
           "persona_version",
           "decoder_hash",
-          "control_set_id",
+          "catalogue_hash",
           "controls",
+          "habits",
           "mode",
           "policy",
           "engine_status"
@@ -1224,7 +1276,7 @@
         "properties": {
           "protocol_version": {
             "type": "string",
-            "const": "upap/1",
+            "const": "upap/2",
             "title": "Protocol Version"
           },
           "evolution": {
@@ -1284,7 +1336,7 @@
         "properties": {
           "protocol_version": {
             "type": "string",
-            "const": "upap/1",
+            "const": "upap/2",
             "title": "Protocol Version"
           },
           "include_relationships": {
@@ -1304,7 +1356,7 @@
         "properties": {
           "protocol_version": {
             "type": "string",
-            "const": "upap/1",
+            "const": "upap/2",
             "title": "Protocol Version"
           },
           "request_id": {
@@ -1392,7 +1444,7 @@
         "properties": {
           "protocol_version": {
             "type": "string",
-            "const": "upap/1",
+            "const": "upap/2",
             "title": "Protocol Version"
           },
           "feedback_id": {
@@ -1458,31 +1510,25 @@
             ],
             "title": "Value"
           },
-          "preferred_control": {
+          "preferred": {
             "anyOf": [
               {
-                "type": "integer",
-                "maximum": 23.0,
-                "minimum": 0.0
+                "$ref": "#/components/schemas/Choice"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Preferred Control"
+            ]
           },
-          "rejected_control": {
+          "rejected": {
             "anyOf": [
               {
-                "type": "integer",
-                "maximum": 23.0,
-                "minimum": 0.0
+                "$ref": "#/components/schemas/Choice"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Rejected Control"
+            ]
           },
           "evidence_group": {
             "type": "string",
@@ -1619,7 +1665,7 @@
         "properties": {
           "protocol_version": {
             "type": "string",
-            "const": "upap/1",
+            "const": "upap/2",
             "title": "Protocol Version"
           },
           "persona_id": {
@@ -1669,7 +1715,7 @@
         "properties": {
           "protocol_version": {
             "type": "string",
-            "const": "upap/1",
+            "const": "upap/2",
             "title": "Protocol Version"
           },
           "adapter_id": {
@@ -1726,7 +1772,7 @@
         "properties": {
           "protocol_version": {
             "type": "string",
-            "const": "upap/1",
+            "const": "upap/2",
             "title": "Protocol Version"
           },
           "candidate_id": {
@@ -1753,7 +1799,7 @@
         "properties": {
           "protocol_version": {
             "type": "string",
-            "const": "upap/1",
+            "const": "upap/2",
             "title": "Protocol Version"
           },
           "reflection_id": {
@@ -1787,8 +1833,39 @@
             },
             "type": "object",
             "maxProperties": 3,
-            "minProperties": 1,
             "title": "Adjustments"
+          },
+          "habits": {
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "more_often",
+                "less_often"
+              ]
+            },
+            "propertyNames": {
+              "enum": [
+                "summary_first",
+                "risks_first",
+                "next_step",
+                "confirm_goal",
+                "clarify_once",
+                "acknowledge_constraints",
+                "concrete_examples",
+                "analogies",
+                "structured",
+                "plain_words",
+                "precise_terms",
+                "tradeoffs",
+                "acknowledge_progress",
+                "light_aside",
+                "recap_end",
+                "flag_uncertainty"
+              ]
+            },
+            "type": "object",
+            "maxProperties": 2,
+            "title": "Habits"
           },
           "reason": {
             "type": "string",
@@ -1821,7 +1898,6 @@
           "protocol_version",
           "reflection_id",
           "decision_id",
-          "adjustments",
           "reason"
         ],
         "title": "Reflection"
@@ -1830,7 +1906,7 @@
         "properties": {
           "protocol_version": {
             "type": "string",
-            "const": "upap/1",
+            "const": "upap/2",
             "title": "Protocol Version"
           },
           "version": {

@@ -2,7 +2,7 @@
   "additionalProperties": false,
   "properties": {
     "protocol_version": {
-      "const": "upap/1",
+      "const": "upap/2",
       "title": "Protocol Version",
       "type": "string"
     },

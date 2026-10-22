@@ -4,67 +4,46 @@
       "additionalProperties": false,
       "properties": {
         "directness": {
-          "enum": [
-            "low",
-            "moderate",
-            "high"
-          ],
+          "maximum": 4,
+          "minimum": 0,
           "title": "Directness",
-          "type": "string"
+          "type": "integer"
         },
         "warmth": {
-          "enum": [
-            "low",
-            "moderate",
-            "high"
-          ],
+          "maximum": 4,
+          "minimum": 0,
           "title": "Warmth",
-          "type": "string"
+          "type": "integer"
         },
         "verbosity": {
-          "enum": [
-            "low",
-            "moderate",
-            "high"
-          ],
+          "maximum": 4,
+          "minimum": 0,
           "title": "Verbosity",
-          "type": "string"
+          "type": "integer"
         },
         "humour": {
-          "enum": [
-            "low",
-            "moderate",
-            "high"
-          ],
+          "maximum": 4,
+          "minimum": 0,
           "title": "Humour",
-          "type": "string"
+          "type": "integer"
         },
         "formality": {
-          "enum": [
-            "low",
-            "moderate",
-            "high"
-          ],
+          "maximum": 4,
+          "minimum": 0,
           "title": "Formality",
-          "type": "string"
+          "type": "integer"
         },
         "explanation_depth": {
-          "enum": [
-            "low",
-            "moderate",
-            "high"
-          ],
+          "maximum": 4,
+          "minimum": 0,
           "title": "Explanation Depth",
-          "type": "string"
+          "type": "integer"
         },
         "assertiveness": {
-          "enum": [
-            "low",
-            "moderate",
-            "high"
-          ],
+          "maximum": 4,
+          "minimum": 0,
           "title": "Assertiveness",
-          "type": "string"
+          "type": "integer"
         }
       },
       "required": [
@@ -109,8 +88,8 @@
   "additionalProperties": false,
   "properties": {
     "protocol_version": {
-      "const": "upap/1",
-      "default": "upap/1",
+      "const": "upap/2",
+      "default": "upap/2",
       "title": "Protocol Version",
       "type": "string"
     },
@@ -147,17 +126,43 @@
       "type": "string"
     },
     "control_schema": {
-      "const": "behaviour-controls/1",
-      "default": "behaviour-controls/1",
+      "const": "behaviour-controls/2",
+      "default": "behaviour-controls/2",
       "title": "Control Schema",
       "type": "string"
     },
-    "control_set_id": {
-      "title": "Control Set Id",
+    "catalogue_hash": {
+      "title": "Catalogue Hash",
       "type": "string"
     },
     "controls": {
       "$ref": "#/$defs/Controls"
+    },
+    "habits": {
+      "items": {
+        "enum": [
+          "summary_first",
+          "risks_first",
+          "next_step",
+          "confirm_goal",
+          "clarify_once",
+          "acknowledge_constraints",
+          "concrete_examples",
+          "analogies",
+          "structured",
+          "plain_words",
+          "precise_terms",
+          "tradeoffs",
+          "acknowledge_progress",
+          "light_aside",
+          "recap_end",
+          "flag_uncertainty"
+        ],
+        "type": "string"
+      },
+      "maxItems": 3,
+      "title": "Habits",
+      "type": "array"
     },
     "mode": {
       "enum": [
@@ -223,8 +228,9 @@
     "decision_id",
     "persona_version",
     "decoder_hash",
-    "control_set_id",
+    "catalogue_hash",
     "controls",
+    "habits",
     "mode",
     "policy",
     "engine_status"

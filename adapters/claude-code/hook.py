@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import upap_lite  # noqa: E402  (vendored, byte-identical to sdk/python/lite.py)
 
 ADAPTER = 'upap.claude-code'
-VERSION = '0.2.0'
+VERSION = '0.3.0'
 
 def stable(value): return hashlib.sha256(value.encode()).hexdigest()[:48]
 def safe_id(value, default): return (re.sub(r'[^A-Za-z0-9_.:-]', '-', value or '')[:100]) or default

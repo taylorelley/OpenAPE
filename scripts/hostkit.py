@@ -35,7 +35,7 @@ class Engine:
             time.sleep(.05)
         else:raise RuntimeError('engine startup timed out')
     def post(self,path,body):
-        r=self.http.post(path,json={'protocol_version':'upap/1',**body});r.raise_for_status();return r.json()
+        r=self.http.post(path,json={'protocol_version':'upap/2',**body});r.raise_for_status();return r.json()
     def rows(self,sql):
         import sqlite3
         db=sqlite3.connect(self.tmp/'engine-data'/'openape.sqlite');db.row_factory=sqlite3.Row
