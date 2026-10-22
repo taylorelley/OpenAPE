@@ -17,13 +17,32 @@
           "concise",
           "detailed",
           "warm",
-          "formal"
+          "reserved",
+          "formal",
+          "casual",
+          "direct",
+          "gentle",
+          "playful",
+          "serious"
         ],
         "type": "string"
       },
-      "maxItems": 4,
+      "maxItems": 5,
       "title": "Seed Preferences",
       "type": "array"
+    },
+    "parent_persona_id": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parent Persona Id"
     }
   },
   "required": [

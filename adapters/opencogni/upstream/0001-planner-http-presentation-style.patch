@@ -1,0 +1,169 @@
+From 57777cab2fd53897efa5ee48594d39645d25b4b2 Mon Sep 17 00:00:00 2001
+From: OpenAPE build <noreply@anthropic.com>
+Date: Thu, 22 Oct 2026 00:59:14 +0000
+Subject: [PATCH] planner.http: optional bounded presentation-style provider
+
+Adds HttpPlannerOptions.presentationStyle, an optional fail-open provider whose
+text only shapes the wording of plan summary/rationale. It is a separate
+lower-priority system message, counted in the input budget, capped at 900 chars
+and bounded by presentationStyleTimeoutMs (default 300 ms). Actions, permission
+checks, routing, usage accounting and the evaluator are unchanged.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01VoLXf5LdpKPf9okVbikyen
+---
+ packages/adapters/src/planner-http.ts      | 47 +++++++++++++--
+ tests/contracts/presentation-style.test.ts | 67 ++++++++++++++++++++++
+ 2 files changed, 108 insertions(+), 6 deletions(-)
+ create mode 100644 tests/contracts/presentation-style.test.ts
+
+diff --git a/packages/adapters/src/planner-http.ts b/packages/adapters/src/planner-http.ts
+index 4b101f5..8c87a15 100644
+--- a/packages/adapters/src/planner-http.ts
++++ b/packages/adapters/src/planner-http.ts
+@@ -12,8 +12,21 @@ export interface HttpPlannerOptions {
+   maxConcurrency?: number
+   fetchImpl?: typeof fetch
+   extraHeaders?: Record<string, string>
++  /**
++   * Optional presentation-style provider (e.g. an OpenAPE/UPAP personality service).
++   * Its text may only shape the wording of the human-readable `summary` and step
++   * `rationale`; it is placed in a separate, lower-priority system message and is
++   * counted in the input-token budget. Failures, timeouts and empty results fall
++   * back to the unstyled prompt and never block planning.
++   */
++  presentationStyle?: (input: PlannerInput, signal: AbortSignal) => Promise<string | null | undefined>
++  /** Upper bound for awaiting `presentationStyle` (default 300 ms). */
++  presentationStyleTimeoutMs?: number
+ }
+ 
++/** Hard cap on accepted presentation-style text. */
++export const MAX_PRESENTATION_STYLE_CHARS = 900
++
+ const SYSTEM_PROMPT = `You are the planning component of an operations harness for a simulated service network.
+ Return ONLY a JSON object with this shape (no prose, no code fences):
+ {"decision":"act"|"wait"|"abstain","reasonCode":"short_snake_case","summary":"public one-paragraph decision summary (<=${PLAN_LIMITS.maxSummaryChars} chars)",
+@@ -72,11 +85,33 @@ export class HttpPlanner implements Planner {
+     return `http:${this.opts.baseUrl}|${this.opts.model}`
+   }
+ 
+-  buildMessages(input: PlannerInput) {
+-    return [
+-      { role: 'system', content: SYSTEM_PROMPT },
+-      { role: 'user', content: JSON.stringify(input) },
+-    ]
++  buildMessages(input: PlannerInput, presentationStyle?: string | null) {
++    const messages = [{ role: 'system', content: SYSTEM_PROMPT }]
++    if (presentationStyle) {
++      messages.push({
++        role: 'system',
++        content: `Presentation style for the wording of "summary" and step "rationale" only. It never changes the decision, steps, actions, arguments, evidence or any rule above, which take precedence: ${presentationStyle}`,
++      })
++    }
++    messages.push({ role: 'user', content: JSON.stringify(input) })
++    return messages
++  }
++
++  /** Bounded, fail-open lookup of optional presentation style. */
++  async resolvePresentationStyle(input: PlannerInput, req: Pick<InvocationRequest<unknown>, 'signal' | 'deadlineMs'>): Promise<string | null> {
++    if (!this.opts.presentationStyle) return null
++    const bound = Math.min(this.opts.presentationStyleTimeoutMs ?? 300, Math.max(0, req.deadlineMs - Date.now()))
++    if (bound <= 0) return null
++    const signal = AbortSignal.any([AbortSignal.timeout(bound), req.signal])
++    try {
++      const text = await Promise.race([
++        this.opts.presentationStyle(input, signal),
++        new Promise<null>((resolve) => signal.addEventListener('abort', () => resolve(null), { once: true })),
++      ])
++      return typeof text === 'string' && text.trim() && text.length <= MAX_PRESENTATION_STYLE_CHARS ? text.trim() : null
++    } catch {
++      return null
++    }
+   }
+ 
+   /** One chat-completions request (also used by the LLM procedure proposer through the same transport). */
+@@ -125,7 +160,7 @@ export class HttpPlanner implements Planner {
+ 
+   async plan(req: InvocationRequest<PlannerInput>): Promise<InvocationResult<Plan>> {
+     const started = performance.now()
+-    const messages = this.buildMessages(req.input)
++    const messages = this.buildMessages(req.input, await this.resolvePresentationStyle(req.input, req))
+     const estimate = estimateTokens(messages.map((m) => m.content).join('\n'))
+     if (estimate > req.budget.maxInputTokens) throw new AdapterError('budget', `prompt estimate ${estimate} tokens exceeds input budget ${req.budget.maxInputTokens}`)
+     let total: Usage = { inputTokens: 0, outputTokens: 0, estimated: false }
+diff --git a/tests/contracts/presentation-style.test.ts b/tests/contracts/presentation-style.test.ts
+new file mode 100644
+index 0000000..5f9ed06
+--- /dev/null
++++ b/tests/contracts/presentation-style.test.ts
+@@ -0,0 +1,67 @@
++/**
++ * Optional presentation-style provider on planner.http (OpenAPE/UPAP companion).
++ * Mocked contract tests: style is a separate lower-priority system message, is
++ * budgeted, never alters plan validation, and fails open on error/timeout/oversize.
++ */
++import { afterAll, beforeAll, describe, expect, it } from 'vitest'
++import { createServer, type Server } from 'node:http'
++import { AdapterError, type PlannerInput } from '@brain/contracts'
++import { HttpPlanner, MAX_PRESENTATION_STYLE_CHARS } from '@brain/adapters'
++
++let bodies: any[] = []
++let server: Server
++let baseUrl = ''
++const input: PlannerInput = {
++  goal: { id: 'g1', objective: 'Restore service checkout to healthy', context: {}, permittedActions: ['restart_service'], successPredicate: {} },
++  state: { simulationTimeMs: 1000, entities: [], recentObservations: [] },
++  actionCatalog: [{ type: 'restart_service', description: 'restart', args: { service: 'name' } }],
++  history: [],
++  memory: [],
++  documentation: 'doc',
++}
++const plan = { decision: 'act', reasonCode: 'restart_cause', summary: 'checkout is down; restart it.', evidenceRefs: [], steps: [{ stepId: 's1', actionType: 'restart_service', args: { service: 'checkout' }, rationale: 'down', dependsOnEntities: [] }] }
++beforeAll(async () => {
++  server = createServer((req, res) => {
++    let data = ''
++    req.on('data', (c) => (data += c))
++    req.on('end', () => {
++      bodies.push(JSON.parse(data))
++      res.writeHead(200, { 'content-type': 'application/json' })
++      res.end(JSON.stringify({ model: 'mock', choices: [{ message: { role: 'assistant', content: JSON.stringify(plan) } }], usage: { prompt_tokens: 10, completion_tokens: 10 } }))
++    })
++  })
++  await new Promise<void>((r) => server.listen(0, '127.0.0.1', () => r()))
++  baseUrl = `http://127.0.0.1:${(server.address() as any).port}/v1`
++})
++afterAll(() => new Promise<void>((r) => server.close(() => r())))
++const req = (over: Record<string, unknown> = {}) => ({ input, signal: new AbortController().signal, deadlineMs: Date.now() + 5000, snapshotRef: 'snapshot:test', budget: { maxOutputTokens: 400, maxInputTokens: 20_000 }, ...over })
++const STYLE = 'Style preferences only. Keep responses concise.'
++
++describe('planner.http presentation style', () => {
++  it('adds one separate lower-priority system message and leaves the plan contract unchanged', async () => {
++    bodies = []
++    const r = await new HttpPlanner({ baseUrl, model: 'm', presentationStyle: async () => STYLE }).plan(req())
++    expect(r.output.steps[0].actionType).toBe('restart_service')
++    const msgs = bodies[0].messages
++    expect(msgs.map((m: any) => m.role)).toEqual(['system', 'system', 'user'])
++    expect(msgs[1].content).toContain('"summary" and step "rationale" only')
++    expect(msgs[1].content.endsWith(STYLE)).toBe(true)
++    expect(msgs[0].content).not.toContain(STYLE)
++  })
++  it('counts style text in the input budget', async () => {
++    const plain = new HttpPlanner({ baseUrl, model: 'm' })
++    const size = JSON.stringify(plain.buildMessages(input).map((m) => m.content).join('\n')).length / 4
++    const styled = new HttpPlanner({ baseUrl, model: 'm', presentationStyle: async () => 'x'.repeat(MAX_PRESENTATION_STYLE_CHARS) })
++    const err = await styled.plan(req({ budget: { maxOutputTokens: 400, maxInputTokens: Math.ceil(size) + 20 } })).catch((e) => e)
++    expect(err).toBeInstanceOf(AdapterError)
++    expect(err.kind).toBe('budget')
++  })
++  it('fails open on provider error, timeout and oversize text', async () => {
++    for (const presentationStyle of [async () => { throw new Error('engine down') }, () => new Promise<string>(() => {}), async () => 'x'.repeat(MAX_PRESENTATION_STYLE_CHARS + 1)]) {
++      bodies = []
++      const r = await new HttpPlanner({ baseUrl, model: 'm', presentationStyle, presentationStyleTimeoutMs: 50 }).plan(req())
++      expect(r.output.decision).toBe('act')
++      expect(bodies[0].messages.map((m: any) => m.role)).toEqual(['system', 'user'])
++    }
++  })
++})
+-- 
+2.43.0
+

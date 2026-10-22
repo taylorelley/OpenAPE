@@ -34,7 +34,7 @@ def main():
                         req['request_id']=f'perf-{i}';req['session']['turn_id']=f'turn-{i}'
                         start=time.perf_counter();r=c.post('/v1/express',json=req);r.raise_for_status()
                         if i>=20:latencies.append((time.perf_counter()-start)*1000)
-                    d=Decoder(ROOT/'models/decoder-v1/decoder.safetensors');neural=[]
+                    d=Decoder(ROOT/'models/decoder-v2/decoder.safetensors');neural=[]
                     with torch.no_grad():
                         for _ in range(520):
                             start=time.perf_counter();d.logits(torch.zeros(64),torch.zeros(32),req['context'],req['host']);neural.append((time.perf_counter()-start)*1000)

@@ -1,20 +1,20 @@
 {
-  "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
-  "python": "3.12.14",
-  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "platform": "Linux-6.18.44-fc-v139-x86_64-with-glibc2.39",
+  "python": "3.12.3",
+  "cpu": "Intel(R) Xeon(R) Processor @ 2.80GHz",
   "torch": "2.5.1+cpu",
-  "cold_start_ready_seconds": 1.262183135999976,
+  "cold_start_ready_seconds": 2.1354409830000805,
   "http_warm": {
     "n": 500,
-    "p50_ms": 1.9051829999625625,
-    "p95_ms": 2.6823145000037125,
-    "max_ms": 77.2936570000411
+    "p50_ms": 6.103463500039652,
+    "p95_ms": 9.420248600099509,
+    "max_ms": 110.55050899994967
   },
   "neural_warm": {
     "n": 500,
-    "p50_ms": 0.07196599995040742,
-    "p95_ms": 0.1705588999925564,
-    "max_ms": 0.3192199999375589
+    "p50_ms": 0.22966649999034416,
+    "p95_ms": 0.3421125999921059,
+    "max_ms": 0.6868350001241197
   },
   "targets": {
     "http_p95_ms": 75,

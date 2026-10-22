@@ -1,1 +1,17 @@
-{"id":"openape","name":"OpenAPE","description":"Experimental bounded UPAP style context","configSchema":{"type":"object","additionalProperties":false,"properties":{}}}
+{
+  "id": "openape",
+  "name": "OpenAPE",
+  "description": "Experimental bounded UPAP style context",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  },
+  "version": "0.2.0",
+  "activation": {
+    "onStartup": true,
+    "onCapabilities": [
+      "hook"
+    ]
+  }
+}

@@ -29,6 +29,10 @@ class Store:
         CREATE TABLE IF NOT EXISTS audit(seq INTEGER PRIMARY KEY,tenant TEXT,persona TEXT,action TEXT,data TEXT);
         ''')
         self.db.row_factory=sqlite3.Row
+        # Additive migrations from the 0.1.0 schema. Lineage columns drive revocation.
+        for table,column,decl in (('personas','parent','TEXT'),('versions','job','TEXT'),('versions','core_base','TEXT'),('versions','revoked','INTEGER DEFAULT 0')):
+            if column not in {r['name'] for r in self.db.execute(f'PRAGMA table_info({table})')}:
+                self.db.execute(f'ALTER TABLE {table} ADD COLUMN {column} {decl}')
     @contextmanager
     def tx(self):
         with self.lock:
@@ -59,7 +63,7 @@ class Store:
         db.execute('INSERT INTO audit(tenant,persona,action,data) VALUES(?,?,?,?)',(tenant,persona,action,json.dumps(data)))
     def gc(self):
         """Only invoke while holding a write transaction."""
-        used={r['hash'] for r in self.db.execute('SELECT hash FROM versions')}
+        used={r['hash'] for r in self.db.execute('SELECT hash FROM versions WHERE revoked=0')}
         for row in self.db.execute('SELECT data FROM jobs'):
             artifact=json.loads(row['data']).get('artifact')
             if artifact:used.add(artifact)

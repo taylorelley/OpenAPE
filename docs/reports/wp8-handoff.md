@@ -1,5 +1,7 @@
 # WP8: Benchmark/hardening/release
 
+**0.2.0 update:** 0.2.0 review and fixes: docs/reports/v0.2-review.md and release-status.md. Release remains experimental.
+
 Status: **NOT RELEASE READY**.
 
 Implemented: A/B/C/D interfaces, independent-outcome clustered-bootstrap evaluator, measured local latency, security regressions, CI and deployment files.

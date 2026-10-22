@@ -1,8 +1,12 @@
 """UPAP/1 wire contracts. Unknown fields are rejected throughout."""
 from typing import Literal, Annotated
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from protocol.catalogue import CATALOGUE
 
 Id = Annotated[str, StringConstraints(pattern=r'^[A-Za-z0-9_.:-]{1,100}$')]
+ControlIndex = Annotated[int, Field(ge=0, le=len(CATALOGUE)-1)]
+Seed = Literal['concise','detailed','warm','reserved','formal','casual','direct','gentle','playful','serious']
+Timestamp = Annotated[str, StringConstraints(max_length=40)]
 class Strict(BaseModel):
     model_config = ConfigDict(extra='forbid')
 class Envelope(Strict):
@@ -36,9 +40,12 @@ class Express(Envelope):
     selection: Literal['argmax','sample'] = 'argmax'
     seed: int | None = None
     exploration_consent: bool = False
+    pinned_version: Id | None = None
+    debug: bool = False
 class Create(Envelope):
     persona_id: Id
-    seed_preferences: list[Literal['concise','detailed','warm','formal']] = Field(default_factory=list, max_length=4)
+    seed_preferences: list[Seed] = Field(default_factory=list, max_length=5)
+    parent_persona_id: Id | None = None
 class Feedback(Envelope):
     feedback_id: Id
     decision_id: Id
@@ -48,9 +55,11 @@ class Feedback(Envelope):
     consent_scope: Literal['core','relationship','session','record_only'] = 'record_only'
     learning_consent: bool = False
     value: float | None = Field(default=None, ge=-1, le=1)
-    preferred_control: Annotated[int, Field(ge=0, le=19)] | None = None
-    rejected_control: Annotated[int, Field(ge=0, le=19)] | None = None
+    preferred_control: ControlIndex | None = None
+    rejected_control: ControlIndex | None = None
     evidence_group: Id
+    occurred_at: Timestamp | None = None
+    evidence_refs: list[Id] = Field(default_factory=list, max_length=8)
 class Event(Strict):
     event_id: Id
     occurred_at: str = Field(max_length=40)
@@ -106,3 +115,6 @@ class Decision(Envelope):
     policy: Policy
     cache_ttl_ms: int = 30000
     engine_status: Literal['experimental_synthetic','baseline_fallback']
+    # Returned only to training administrators that request debug output.
+    propensity: float | None = None
+    diagnostics: dict[str, float] | None = None

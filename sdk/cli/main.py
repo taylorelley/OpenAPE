@@ -4,7 +4,16 @@ import os
 import secrets
 import sys
 from pathlib import Path
-from sdk.python.client import Client
+from sdk.python.client import Client, UPAPError
+
+ALL_SCOPES=['persona:express','observations:write','feedback:write','persona:admin','training:admin']
+CREDENTIALS=Path('.openape/credentials.json');DOCKER_CREDENTIALS=Path('.openape/docker-credentials.json')
+
+def write_credentials(records):
+    for path,mode in ((CREDENTIALS,0o600),(DOCKER_CREDENTIALS,0o444)):
+        tmp=path.with_suffix('.tmp');fd=os.open(tmp,os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
+        with os.fdopen(fd,'w') as f:json.dump(records,f,indent=2)
+        os.chmod(tmp,mode);os.replace(tmp,path)
 
 def main():
     parser=argparse.ArgumentParser(prog='openape',description='OpenAPE — Agent Personality Engine')
@@ -12,32 +21,50 @@ def main():
     sub=parser.add_subparsers(dest='cmd',required=True)
     sub.add_parser('init')
     serve=sub.add_parser('serve');serve.add_argument('--port',type=int,default=8765);serve.add_argument('--data',default='.openape');serve.add_argument('--host',default='127.0.0.1')
+    token=sub.add_parser('token',help='add a scoped credential (restart serve to load it)');token.add_argument('action',choices=['add'])
+    token.add_argument('--actor',required=True);token.add_argument('--scopes',default='persona:express,observations:write');token.add_argument('--personas',required=True);token.add_argument('--users',default='');token.add_argument('--tenant',default='local')
     persona=sub.add_parser('persona');persona.add_argument('action',choices=['create','list','inspect','history','delete']);persona.add_argument('id',nargs='?')
-    for name in ['express','feedback','learn','promote','rollback','export','import','observe']:
+    persona.add_argument('--seed',action='append',default=[],help='seed preference (repeatable): concise, detailed, warm, reserved, formal, casual, direct, gentle, playful, serious')
+    persona.add_argument('--parent',help='create a snapshot copy of this persona (subagent identity)')
+    for name in ['express','preview','feedback','learn','promote','rollback','export','import','observe']:
         p=sub.add_parser(name);p.add_argument('--file',default='-');p.add_argument('--persona')
+        if name=='preview':p.add_argument('--mode',default='active',choices=['shadow','active','frozen'])
+    sub.add_parser('job').add_argument('id')
+    adapter=sub.add_parser('adapter',help='install guidance, doctor checks and Hermes SOUL.md migration')
+    adapter.add_argument('action',choices=['install','uninstall','doctor','migrate-soul']);adapter.add_argument('host',nargs='?',choices=['claude-code','hermes','pi','openclaw','opencogni'],default='hermes')
+    adapter.add_argument('--hermes-home');adapter.add_argument('--persona');adapter.add_argument('--apply',action='store_true');adapter.add_argument('--force',action='store_true')
     sub.add_parser('bridge')
     args=parser.parse_args()
     if args.cmd=='init':
         root=Path('.openape');root.mkdir(mode=0o700,exist_ok=True);root.chmod(0o700)
-        path=root/'credentials.json'
-        if path.exists():parser.error('Credentials already exist; refusing overwrite')
-        records=[dict(token=secrets.token_urlsafe(32),tenant='local',actor='owner',scopes=['persona:express','observations:write','feedback:write','persona:admin','training:admin'],personas=['*'],users=['*'])]
-        fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+        if CREDENTIALS.exists():parser.error('Credentials already exist; refusing overwrite')
+        records=[dict(token=secrets.token_urlsafe(32),tenant='local',actor='owner',scopes=ALL_SCOPES,personas=['*'],users=['*'])]
+        fd=os.open(CREDENTIALS,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
         with os.fdopen(fd,'w') as f:json.dump(records,f,indent=2)
-        docker_path=root/'docker-credentials.json'
-        fd=os.open(docker_path,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o444)
+        fd=os.open(DOCKER_CREDENTIALS,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o444)
         os.fchmod(fd,0o444)  # Explicit mode despite restrictive process umask; parent is 0700.
         with os.fdopen(fd,'w') as f:json.dump(records,f,indent=2)
         print('Created local and Docker credentials inside private .openape/ (0700). Never commit these files.');return
+    if args.cmd=='token':
+        records=json.loads(CREDENTIALS.read_text());scopes=[s for s in args.scopes.split(',') if s]
+        if not set(scopes)<=set(ALL_SCOPES):parser.error('unknown scope')
+        if any(r['actor']==args.actor and r['tenant']==args.tenant for r in records):parser.error('actor already has a credential')
+        new=dict(token=secrets.token_urlsafe(32),tenant=args.tenant,actor=args.actor,scopes=scopes,personas=[p for p in args.personas.split(',') if p],users=[u for u in args.users.split(',') if u])
+        write_credentials(records+[new])
+        print(json.dumps({'actor':args.actor,'token':new['token'],'scopes':scopes,'personas':new['personas'],'users':new['users'],'note':'Shown once. Restart `openape serve` to load it.'},indent=2));return
     if args.cmd=='serve':
         if not os.environ.get('OPENAPE_CREDENTIALS'):
-            os.environ['OPENAPE_CREDENTIALS']=Path(os.environ.get('OPENAPE_CREDENTIALS_FILE','.openape/credentials.json')).read_text()
+            os.environ['OPENAPE_CREDENTIALS']=Path(os.environ.get('OPENAPE_CREDENTIALS_FILE',str(CREDENTIALS))).read_text()
         from engine.api.app import create_app
         import uvicorn
         uvicorn.run(create_app(args.data),host=args.host,port=args.port);return
+    if args.cmd=='adapter' and args.action in ('install','uninstall'):
+        from sdk.cli import adapters
+        result=adapters.install(args.host,args.hermes_home,args.force) if args.action=='install' else adapters.uninstall(args.host,args.hermes_home)
+        print(json.dumps(result,indent=2));return
     token=os.environ.get('OPENAPE_TOKEN')
     if not token:
-        try:token=json.loads(Path('.openape/credentials.json').read_text())[0]['token']
+        try:token=json.loads(CREDENTIALS.read_text())[0]['token']
         except (OSError,ValueError):parser.error('Run openape init or set OPENAPE_TOKEN')
     client=Client(args.url,token,timeout=10)
     try:
@@ -49,17 +76,32 @@ def main():
                 except (ValueError,TypeError):out={'text':'','status':'invalid_request','decision':None}
                 print(json.dumps(out),flush=True)
             return
-        if args.cmd=='persona':
-            if args.action=='create':result=client.request('POST','/v1/personas',{'persona_id':args.id})
+        if args.cmd=='adapter':
+            from sdk.cli import adapters
+            result=adapters.doctor(args.host,client,args.persona or os.environ.get('OPENAPE_PERSONA'),args.hermes_home) if args.action=='doctor' else adapters.migrate_soul(client,args.hermes_home,args.persona,args.apply)
+        elif args.cmd=='persona':
+            if args.action=='create':
+                body={'persona_id':args.id,'seed_preferences':args.seed}
+                if args.parent:body['parent_persona_id']=args.parent
+                result=client.request('POST','/v1/personas',body)
             elif args.action=='list':result=client.request('GET','/v1/personas')
             else:result=client.request('DELETE' if args.action=='delete' else 'GET',f'/v1/personas/{args.id}'+('/history' if args.action=='history' else ''))
+        elif args.cmd=='job':result=client.request('GET',f'/v1/consolidations/{args.id}')
         else:
             data=json.load(sys.stdin) if args.file=='-' else json.loads(Path(args.file).read_text())
-            route={'express':'express','feedback':'feedback','learn':'consolidations','observe':'observations','import':'personas/import'}.get(args.cmd)
-            if route is None:
-                if not args.persona:parser.error('--persona required')
-                route=f'personas/{args.persona}/'+{'promote':'promotions','rollback':'rollbacks','export':'export'}[args.cmd]
-            result=client.request('POST','/v1/'+route,data)
+            if args.cmd=='preview':
+                # Exactly the text an adapter would inject for this request (decision is ledgered).
+                out=client.express(data,args.mode)
+                if out['status']=='unavailable':raise SystemExit('engine unavailable or request rejected; no style would be injected')
+                result={'status':out['status'],'injected_text':out['text'],'control_set_id':out['decision']['control_set_id'],'controls':out['decision']['controls'],'persona_version':out['decision']['persona_version']}
+            else:
+                route={'express':'express','feedback':'feedback','learn':'consolidations','observe':'observations','import':'personas/import'}.get(args.cmd)
+                if route is None:
+                    if not args.persona:parser.error('--persona required')
+                    route=f'personas/{args.persona}/'+{'promote':'promotions','rollback':'rollbacks','export':'export'}[args.cmd]
+                result=client.request('POST','/v1/'+route,data)
         print(json.dumps(result,indent=2))
+    except UPAPError as exc:
+        print(json.dumps({'error':{'status':exc.status,'code':exc.code,'message':str(exc)}},indent=2),file=sys.stderr);raise SystemExit(1)
     finally:client.close()
 if __name__=='__main__':main()

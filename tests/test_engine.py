@@ -7,7 +7,7 @@ import torch
 from conftest import *
 from sdk.python.client import render,Client
 from engine.neural.policy import CATALOGUE,Decoder,digest
-from engine.learning.trainer import group_split
+from engine.evaluation.policy import group_split
 
 def create(api,id='ape'):
     r=post(api,'/v1/personas',{'persona_id':id});assert r.status_code==200,r.text;return r.json()['active_version']

@@ -228,6 +228,24 @@
       "default": false,
       "title": "Exploration Consent",
       "type": "boolean"
+    },
+    "pinned_version": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Pinned Version"
+    },
+    "debug": {
+      "default": false,
+      "title": "Debug",
+      "type": "boolean"
     }
   },
   "required": [

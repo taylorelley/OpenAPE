@@ -29,3 +29,10 @@ test('Pi removes only its own stale custom style messages',()=>{
  const messages=[{role:'system',content:'policy'},{role:'custom',customType:'openape-style',details:{decision_id:'old'},content:'stale'},{role:'custom',customType:'other',content:'retained'},{role:'user',content:'task'}];
  const result=h.handlers.get('context')!({messages},ctx);assert.equal(result.messages.length,3);assert(result.messages.some((m:any)=>m.content==='policy'));assert(result.messages.some((m:any)=>m.customType==='other'));
 });
+test('OpenClaw embedded runner: run id fallback, explicit empty request opts out',async()=>{
+ const h=harness(claw);const fn=h.handlers.get('before_prompt_build')!;
+ const r=await fn({prompt:'hi'},{sessionId:'s',runId:'r1',trigger:'user'});assert.deepEqual(Object.keys(r),['appendContext']);
+ assert.equal(h.calls.at(-1)[1],'run:r1');
+ assert.equal(await fn({currentUserMessage:'',currentUserMessageId:'u'},{sessionId:'s',runId:'r2'}),undefined);
+ assert.equal(await fn({prompt:'tick'},{sessionId:'s',runId:'r3',trigger:'heartbeat'}),undefined);
+});

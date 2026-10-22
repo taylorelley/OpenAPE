@@ -1,25 +1,37 @@
 {
   "adapter_id": "upap.hermes",
-  "adapter_version": "0.1.0",
   "protocol_version": "upap/1",
-  "host_commit": "3fa571a51a6bf1220dfe9a7a23fcd5bb9482a1af",
-  "host_compatibility": "source-inspected-only",
-  "verified_capabilities": [],
+  "adapter_version": "0.2.0",
   "verified_with_actual_model": false,
-  "insertion_levels": [
-    "context"
-  ],
-  "observation_hooks": [
-    "on_session_end"
-  ],
+  "default_mode": "shadow",
+  "user_linking": "explicit configuration only",
+  "fallback": "250ms deadline; same-scope approved cache or empty injection",
+  "concurrency": "host session IDs scoped by adapter and persona; no mutable latent sharing",
   "permissions": [
     "persona:express",
     "observations:write"
   ],
-  "default_mode": "shadow",
-  "user_linking": "explicit configuration only",
-  "subagents": "automatic lineage/snapshot handling unverified; use separately scoped child credentials or disable adapter",
-  "fallback": "250ms deadline; same-scope approved cache or empty injection",
-  "concurrency": "host session IDs scoped by adapter and persona; no mutable latent sharing",
-  "release_status": "unsupported_release_gate"
+  "host_compatibility": "hermes-agent 0.19.0",
+  "host_commit": null,
+  "insertion_levels": [
+    "context"
+  ],
+  "observation_hooks": [
+    "post_llm_call",
+    "on_session_end"
+  ],
+  "verified_capabilities": [
+    "real_cli_lifecycle_synthetic_model",
+    "current_user_message_injection",
+    "soul_md_coexistence",
+    "prompt_cache_prefix_stable",
+    "resume",
+    "shadow",
+    "soul_migration_with_backup",
+    "install_uninstall",
+    "outage_fail_open"
+  ],
+  "subagents": "opt out: sessions announced by subagent_start receive no injection",
+  "smoke": "python -m scripts.hermes_host_smoke",
+  "release_status": "host_lifecycle_verified_synthetic_model"
 }

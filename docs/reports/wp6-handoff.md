@@ -1,5 +1,7 @@
 # WP6: Claude Code/OpenClaw/OpenCogni
 
+**0.2.0 update:** Claude Code plugin verified on 2.1.307 and OpenClaw plugin fixed/verified on 2026.10.5 (docs/reports/*-host-smoke.json). OpenCogni boundary patch in adapters/opencogni/upstream with passing unit suite; integration suites not run.
+
 Status: **PARTIAL / UNSUPPORTED RELEASE GATES**.
 
 Implemented: Claude UserPromptSubmit hook and OpenClaw before_prompt_build examples. OpenCogni Cordis companion service only; no planner effect and no upstream modifications.

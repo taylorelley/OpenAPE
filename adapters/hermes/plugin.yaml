@@ -1,5 +1,11 @@
 name: openape
-version: 0.1.0
-description: Experimental OpenAPE style context, coexisting with Hermes identity
+version: "0.2.0"
+description: "Experimental OpenAPE (UPAP/1) style context appended to the current user message. Coexists with SOUL.md; never edits it."
 requires_env:
   - OPENAPE_TOKEN
+  - OPENAPE_PERSONA
+hooks:
+  - subagent_start
+  - pre_llm_call
+  - post_llm_call
+  - on_session_end

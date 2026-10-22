@@ -1,18 +1,20 @@
 {
-  "persona": "demo-9fecd7fd",
-  "prior": "af16084e-1203-4ed7-8f5a-2c354d88d63f",
-  "candidate": "7d20fab1-f4c8-4fea-8902-b083aa82132c",
+  "persona": "demo-b313a8f8",
+  "prior": "536f4426-52f1-4c49-abf0-0906e3993950",
+  "candidate": "c3f5038d-ecd8-4e75-84bc-4cc6ca8e5284",
   "promoted": {
     "protocol_version": "upap/1",
-    "version": "bc96f411-365f-4784-9945-94b70afd62c0",
+    "version": "aaab5e9c-283a-40eb-9a3e-04be6a2545ed",
     "scope": "core"
   },
   "rollback": {
     "protocol_version": "upap/1",
-    "persona_id": "demo-9fecd7fd",
-    "active_version": "af16084e-1203-4ed7-8f5a-2c354d88d63f",
+    "persona_id": "demo-b313a8f8",
+    "active_version": "536f4426-52f1-4c49-abf0-0906e3993950",
     "initialization": "neutral_prior",
-    "decoder_hash": "sha256:934d9e8665386fb4819d8102cdb579e34884f5ea22c24c2757c9316feca3c30a"
+    "parent": null,
+    "decoder_hash": "sha256:dda6b8441ab83f351c7b2488fb314c611339a575bbe0433b825eec692862b643",
+    "engine_status": "experimental_synthetic"
   },
   "evaluation": {
     "eligible": true,
@@ -20,7 +22,6 @@
       "train_groups": true,
       "validation_groups": true,
       "drift": true,
-      "kl": true,
       "heldout_gain": true,
       "constraints": true
     },
@@ -29,17 +30,25 @@
       "validation_groups": 10,
       "train_examples": 26,
       "validation_examples": 10,
-      "heldout_loss_before": 2.2695727348327637,
-      "heldout_loss_after": 1.3119574785232544,
-      "heldout_gain": 0.9576152563095093,
-      "drift": 0.4681949019432068,
-      "kl": 0.061003830283880234,
+      "heldout_loss_before": 1.6733946800231934,
+      "heldout_loss_after": 0.0009927588980644941,
+      "heldout_gain": 1.6724019211251289,
+      "drift": 0.9800000190734863,
+      "state_norm": 0.9800000190734863,
+      "state_norm_limit": 2.377,
+      "mean_kl_validation_contexts": 4.059356689453125,
       "constraints_ok": true
     },
-    "policy_hash": "30c950bdde894800b5a6afb7708a9aabd1db6541cb3623fae7af70156db1982b",
+    "policy": {
+      "minimum_train_groups": 8,
+      "minimum_validation_groups": 4,
+      "maximum_drift": 1.0,
+      "minimum_gain": 0.001
+    },
+    "policy_hash": "b8c84e2e4bc273f03e8223b82c774c7ff15a3da20762a786385998c5732bf89e",
     "evidence": "synthetic_or_explicit_feedback; not a live-model behavioral evaluation"
   },
-  "export_checksum": "9cb24340fc424893474fa07bae9c644a5466710a8be0470906134685950b1a14",
+  "export_checksum": "64a1837f9ce161054da1e019d8499640b176de3e0d9f1e837dec2f8301c63131",
   "evidence": "Synthetic explicit preference labels. No live-model benefit claimed.",
   "restart_persistence": "PASS",
   "two_independent_personas": "PASS"

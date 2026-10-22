@@ -15,7 +15,7 @@ def test_unlogged_reward_does_not_train(api):
         assert post(api,'/v1/feedback',req).status_code==200
     job=post(api,'/v1/consolidations',dict(persona_id='ape',scope='core')).json()
     result=wait_job(api,job['job_id']);assert result['status']=='failed'
-    assert 'disjoint' in result['reason']
+    assert 'eligible' in result['reason']
 
 def test_frozen_feedback_is_not_training_evidence(api):
     create(api);d=decision(api,mode='frozen')
@@ -40,7 +40,7 @@ def test_relationship_revocation_preserves_other_user(api):
     store=api.app.state.store
     with store.tx() as db:
         h=store.put(torch.ones(32)*.01)
-        db.execute('INSERT INTO versions VALUES(?,?,?,?,?,?,?)',('local','ape','bob-v',h,base,'relationship','bob'))
+        db.execute('INSERT INTO versions(tenant,persona,id,hash,parent,scope,user_id) VALUES(?,?,?,?,?,?,?)',('local','ape','bob-v',h,None,'relationship','bob'))
         db.execute('INSERT INTO relationships VALUES(?,?,?,?)',('local','ape','bob','bob-v'))
     event=dict(event_id='revoke-rel',occurred_at=datetime.now(timezone.utc).isoformat(),persona_id='ape',type='experience.corrected',feedback_id='feedback-0')
     assert post(api,'/v1/observations',dict(adapter_id='custom',events=[event])).status_code==200
@@ -48,7 +48,7 @@ def test_relationship_revocation_preserves_other_user(api):
     assert store.one('SELECT active FROM relationships WHERE user_id=?',('bob',))['active']=='bob-v'
 
 def test_logged_bandit_loss_requires_propensity():
-    d=Decoder('models/decoder-v1/decoder.safetensors');x=torch.zeros(64,requires_grad=True);r=torch.zeros(32)
+    d=Decoder('models/decoder-v2/decoder.safetensors');x=torch.zeros(64,requires_grad=True);r=torch.zeros(32)
     e=dict(kind='rating',context=dict(stakes='low',tags=[]),host={},selection='sample',propensity=.2,value=1,action=0)
     loss=loss_for(d,x,r,e);loss.backward();assert x.grad.norm()>0
     assert loss_for(d,x,r,{**e,'selection':'argmax'}) is None

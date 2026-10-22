@@ -189,6 +189,33 @@
       ],
       "title": "Engine Status",
       "type": "string"
+    },
+    "propensity": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Propensity"
+    },
+    "diagnostics": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Diagnostics"
     }
   },
   "required": [

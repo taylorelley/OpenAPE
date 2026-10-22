@@ -1,31 +1,35 @@
 # Ten-minute local walkthrough
 
-1. Follow README installation, run `openape init`, then `openape serve`.
-2. In a second shell with the venv active, `openape persona create ape`.
-3. `openape express --file examples/express.json` returns a shadow decision.
-   To preview active style use the Python client with mode='active'; the SDK
-   renderer returns a short approved instruction, never arbitrary prompt text.
-4. Run `python -m scripts.offline_demo`. This creates its own persona, records
-   36 explicitly synthetic preference pairs on distinct sessions, trains a latent
-   candidate, checks held-out gain/drift, promotes manually, exports and rolls back.
-   The default owner credential is required for this admin demonstration.
-5. Inspect its returned persona ID: `openape persona history DEMO_ID`.
-6. Stop/restart `openape serve`; inspect again to verify SQLite persistence.
-7. For Pi, install the pinned smoke dependency as shown in README, then run
-   `python -m scripts.real_host_smoke`. This uses a real native SDK session with
-   synthetic model I/O; it makes no provider API calls. For normal Pi usage,
-   review `docs/adapters/compatibility.md` and configure a restricted host token.
-8. Stop the engine during a host session. Client deadline/fallback tests verify
-   empty injection or exact-scoped short-lived cache; host tasks continue.
-9. Use explicit feedback requests from protocol schemas to collect genuine opted-in
-   preference pairs. `openape learn --file job.json` returns job_id. Poll the HTTP
-   consolidation endpoint; inspect metrics. `openape promote --persona ID --file
-   promotion.json` needs candidate_id and expected_version. Rejected candidates
-   remain inspectable and cannot promote.
-10. `openape rollback --persona ID --file rollback.json` takes version and reason.
-    Exports default to core only. `openape persona delete ID` permanently deletes
-    the scoped persona and its derived state; export first if you want a backup.
+1. Install as in the README, then `openape init` and `openape serve`.
+2. Second shell (same venv): create two personas from declared seed preferences:
+   `openape persona create terse --seed concise --seed direct` and
+   `openape persona create kind --seed warm --seed detailed`. The response labels
+   `initialization: seed_preferences`; that is a declared prior, not learning.
+3. Copy `examples/express.json`, set `identity.persona_id` to `terse`, and run
+   `openape preview --file req.json`; repeat for `kind`. Identical context, visibly
+   different approved controls and injected text. Repeat calls are deterministic.
+4. `python -m scripts.offline_demo` creates its own persona, records 36 explicitly
+   synthetic preference pairs on distinct sessions, trains a candidate, has the
+   independent evaluator score held-out groups, promotes with compare-and-swap,
+   exports and rolls back. `openape job JOB_ID` shows the evaluator report.
+5. `openape persona history DEMO_ID` lists versions (with producing candidate and
+   revoked flag) and the audit trail. Restart `openape serve` and inspect again to
+   confirm SQLite persistence.
+6. Mint a restricted host token: `openape token add --actor claude --personas terse`
+   (restart serve). Install a host adapter (README table), set `OPENAPE_TOKEN`,
+   `OPENAPE_PERSONA=terse`, `OPENAPE_MODE=active`, then `openape adapter doctor
+   claude-code --persona terse`.
+7. Stop the engine during a host session: the next prompt continues with no style
+   injection (all five host smokes verify this).
+8. Collect genuine opted-in feedback (`openape feedback --file f.json`, see
+   `protocol/upap/v1/schema/feedback.json`), then `openape learn`, `openape job`,
+   `openape promote --persona ID --file p.json` (candidate_id + expected_version).
+   Rejected candidates stay inspectable and cannot promote.
+9. Revoke a piece of evidence with an `experience.corrected` observation: only
+   candidates/versions derived from it are invalidated; the persona falls back to the
+   nearest clean ancestor. `openape rollback --persona ID --file r.json` restores any
+   non-revoked version. Exports default to core state only.
 
-No credentials belong in git or transcripts. Create separate host and admin
-credentials; hosts do not need persona:admin or training:admin. Back up the data
-directory with the service stopped; keep the exact decoder manifest with it.
+Keep credentials out of git and transcripts. Hosts need only `persona:express` and
+`observations:write`. Back up the data directory with the service stopped, together
+with the exact decoder manifest.

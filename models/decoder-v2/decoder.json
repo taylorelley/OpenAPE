@@ -1,0 +1,56 @@
+{
+  "hash": "sha256:dda6b8441ab83f351c7b2488fb314c611339a575bbe0433b825eec692862b643",
+  "seed": 42,
+  "encoder": "encoder/2",
+  "catalogue": "behaviour-controls/1",
+  "actions": 24,
+  "status": "experimental_synthetic",
+  "latent_norm_limit": 2.377,
+  "training": {
+    "rows": 28576,
+    "train_personas": 384,
+    "relationship_rows": 9216,
+    "neutral_rows": 4000,
+    "steps": 700,
+    "top1_agreement_train": 0.7493,
+    "core_latent_norm_median": 1.376,
+    "relationship_latent_norm_median": 0.815,
+    "corpus_sha256": "961eb471cee63d1bd8b063ed3ea99f563aae8d842afb07c169a8a37eff0f4c81"
+  },
+  "license": "Apache-2.0 weights; original CC0 synthetic corpus",
+  "limitations": [
+    "Synthetic rule/profile labels only",
+    "No independent human validation",
+    "No measured cross-model benefit"
+  ],
+  "heldout_persona_fewshot": {
+    "calibration": {
+      "personas": 64,
+      "support_pairs_per_persona": 16,
+      "query_contexts_per_persona": 32,
+      "top1_agreement_neutral": 0.1367,
+      "top1_agreement_fixed_default": 0.0654,
+      "top1_agreement_fitted": 0.6182
+    },
+    "validation": {
+      "personas": 96,
+      "support_pairs_per_persona": 16,
+      "query_contexts_per_persona": 32,
+      "top1_agreement_neutral": 0.1221,
+      "top1_agreement_fixed_default": 0.0485,
+      "top1_agreement_fitted": 0.6569
+    }
+  },
+  "seed_initialization_top1_agreement": {
+    "casual": 0.7188,
+    "concise": 0.3438,
+    "detailed": 0.6875,
+    "direct": 0.4062,
+    "formal": 0.8906,
+    "gentle": 1.0,
+    "playful": 0.75,
+    "reserved": 0.9844,
+    "serious": 0.4688,
+    "warm": 0.8594
+  }
+}

@@ -1,5 +1,7 @@
 # WP7: Operations and portability
 
+**0.2.0 update:** Added token add, preview, job and adapter install/uninstall/doctor/migrate-soul; one persona verified across five real hosts with separate sessions. Live model families still untested.
+
 Status: **PARTIAL**.
 
 Implemented: CLI/JSONL bridge, operational walkthrough, offline HTTP/restart runbook and restricted-token adapter installation instructions.

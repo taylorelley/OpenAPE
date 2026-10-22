@@ -30,6 +30,10 @@ def main():
                 db=sqlite3.connect(Path(tmp)/'openape.sqlite')
                 assert db.execute('SELECT count(*) FROM decisions').fetchone()[0]>=1
                 assert db.execute('SELECT count(*) FROM observations').fetchone()[0]>=1
-                db.close();print('PASS: real engine recorded host decision and canonical observation')
+                sessions=db.execute("SELECT count(DISTINCT json_extract(data,'$.session.id')) FROM decisions").fetchone()[0]
+                versions=db.execute("SELECT count(DISTINCT json_extract(data,'$.response.persona_version')) FROM decisions").fetchone()[0]
+                assert sessions>=2 and versions==1,(sessions,versions)
+                db.close();print('PASS: real engine recorded host decisions for 2 sessions on one persona version, plus canonical observations')
+                (ROOT/'docs/reports/pi-native-smoke.txt').write_text(result.stdout.strip()+'\nPASS: engine ledger: >=2 host sessions, one persona version, observations recorded\n')
         finally:proc.terminate();proc.wait(timeout=10);log.close()
 if __name__=='__main__':main()
