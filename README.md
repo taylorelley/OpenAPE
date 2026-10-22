@@ -1,18 +1,121 @@
 # OpenAPE — Agent Personality Engine
 
-A local, CPU-only neural style policy behind a versioned **UPAP/1** HTTP API. A
-persistent persona latent (plus optional per-user relationship latent) conditions a
-frozen decoder that picks one of 24 audited style configurations; hosts render it
-as short, approved context text. Learning comes only from explicit, consented,
-attributable feedback, through isolated candidates, an independent held-out
-evaluator, manual compare-and-swap promotion, version pinning and rollback.
+OpenAPE gives AI coding agents and chat harnesses (Claude Code, Hermes, OpenClaw,
+Pi, OpenCogni, or your own) a **persistent, learnable communication style** that
+stays the same whatever model or provider is behind them.
 
-**Experimental 0.2.0, not the completed v1 release gate.** The decoder is trained
-on original synthetic persona profiles; held-out synthetic personas can be fitted
-from 16 preferences (top-1 0.66 vs 0.12 neutral). All five host adapters run real
-host turns against a synthetic model endpoint. There is still **no live-model and
-no independent human evidence** of preference gains, cross-provider portability or
-task/safety non-inferiority. See [release status](docs/reports/release-status.md).
+A "persona" in OpenAPE is not a system prompt someone wrote. It is a small
+numeric state held by a local service. On every turn, the host agent asks the
+engine how this persona should talk in the current context. The engine answers
+with one of 24 hand-reviewed style settings (how direct, warm, verbose, formal,
+humorous, explanatory and assertive to be). The host turns that into a short
+fixed-template note and adds it to the model's context:
+
+> Style preferences only. Host, system, developer, safety and user task
+> requirements take precedence. Be clear. Be considerate. Use moderate detail.
+> Avoid humour. Use plain professional language. Explain key reasoning. State
+> recommendations clearly without changing factual certainty.
+
+The persona changes only through feedback that users explicitly give and consent
+to train on, and every change goes through a review step you control. Personas
+can be versioned, pinned, rolled back, exported and deleted.
+
+It runs locally on a CPU, needs no GPU or provider API keys, and never calls an
+LLM itself.
+
+> **Status: experimental 0.2.0.** This is not the finished v1 release. The neural
+> decoder is trained only on synthetic persona profiles. Held-out synthetic
+> personas can be fitted from 16 preferences (top-1 agreement 0.66, against 0.12
+> for a neutral persona). All five host adapters have been run against real host
+> builds, but with a synthetic model endpoint. There is **no live-model or
+> independent human evidence yet** that it improves user preference, carries over
+> across providers, or leaves task quality and safety unchanged. See
+> [release status](docs/reports/release-status.md).
+
+## How it works
+
+```
+ host agent (Claude Code, Hermes, …)            OpenAPE engine (local HTTP, UPAP/1)
+ ──────────────────────────────────            ────────────────────────────────────
+ user turn ─▶ adapter ── POST /v1/express ───▶ encode context (task, channel,
+                │        persona, user,         stakes, tags, provider)
+                │        session, context              │
+                │                                      ▼
+                │                         persona latent ─┐
+                │                    + relationship latent ├─▶ frozen decoder (MLP)
+                │                                         │   ─▶ 24-way choice
+                │                                         │   ─▶ safety mask
+                │◀── decision: approved style controls ───┘
+                ▼
+     render fixed template ─▶ inject once into model context ─▶ model replies
+
+ user gives explicit, consented feedback ──▶ POST feedback ──▶ evidence ledger
+                                                                   │
+              operator runs `learn` ─▶ train candidate (decoder frozen)
+                                     ─▶ independent evaluator on held-out groups
+                                     ─▶ operator `promote` (compare-and-swap)
+                                     ─▶ new immutable persona version
+```
+
+1. **State.** Each persona has a 64-number *core latent*. Each linked user can
+   also have a 32-number *relationship latent*, so the same persona can adapt to
+   one person without affecting how it treats anyone else. The numbers have no
+   assigned meaning; they matter only through the decoder. A new persona starts
+   neutral, from declared seed preferences (`concise`, `warm`, `formal`, …), or as
+   a snapshot of a parent persona (for subagents).
+2. **Expression.** The adapter sends the turn's context: task type, channel,
+   stakes, turn origin, tags and provider family. Raw text and transcripts are
+   never sent. A small frozen CPU network
+   ([decoder-v2](models/decoder-v2/MODEL_CARD.md)) combines the context with the
+   latents and picks one row of the audited
+   [style catalogue](protocol/catalogue.py). Fixed rules then mask unsafe choices,
+   for example no humour when stakes are high and no long answers when the turn
+   is urgent. The engine returns only these controls, never free text,
+   permissions or instructions. The SDK renders them with fixed templates in
+   Python and TypeScript, and both produce byte-identical output. A session pins
+   its persona and decoder versions until it ends.
+3. **Safe fallback.** The SDK waits at most 250 ms and retries a transient error
+   once. If the engine is slow, down or broken, the host injects nothing, or a
+   recent cached result for exactly the same scope, and carries on. `shadow` mode
+   makes decisions without injecting anything, so you can trial OpenAPE safely.
+   `disabled` makes no request at all.
+4. **Learning.** Only explicit, attributable feedback counts: pairwise
+   preferences, corrections and ratings that carry `learning_consent`. Task
+   success, tool results and inferred satisfaction are never used as reward. When
+   an operator runs `learn`, the trainer fits a *candidate* latent with the
+   decoder frozen. A separate evaluator then splits the evidence by actor and
+   session, re-scores the candidate on groups it was not trained on, and applies
+   fixed thresholds: held-out gain, minimum evidence, and a limit on how far the
+   latent may move.
+5. **Promotion, rollback and revocation.** Candidates are never promoted
+   automatically. An admin promotes one with compare-and-swap against the
+   expected current version. Versions are immutable, content-addressed
+   safetensors files in SQLite-backed storage, and any of them can be rolled back
+   to. If a piece of evidence is revoked, only the candidates and versions built
+   from it are invalidated. The persona then falls back to its nearest clean
+   ancestor.
+6. **Trust boundaries.** Every bearer token is bound to a tenant, an actor, the
+   personas and users it may touch, and its scopes. Hosts normally need only
+   `persona:express` and `observations:write`. Exports contain core state only,
+   with no raw feedback, relationships or secrets.
+
+The wire protocol, **UPAP/1** (Universal Personality Adapter Protocol), is
+specified in [`protocol/upap/v1`](protocol/upap/v1/specification.md) with JSON
+Schemas, OpenAPI and shared conformance fixtures. For the reasoning behind these
+choices, see the [architecture ADRs](#design-and-evidence).
+
+### Repository layout
+
+| Path | Contents |
+|---|---|
+| `engine/` | FastAPI service: `api`, `neural` (decoder + encoder), `learning` (trainer), `evaluation` (independent evaluator), `storage` (SQLite + artifacts), `security` |
+| `protocol/` | UPAP/1 spec, schemas, OpenAPI, conformance fixtures, style catalogue |
+| `sdk/` | Python client (`client.py`, stdlib `lite.py`), TypeScript client, `openape` CLI |
+| `adapters/` | Host integrations for Claude Code, Hermes, OpenClaw, Pi, OpenCogni |
+| `adapter-kit/` | Templates, mock host and conformance notes for writing new adapters |
+| `models/decoder-v2/` | Trained decoder weights, manifest and model card |
+| `benchmarks/`, `scripts/`, `tests/` | Synthetic corpus and benchmark, smoke tests, reproducibility checks |
+| `docs/` | ADRs, walkthrough, adapter compatibility, verification reports |
 
 ## Run locally (Python 3.12+, no GPU or provider credentials)
 
