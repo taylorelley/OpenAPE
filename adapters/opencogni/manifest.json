@@ -1,21 +1,33 @@
 {
   "adapter_id": "upap.opencogni",
-  "adapter_version": "0.1.0",
   "protocol_version": "upap/1",
-  "host_commit": "833f4e6bb77c35f87c139e4944f80424f2ff8a30",
-  "host_compatibility": "source-inspected-only",
-  "verified_capabilities": [],
+  "adapter_version": "0.2.0",
   "verified_with_actual_model": false,
-  "insertion_levels": [],
-  "observation_hooks": [],
+  "default_mode": "shadow",
+  "user_linking": "explicit configuration only",
+  "fallback": "250ms deadline; same-scope approved cache or empty injection",
+  "concurrency": "host session IDs scoped by adapter and persona; no mutable latent sharing",
   "permissions": [
     "persona:express",
     "observations:write"
   ],
-  "default_mode": "shadow",
-  "user_linking": "explicit configuration only",
-  "subagents": "automatic lineage/snapshot handling unverified; use separately scoped child credentials or disable adapter",
-  "fallback": "250ms deadline; same-scope approved cache or empty injection",
-  "concurrency": "host session IDs scoped by adapter and persona; no mutable latent sharing",
-  "release_status": "unsupported_release_gate"
+  "host_compatibility": "opencogni 833f4e6 + adapters/opencogni/upstream patch (not merged upstream)",
+  "host_commit": "833f4e6bb77c35f87c139e4944f80424f2ff8a30",
+  "insertion_levels": [
+    "system_append"
+  ],
+  "observation_hooks": [],
+  "verified_capabilities": [
+    "real_planner_http_synthetic_model",
+    "summary_rationale_scope_only",
+    "budget_accounted",
+    "decision_and_versions_logged",
+    "outage_fail_open"
+  ],
+  "unverified": [
+    "OpenCogni integration/evaluator suites (need nats-server + PostgreSQL)"
+  ],
+  "subagents": "not applicable",
+  "smoke": "OPENCOGNI_DIR=... python -m scripts.opencogni_host_smoke",
+  "release_status": "requires_upstream_boundary_change"
 }

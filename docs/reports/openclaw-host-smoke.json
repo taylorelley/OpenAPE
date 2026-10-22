@@ -1,0 +1,23 @@
+{
+  "host": "OpenClaw",
+  "host_version": "2026.10.5",
+  "runner": "embedded (openclaw agent --local)",
+  "model": "synthetic OpenAI-compatible endpoint; no provider call",
+  "checks": {
+    "turn_completes": true,
+    "style_reached_model_once": true,
+    "second_turn_single_copy": true,
+    "tool_surface_unchanged": true,
+    "disabled_makes_no_engine_call": true,
+    "shadow_records_without_injection": true,
+    "decision_linked_turn_completed": true,
+    "approved_feedback_linked_to_host_decision": true,
+    "engine_outage_fail_open": true
+  },
+  "style_location": "conversation",
+  "history_style_copies_turn_two": 2,
+  "observations": [
+    "turn.completed"
+  ],
+  "status": "PASS"
+}

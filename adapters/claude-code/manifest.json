@@ -1,23 +1,43 @@
 {
   "adapter_id": "upap.claude-code",
-  "adapter_version": "0.1.0",
   "protocol_version": "upap/1",
-  "host_commit": null,
-  "host_compatibility": "source-inspected-only",
-  "verified_capabilities": [],
+  "adapter_version": "0.2.0",
   "verified_with_actual_model": false,
-  "insertion_levels": [
-    "context"
-  ],
-  "observation_hooks": [],
+  "default_mode": "shadow",
+  "user_linking": "explicit configuration only",
+  "fallback": "250ms deadline; same-scope approved cache or empty injection",
+  "concurrency": "host session IDs scoped by adapter and persona; no mutable latent sharing",
   "permissions": [
     "persona:express",
     "observations:write"
   ],
-  "default_mode": "shadow",
-  "user_linking": "explicit configuration only",
-  "subagents": "automatic lineage/snapshot handling unverified; use separately scoped child credentials or disable adapter",
-  "fallback": "250ms deadline; same-scope approved cache or empty injection",
-  "concurrency": "host session IDs scoped by adapter and persona; no mutable latent sharing",
-  "release_status": "unsupported_release_gate"
+  "host_compatibility": "Claude Code 2.1.307",
+  "host_commit": null,
+  "insertion_levels": [
+    "context"
+  ],
+  "observation_hooks": [
+    "SessionStart",
+    "Stop",
+    "StopFailure",
+    "PostCompact",
+    "PostModelSwitch",
+    "SessionEnd"
+  ],
+  "verified_capabilities": [
+    "real_cli_lifecycle_synthetic_model",
+    "single_injection_per_turn",
+    "resume",
+    "compaction_observed",
+    "shadow",
+    "outage_fail_open",
+    "decision_linked_observation"
+  ],
+  "unverified": [
+    "PostModelSwitch (interactive /model only)",
+    "StopFailure path"
+  ],
+  "subagents": "opt out: no injection or observation inside agent_id contexts; bind a separately scoped child persona instead",
+  "smoke": "python -m scripts.claude_code_host_smoke",
+  "release_status": "host_lifecycle_verified_synthetic_model"
 }
