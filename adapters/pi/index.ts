@@ -1,6 +1,7 @@
-/** Source inspected at 7f225f2, Pi 1.3.0. No tools or system prompt replacement. */
+/** Source inspected at 7f225f2, Pi 1.3.0. No system prompt replacement. In active mode it
+ * registers one tool, persona_feedback (style feedback only; OPENAPE_AGENT_FEEDBACK=0 disables). */
 import {randomUUID} from 'node:crypto';
-import {Binding,fromEnvironment,type Config} from '../common.ts';
+import {Binding,fromEnvironment,personaFeedbackTool,type Config} from '../common.ts';
 export function install(pi:any,config:Config,binding=new Binding(config,'upap.pi')){
  if(typeof pi.on!=='function')throw Error('Missing Pi extension event API');
  pi.on('before_agent_start',async(event:any,ctx:any)=>{
@@ -22,6 +23,11 @@ export function install(pi:any,config:Config,binding=new Binding(config,'upap.pi
  pi.on('agent_end',async(_event:any,ctx:any)=>{
   const session=ctx.sessionManager?.getSessionId?.();if(session)await binding.observe(session);
  });
+ if(config.mode==='active'&&config.agentFeedback!==false&&typeof pi.registerTool==='function')pi.registerTool({
+  name:personaFeedbackTool.name,label:'Persona feedback',description:personaFeedbackTool.description,parameters:personaFeedbackTool.parameters,
+  async execute(_id:string,params:any,_signal:any,_update:any,ctx:any){
+   const text=await binding.reflect(ctx?.sessionManager?.getSessionId?.(),params);return {content:[{type:'text',text}],details:{}};
+  }});
  pi.on('session_shutdown',async(_event:any,ctx:any)=>{
   const session=ctx.sessionManager?.getSessionId?.();if(session){await binding.observe(session,'session.ended');binding.last.delete(session);}
  });

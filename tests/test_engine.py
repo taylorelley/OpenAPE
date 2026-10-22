@@ -10,7 +10,7 @@ from engine.neural.policy import CATALOGUE,Decoder,digest
 from engine.evaluation.policy import group_split
 
 def create(api,id='ape'):
-    r=post(api,'/v1/personas',{'persona_id':id});assert r.status_code==200,r.text;return r.json()['active_version']
+    r=post(api,'/v1/personas',{'persona_id':id,'archetype':'balanced','evolution':'manual'});assert r.status_code==200,r.text;return r.json()['active_version']
 def decision(api,**kwargs):
     r=post(api,'/v1/express',expression(**kwargs));assert r.status_code==200,r.text;return r.json()
 def wait_job(api,jid):

@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from sdk.python.client import Client, UPAPError
 
-ALL_SCOPES=['persona:express','observations:write','feedback:write','persona:admin','training:admin']
+ALL_SCOPES=['persona:express','observations:write','feedback:write','persona:admin','training:admin','reflection:write']
 CREDENTIALS=Path('.openape/credentials.json');DOCKER_CREDENTIALS=Path('.openape/docker-credentials.json')
 
 def write_credentials(records):
@@ -22,10 +22,17 @@ def main():
     sub.add_parser('init')
     serve=sub.add_parser('serve');serve.add_argument('--port',type=int,default=8765);serve.add_argument('--data',default='.openape');serve.add_argument('--host',default='127.0.0.1')
     token=sub.add_parser('token',help='add a scoped credential (restart serve to load it)');token.add_argument('action',choices=['add'])
-    token.add_argument('--actor',required=True);token.add_argument('--scopes',default='persona:express,observations:write');token.add_argument('--personas',required=True);token.add_argument('--users',default='');token.add_argument('--tenant',default='local')
-    persona=sub.add_parser('persona');persona.add_argument('action',choices=['create','list','inspect','history','delete']);persona.add_argument('id',nargs='?')
-    persona.add_argument('--seed',action='append',default=[],help='seed preference (repeatable): concise, detailed, warm, reserved, formal, casual, direct, gentle, playful, serious')
+    token.add_argument('--actor',required=True);token.add_argument('--scopes',default='persona:express,observations:write,reflection:write');token.add_argument('--personas',required=True);token.add_argument('--users',default='');token.add_argument('--tenant',default='local')
+    persona=sub.add_parser('persona');persona.add_argument('action',choices=['create','list','inspect','history','delete','archetypes','evolution']);persona.add_argument('id',nargs='?')
+    persona.add_argument('--archetype',help='starting persona: balanced, mentor, pragmatic_engineer, concierge, collaborator, analyst, critic (see `persona archetypes`)')
+    persona.add_argument('--seed',action='append',default=[],help='advanced: seed preference instead of an archetype (repeatable): concise, detailed, warm, reserved, formal, casual, direct, gentle, playful, serious')
     persona.add_argument('--parent',help='create a snapshot copy of this persona (subagent identity)')
+    persona.add_argument('--maturation-rate',choices=['fast','normal','slow'],help='how quickly natural maturation runs its course (default normal)')
+    persona.add_argument('--manual',action='store_true',help='create: no automatic evolution; an operator runs learn/promote')
+    persona.add_argument('--no-agent-feedback',action='store_true',help='create: refuse persona_feedback tool calls from agents')
+    persona.add_argument('--pause',action='store_true',help='evolution: stop automatic evolution');persona.add_argument('--resume',action='store_true',help='evolution: resume automatic evolution')
+    persona.add_argument('--agent-feedback',choices=['on','off'],help='evolution: allow or refuse agent persona_feedback')
+    persona.add_argument('--user',help='inspect: include growth with this linked user')
     for name in ['express','preview','feedback','learn','promote','rollback','export','import','observe']:
         p=sub.add_parser(name);p.add_argument('--file',default='-');p.add_argument('--persona')
         if name=='preview':p.add_argument('--mode',default='active',choices=['shadow','active','frozen'])
@@ -70,10 +77,14 @@ def main():
     try:
         if args.cmd=='bridge':
             # One canonical express request per line; failures never emit style text.
+            # {"op":"reflect","decision_id":...,"arguments":{...}} records a persona_feedback tool call.
+            from sdk.python.lite import reflect
             for line in sys.stdin:
                 try:
-                    data=json.loads(line);out=client.express(data,data.get('mode','shadow'))
-                except (ValueError,TypeError):out={'text':'','status':'invalid_request','decision':None}
+                    data=json.loads(line)
+                    if data.get('op')=='reflect':out={'text':reflect(args.url,token,data.get('decision_id'),data.get('arguments') or {})}
+                    else:out=client.express(data,data.get('mode','shadow'))
+                except (ValueError,TypeError,AttributeError):out={'text':'','status':'invalid_request','decision':None}
                 print(json.dumps(out),flush=True)
             return
         if args.cmd=='adapter':
@@ -81,10 +92,22 @@ def main():
             result=adapters.doctor(args.host,client,args.persona or os.environ.get('OPENAPE_PERSONA'),args.hermes_home) if args.action=='doctor' else adapters.migrate_soul(client,args.hermes_home,args.persona,args.apply)
         elif args.cmd=='persona':
             if args.action=='create':
-                body={'persona_id':args.id,'seed_preferences':args.seed}
+                if not (args.archetype or args.seed or args.parent):parser.error('choose a starting persona with --archetype (see `openape persona archetypes`)')
+                body={'persona_id':args.id,'seed_preferences':args.seed,'evolution':'manual' if args.manual else 'automatic','agent_feedback':not args.no_agent_feedback}
+                if args.archetype:body['archetype']=args.archetype
                 if args.parent:body['parent_persona_id']=args.parent
+                if args.maturation_rate:body['maturation_rate']=args.maturation_rate
                 result=client.request('POST','/v1/personas',body)
+            elif args.action=='archetypes':result=client.request('GET','/v1/capabilities')['archetypes']
+            elif args.action=='evolution':
+                if args.pause and args.resume:parser.error('choose --pause or --resume')
+                body={}
+                if args.pause or args.resume:body['evolution']='manual' if args.pause else 'automatic'
+                if args.maturation_rate:body['maturation_rate']=args.maturation_rate
+                if args.agent_feedback:body['agent_feedback']=args.agent_feedback=='on'
+                result=client.request('POST',f'/v1/personas/{args.id}/evolution',body) if body else client.request('GET',f'/v1/personas/{args.id}')
             elif args.action=='list':result=client.request('GET','/v1/personas')
+            elif args.action=='inspect' and args.user:result=client.request('GET',f'/v1/personas/{args.id}?user_id={args.user}')
             else:result=client.request('DELETE' if args.action=='delete' else 'GET',f'/v1/personas/{args.id}'+('/history' if args.action=='history' else ''))
         elif args.cmd=='job':result=client.request('GET',f'/v1/consolidations/{args.id}')
         else:

@@ -1,10 +1,11 @@
 import {createHash,randomUUID} from 'node:crypto';
-import {Client,type Mode,type PersonalityContext,type RenderedExpression} from '../sdk/typescript/client.ts';
+import {Client,personaFeedbackTool,type Mode,type PersonalityContext,type Reflection,type RenderedExpression} from '../sdk/typescript/client.ts';
+export {personaFeedbackTool};
 export const stableId=(s:string)=>createHash('sha256').update(s).digest('hex').slice(0,48);
-export type Config={url:string;token:string;tenant:string;persona:string;user?:string;mode?:Mode;hostVersion:string};
+export type Config={url:string;token:string;tenant:string;persona:string;user?:string;mode?:Mode;hostVersion:string;agentFeedback?:boolean};
 export function fromEnvironment(hostVersion:string):Config|null{
  if(!process.env.OPENAPE_TOKEN||!process.env.OPENAPE_PERSONA)return null;
- return {url:process.env.OPENAPE_URL??'http://127.0.0.1:8765',token:process.env.OPENAPE_TOKEN,tenant:process.env.OPENAPE_TENANT??'local',persona:process.env.OPENAPE_PERSONA,user:process.env.OPENAPE_LINKED_USER,mode:(process.env.OPENAPE_MODE??'shadow') as Mode,hostVersion};
+ return {url:process.env.OPENAPE_URL??'http://127.0.0.1:8765',token:process.env.OPENAPE_TOKEN,tenant:process.env.OPENAPE_TENANT??'local',persona:process.env.OPENAPE_PERSONA,user:process.env.OPENAPE_LINKED_USER,mode:(process.env.OPENAPE_MODE??'shadow') as Mode,hostVersion,agentFeedback:process.env.OPENAPE_AGENT_FEEDBACK!=='0'};
 }
 export class Binding {
  client:Client;config:Config;adapter:string;last=new Map<string,RenderedExpression>();
@@ -18,5 +19,11 @@ export class Binding {
   if(this.config.mode==='disabled')return;
   const last=this.last.get(session);if(!last?.decision)return;
   try{await this.client.request('POST','/v1/observations',{adapter_id:this.adapter,events:[{event_id:randomUUID(),occurred_at:new Date().toISOString(),persona_id:this.config.persona,...(this.config.user?{user_id:this.config.user}:{}),session_id:stableId(`${this.adapter}:${session}:${this.config.persona}`),decision_id:last.decision.decision_id,type,status}]});}catch{/* Observation loss never blocks host. */}
+ }
+ /** persona_feedback tool call: attaches to this session's latest decision (active mode only). */
+ async reflect(session:string|undefined,args:Reflection):Promise<string>{
+  const last=session?this.last.get(session):undefined;
+  if(this.config.mode!=='active'||!last?.decision)return 'Not recorded: no active persona decision for this turn.';
+  return this.client.reflect(last.decision.decision_id,args);
  }
 }

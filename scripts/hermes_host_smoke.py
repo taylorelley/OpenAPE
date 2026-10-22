@@ -52,12 +52,15 @@ def main():
         c['turn_completes']=first['code']==0 and 'Synthetic host transport response.' in first['out']
         c['style_in_current_user_message_once']=count_marker(last_user(req))==1 and count_marker(req['body'])==1
         c['soul_md_coexists_in_system_prompt']='Be warm and friendly.' in system and count_marker(system)==0
+        tool_names=lambda r:sorted(t.get('function',{}).get('name','') for t in r['body'].get('tools') or [])
+        report['tools_active']=tool_names(req)
         second=run('Fixture request two.',resume=first['session'])
         r2=second['requests'][-1];prefix=messages(req)
         c['resume_one_copy_in_current_turn']=second['code']==0 and first['session'] is not None and count_marker(last_user(r2))==1
         c['prompt_cache_prefix_byte_stable']=json.dumps(messages(r2)[:len(prefix)])==json.dumps(prefix)
         report['resume_history_style_copies']=count_marker(r2['body'])
         shadow=run('Shadow fixture request.',mode='shadow')
+        c['persona_feedback_only_in_active_mode']='persona_feedback' in tool_names(req) and 'persona_feedback' not in tool_names(shadow['requests'][-1])
         c['shadow_records_without_injection']=shadow['code']==0 and count_marker(shadow['requests'][-1]['body'])==0 and decisions()[-1]['mode']=='shadow'
         obs=[json.loads(r['data']) for r in engine.rows('SELECT data FROM observations ORDER BY rowid')]
         report['observations']=sorted({o['type'] for o in obs})

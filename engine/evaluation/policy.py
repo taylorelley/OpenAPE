@@ -43,15 +43,21 @@ class EvaluationPolicy:
 # Slow core consolidation needs more independent evidence and a tighter trust region.
 CORE=EvaluationPolicy(minimum_train_groups=8,minimum_validation_groups=4,maximum_drift=1.0)
 RELATIONSHIP=EvaluationPolicy()
-def policy_for(scope): return CORE if scope=='core' else RELATIONSHIP
+# Autonomous promotion (persona evolution policy 'automatic') needs more independent
+# evidence, a larger held-out gain and, for the core, a tighter trust region.
+AUTO_CORE=EvaluationPolicy(minimum_train_groups=12,minimum_validation_groups=6,maximum_drift=0.6,minimum_gain=0.005)
+AUTO_RELATIONSHIP=EvaluationPolicy(minimum_train_groups=6,minimum_validation_groups=3,minimum_gain=0.005)
+def policy_for(scope,auto=False):
+    if auto: return AUTO_CORE if scope=='core' else AUTO_RELATIONSHIP
+    return CORE if scope=='core' else RELATIONSHIP
 
 def _mean(decoder,states,rows):
     losses=[loss_for(decoder,*states,e) for e in rows]
     losses=[float(l) for l in losses if l is not None]
     return sum(losses)/len(losses)
 
-def evaluate_candidate(decoder,core,rel,candidate,scope,train,valid):
-    policy=policy_for(scope)
+def evaluate_candidate(decoder,core,rel,candidate,scope,train,valid,auto=False):
+    policy=policy_for(scope,auto)
     with torch.no_grad():
         base=(core,rel); new=(candidate,rel) if scope=='core' else (core,candidate)
         usable_train=[e for e in train if loss_for(decoder,core,rel,e) is not None]
@@ -68,3 +74,27 @@ def evaluate_candidate(decoder,core,rel,candidate,scope,train,valid):
             drift=float((candidate-original).norm()),state_norm=float(candidate.norm()),state_norm_limit=limit,mean_kl_validation_contexts=sum(kls)/len(kls),
             constraints_ok=bool(torch.isfinite(candidate).all()) and candidate.shape==original.shape and float(candidate.norm())<=limit+1e-4)
     return policy.evaluate(metrics)
+
+def preference_agreement(decoder,states,rows):
+    """Fraction of explicit pairwise preferences/corrections the policy satisfies."""
+    pairs=[e for e in rows if e['kind'] in ('pairwise_preference','correction') and loss_for(decoder,*states,e) is not None]
+    if not pairs:return None,0
+    hits=0
+    for e in pairs:
+        logits=decoder.logits(*states,e['context'],e['host']);hits+=int(logits[e['preferred_control']]>logits[e['rejected_control']])
+    return hits/len(pairs),len(pairs)
+
+def evaluate_maturation(decoder,core,rel,candidate,scope,step_budget,feedback):
+    """Gate for a maturation step: bounded, finite, and feedback wins. Maturation is a
+    fixed prior, not learning, so it may never reduce how many of the persona's valid
+    consented preferences the policy satisfies."""
+    with torch.no_grad():
+        original=core if scope=='core' else rel; limit=state_norm_limit(decoder,scope)
+        new=(candidate,rel) if scope=='core' else (core,candidate)
+        before,count=preference_agreement(decoder,(core,rel),feedback);after,_=preference_agreement(decoder,new,feedback)
+        drift=float((candidate-original).norm())
+        checks={'finite':bool(torch.isfinite(candidate).all()) and candidate.shape==original.shape,
+            'step_budget':drift<=step_budget+1e-4,'state_norm':float(candidate.norm())<=limit+1e-4,
+            'feedback_preserved':before is None or after>=before}
+    return {'eligible':all(checks.values()),'checks':checks,'metrics':dict(drift=drift,step_budget=step_budget,state_norm=float(candidate.norm()),state_norm_limit=limit,
+        feedback_examples=count,feedback_agreement_before=before,feedback_agreement_after=after),'evidence':'fixed maturation prior; not learned from or validated against people'}

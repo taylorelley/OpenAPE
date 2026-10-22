@@ -6,6 +6,9 @@ from protocol.catalogue import CATALOGUE
 Id = Annotated[str, StringConstraints(pattern=r'^[A-Za-z0-9_.:-]{1,100}$')]
 ControlIndex = Annotated[int, Field(ge=0, le=len(CATALOGUE)-1)]
 Seed = Literal['concise','detailed','warm','reserved','formal','casual','direct','gentle','playful','serious']
+Archetype = Literal['balanced','mentor','pragmatic_engineer','concierge','collaborator','analyst','critic']
+Trait = Literal['directness','warmth','verbosity','humour','formality','explanation_depth','assertiveness']
+Horizon = Annotated[int, Field(ge=3, le=1000)]
 Timestamp = Annotated[str, StringConstraints(max_length=40)]
 class Strict(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -42,14 +45,32 @@ class Express(Envelope):
     exploration_consent: bool = False
     pinned_version: Id | None = None
     debug: bool = False
+class MaturationHorizon(Strict):
+    relationship_horizon: Horizon
+    core_horizon: Horizon
+MaturationRate = Literal['fast','normal','slow'] | MaturationHorizon
 class Create(Envelope):
     persona_id: Id
+    archetype: Archetype | None = None
     seed_preferences: list[Seed] = Field(default_factory=list, max_length=5)
     parent_persona_id: Id | None = None
+    evolution: Literal['automatic','manual'] = 'automatic'
+    maturation_rate: MaturationRate | None = None
+    agent_feedback: bool = True
+class Evolution(Envelope):
+    evolution: Literal['automatic','manual'] | None = None
+    maturation_rate: MaturationRate | None = None
+    agent_feedback: bool | None = None
+class Reflection(Envelope):
+    reflection_id: Id
+    decision_id: Id
+    adjustments: dict[Trait, Literal['more','less']] = Field(min_length=1, max_length=3)
+    reason: Literal['user_requested','user_corrected','observed_preference']
+    scope: Literal['core','relationship'] | None = None
 class Feedback(Envelope):
     feedback_id: Id
     decision_id: Id
-    source: Literal['explicit_user','owner','verified_evaluator']
+    source: Literal['explicit_user','owner','verified_evaluator','agent_reflection']
     kind: Literal['rating','pairwise_preference','correction']
     actor_id: Id
     consent_scope: Literal['core','relationship','session','record_only'] = 'record_only'

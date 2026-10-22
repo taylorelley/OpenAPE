@@ -4,13 +4,15 @@
 Fail-open: always exits 0; on any failure it prints nothing. Never reads the
 transcript, prompt text, CLAUDE.md or AGENTS.md. Only UserPromptSubmit emits
 `hookSpecificOutput.additionalContext`; every other event is a best-effort
-observation carrying IDs and status only.
+observation carrying IDs and status only. UserPromptSubmit also records the latest
+active decision ID for the persona_feedback MCP tool (mcp_server.py).
 """
 import hashlib
 import json
 import os
 import re
 import sys
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,10 +31,16 @@ def config():
     return dict(token=token, persona=persona, url=os.environ.get('OPENAPE_URL', 'http://127.0.0.1:8765'), tenant=os.environ.get('OPENAPE_TENANT', 'local'),
         user=os.environ.get('OPENAPE_LINKED_USER'), mode=os.environ.get('OPENAPE_MODE', 'shadow'), host_version=safe_id(os.environ.get('OPENAPE_HOST_VERSION'), 'unverified'))
 
-def state_path(session_key):
+def state_root():
     root = Path(os.environ.get('CLAUDE_PLUGIN_DATA') or Path.home() / '.openape' / 'claude-code-state')
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
-    return root / f'{session_key}.json'
+    return root
+
+def state_path(session_key): return state_root() / f'{session_key}.json'
+
+def latest_path(persona):
+    """Latest active decision for this persona, read by the persona_feedback MCP tool."""
+    return state_root() / f'latest-{stable(persona)}.json'
 
 def load(path):
     try: return json.loads(path.read_text())
@@ -70,6 +78,7 @@ def main():
         if cfg['user']: request['identity']['user_id'] = cfg['user']
         result = upap_lite.express(cfg['url'], cfg['token'], request, cfg['mode'])
         state.update(prompt_id=prompt_id, decision_id=(result['decision'] or {}).get('decision_id'), applied=bool(result['text'])); save(path, state)
+        if result['text'] and state['decision_id']: save(latest_path(cfg['persona']), {'decision_id': state['decision_id'], 'at': time.time()})
         if result['text']:
             # Context tier wording: a factual statement of user-configured preferences.
             text = 'OpenAPE persona style preferences configured by the user for this session. ' + result['text']

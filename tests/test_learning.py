@@ -10,7 +10,7 @@ from engine.neural.policy import Decoder,CATALOGUE,mask
 from engine.neural.profiles import fit_seed_latent,seed_profile,agreement,random_context
 
 def seeded(api,id,seeds):
-    r=post(api,'/v1/personas',{'persona_id':id,'seed_preferences':seeds});assert r.status_code==200,r.text
+    r=post(api,'/v1/personas',{'persona_id':id,'seed_preferences':seeds,'evolution':'manual'});assert r.status_code==200,r.text
     assert r.json()['initialization']=='seed_preferences';return r.json()['active_version']
 
 def low_risk(request_id,persona,session):

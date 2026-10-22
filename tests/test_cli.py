@@ -25,7 +25,7 @@ def test_token_add_appends_scoped_credential(tmp_path):
     assert run('init').returncode==0
     r=run('token','add','--actor','pi-host','--personas','ape');assert r.returncode==0,r.stderr
     token=json.loads(r.stdout)['token'];records=json.loads((tmp_path/'.openape/credentials.json').read_text())
-    assert records[1]==dict(token=token,tenant='local',actor='pi-host',scopes=['persona:express','observations:write'],personas=['ape'],users=[])
+    assert records[1]==dict(token=token,tenant='local',actor='pi-host',scopes=['persona:express','observations:write','reflection:write'],personas=['ape'],users=[])
     assert stat.S_IMODE((tmp_path/'.openape/credentials.json').stat().st_mode)==0o600
     assert stat.S_IMODE((tmp_path/'.openape/docker-credentials.json').stat().st_mode)==0o444
     assert json.loads((tmp_path/'.openape/docker-credentials.json').read_text())==records

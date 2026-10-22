@@ -54,7 +54,10 @@ def main():
         # turns keep their copy (history growth ~1 style block per turn).
         report['history_style_copies_turn_two']=count_marker(second['requests'][-1]['body'])
         disabled=run('Disabled fixture request.','smoke-2',mode='disabled')
+        # Direct tool schemas are unchanged; OpenClaw's Tool Search directory (embedded default)
+        # lists OpenAPE's one plugin tool, persona_feedback, in active mode only.
         c['tool_surface_unchanged']=tools(first['requests'][-1])==tools(disabled['requests'][-1])
+        c['persona_feedback_in_tool_catalog']='persona_feedback' in json.dumps(first['requests'][-1]['body']) and 'persona_feedback' not in json.dumps(disabled['requests'][-1]['body'])
         c['disabled_makes_no_engine_call']=count_marker(disabled['requests'][-1]['body'])==0 and len(decisions())==2
         shadow=run('Shadow fixture request.','smoke-3',mode='shadow')
         c['shadow_records_without_injection']=count_marker(shadow['requests'][-1]['body'])==0 and decisions()[-1]['mode']=='shadow'

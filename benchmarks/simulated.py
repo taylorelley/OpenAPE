@@ -63,7 +63,7 @@ def run(data_dir):
         post=lambda path,body:api.post(path,json={'protocol_version':'upap/1',**body})
         for u in range(USERS):
             user=make_user(rng);persona=f'sim-{u:02d}'
-            initial=post('/v1/personas',{'persona_id':persona}).json()['active_version']
+            initial=post('/v1/personas',{'persona_id':persona,'archetype':'balanced','evolution':'manual'}).json()['active_version']
             n=0
             for round_ in range(ROUNDS):
                 for _ in range(FEEDBACK_PER_ROUND):

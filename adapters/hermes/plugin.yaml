@@ -4,6 +4,8 @@ description: "Experimental OpenAPE (UPAP/1) style context appended to the curren
 requires_env:
   - OPENAPE_TOKEN
   - OPENAPE_PERSONA
+provides_tools:
+  - persona_feedback
 hooks:
   - subagent_start
   - pre_llm_call

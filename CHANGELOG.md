@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased — archetypes and automatic evolution (see docs/adr/0003-automatic-evolution.md)
+
+* Breaking: creating a persona requires a starting `archetype` (balanced, mentor,
+  pragmatic_engineer, concierge, collaborator, analyst, critic), seed preferences or a
+  snapshot parent. There is no implicit neutral default; use `archetype: balanced`.
+* Automatic evolution (default for new personas): the engine consolidates consented
+  feedback once enough new evidence exists, evaluates under stricter autonomous
+  thresholds and promotes eligible candidates itself. Personas from 0.2.0 stay manual.
+* Natural maturation on a square-root curve `sqrt(min(t/T,1))` over ended sessions,
+  with a configurable rate (`fast`/`normal`/`slow` or explicit horizons):
+  relationship familiarity per linked user and core habituation to served contexts.
+  The steps are bounded, replayed in order and never undo consented preferences.
+* Agent feedback tool: `POST /v1/reflections`, scope `reflection:write`, canonical
+  `persona_feedback` tool definition, `reflect()` in the Python, lite and TypeScript
+  SDKs, bridge `{"op":"reflect"}`; registered by the Claude Code (bundled stdio MCP
+  server), Hermes, Pi and OpenClaw adapters in active mode.
+* `POST /v1/personas/{id}/evolution`; inspect reports archetype, evolution policy
+  and growth; capabilities list archetypes and maturation rates.
+* CLI: `persona create --archetype`, `--maturation-rate`, `--manual`,
+  `--no-agent-feedback`; `persona archetypes`; `persona evolution --pause/--resume`;
+  `persona inspect --user`. `token add` defaults include `reflection:write`.
+
 ## 0.2.0 — experimental (review against the brief; see docs/reports/v0.2-review.md)
 
 * decoder-v2: persona-conditioned auto-decoder on synthetic profiles, encoder/2

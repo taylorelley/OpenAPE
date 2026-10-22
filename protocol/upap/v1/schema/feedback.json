@@ -20,7 +20,8 @@
       "enum": [
         "explicit_user",
         "owner",
-        "verified_evaluator"
+        "verified_evaluator",
+        "agent_reflection"
       ],
       "title": "Source",
       "type": "string"

@@ -94,7 +94,7 @@ def migrate_soul(client,hermes_path=None,persona=None,apply=False):
     if not persona:raise SystemExit('--apply requires --persona')
     stamp=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S');backup=home/f'SOUL.md.openape-backup-{stamp}'
     with open(backup,'x') as f:f.write(original)  # exclusive: never overwrite an existing backup
-    created=client.request('POST','/v1/personas',{'persona_id':persona,'seed_preferences':analysis['seeds']})
+    created=client.request('POST','/v1/personas',{'persona_id':persona,**({'seed_preferences':analysis['seeds']} if analysis['seeds'] else {'archetype':'balanced'})})
     header=f'<!-- Style-only lines moved to OpenAPE persona "{persona}" ({",".join(analysis["seeds"]) or "neutral"}); backup: {backup.name} -->'
     tmp=soul.with_suffix('.openape.tmp');tmp.write_text('\n'.join([header,*analysis['retained_lines']])+'\n');os.replace(tmp,soul)
     report.update(applied=True,backup=str(backup),persona=created,action='SOUL.md backed up; operational lines retained; style-only lines removed')

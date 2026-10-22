@@ -6,6 +6,9 @@
   here; see `openape adapter migrate-soul` for the explicit, backed-up migration.
 * `post_llm_call` / `on_session_end` send ID-and-status observations only.
 * Subagent sessions (announced by `subagent_start`) opt out by default.
+* In active mode, registers one tool, `persona_feedback` (toolset `openape`), so the
+  agent can record style feedback on the current turn's decision. Style only, never
+  text; `OPENAPE_AGENT_FEEDBACK=0` disables it.
 * Settings resolve per call through Hermes's profile-scoped `get_secret`, so one
   Hermes profile can never use another profile's token or persona.
 Stdlib only (vendored `upap_lite`), so it runs in Hermes's own interpreter.
@@ -33,7 +36,7 @@ def settings():
     token, persona = get_secret('OPENAPE_TOKEN'), get_secret('OPENAPE_PERSONA')
     if not token or not persona: return None
     return dict(token=token, persona=persona, url=get_secret('OPENAPE_URL') or 'http://127.0.0.1:8765', tenant=get_secret('OPENAPE_TENANT') or 'local',
-        user=get_secret('OPENAPE_LINKED_USER'), mode=get_secret('OPENAPE_MODE') or 'shadow')
+        user=get_secret('OPENAPE_LINKED_USER'), mode=get_secret('OPENAPE_MODE') or 'shadow', agent_feedback=(get_secret('OPENAPE_AGENT_FEEDBACK') or '1')!='0')
 
 def register(ctx):
     if not callable(getattr(ctx, 'register_hook', None)): raise RuntimeError('Hermes hooks unavailable')
@@ -74,3 +77,10 @@ def register(ctx):
     ctx.register_hook('pre_llm_call', prepare)
     ctx.register_hook('post_llm_call', completed)
     ctx.register_hook('on_session_end', ended)
+    def persona_feedback(args, session_id=None, **_):
+        cfg = settings()
+        if not cfg or cfg['mode'] != 'active' or not cfg['agent_feedback']: return 'Not recorded: persona feedback is not enabled.'
+        return upap_lite.reflect(cfg['url'], cfg['token'], decisions.get(session_id or ''), args if isinstance(args, dict) else {})
+    if callable(getattr(ctx, 'register_tool', None)):
+        ctx.register_tool(name=upap_lite.TOOL_NAME, toolset='openape', schema=upap_lite.TOOL, handler=persona_feedback,
+            description=upap_lite.TOOL_DESCRIPTION, check_fn=lambda: bool((cfg := settings()) and cfg['mode'] == 'active' and cfg['agent_feedback']))

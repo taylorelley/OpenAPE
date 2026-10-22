@@ -1,6 +1,6 @@
 {
   "host": "Claude Code",
-  "host_version": "2.1.307 (Claude Code)",
+  "host_version": "2.1.308 (Claude Code)",
   "plugin": "adapters/claude-code (--plugin-dir)",
   "model": "synthetic Anthropic Messages endpoint; no provider call",
   "checks": {
@@ -8,6 +8,7 @@
     "style_reached_model_once": true,
     "context_in_current_turn_not_system_prompt": true,
     "resume_one_copy_in_new_turn": true,
+    "persona_feedback_tool_only_in_active_mode": true,
     "shadow_records_without_injection": true,
     "two_personas_distinct_controls": true,
     "decision_linked_turn_completed": true,

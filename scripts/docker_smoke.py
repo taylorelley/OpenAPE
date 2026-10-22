@@ -19,7 +19,7 @@ def main():
         else:raise RuntimeError('Trained decoder not ready')
         assert c.request('GET','/v1/capabilities')['engine_status']=='experimental_synthetic'
         persona='docker-smoke-'+uuid.uuid4().hex[:8]
-        c.request('POST','/v1/personas',{'persona_id':persona})
+        c.request('POST','/v1/personas',{'persona_id':persona,'archetype':'balanced'})
         req=json.loads(Path('examples/express.json').read_text());req['identity']['persona_id']=persona
         decision=c.request('POST','/v1/express',req)
         assert decision['engine_status']=='experimental_synthetic'

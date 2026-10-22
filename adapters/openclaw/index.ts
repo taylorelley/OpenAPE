@@ -1,8 +1,10 @@
 /** OpenAPE OpenClaw plugin. Verified against openclaw 2026.10.5 (embedded runner).
  * `before_prompt_build` -> `appendContext` only; never systemPrompt, tool policy or
  * SOUL.md. Prompt text is never read or transmitted. Permission grants
- * (allowPromptInjection / allowConversationAccess) remain host-controlled. */
-import {Binding,fromEnvironment,type Config} from '../common.ts';
+ * (allowPromptInjection / allowConversationAccess) remain host-controlled.
+ * In active mode it registers one tool, persona_feedback (declared in
+ * contracts.tools; style feedback only; OPENAPE_AGENT_FEEDBACK=0 disables). */
+import {Binding,fromEnvironment,personaFeedbackTool,type Config} from '../common.ts';
 export const HOST_VERSION='2026.10.5';
 export function turnIdentity(event:any,ctx:any):string|null{
  // Only user-initiated turns. Heartbeat, cron and other triggers opt out.
@@ -23,6 +25,11 @@ export function install(api:any,config:Config,binding=new Binding(config,'upap.o
  });
  api.on('agent_end',async(event:any,ctx:any)=>{
   if(ctx.sessionId)await binding.observe(ctx.sessionId,event.success?'turn.completed':'turn.failed',event.success?'ok':'failed');
- });return binding;
+ });
+ if(config.mode==='active'&&config.agentFeedback!==false&&typeof api.registerTool==='function')api.registerTool((ctx:any)=>({
+  name:personaFeedbackTool.name,label:'Persona feedback',description:personaFeedbackTool.description,parameters:personaFeedbackTool.parameters,
+  async execute(_id:string,params:any){const text=await binding.reflect(ctx?.sessionId,params);return {content:[{type:'text',text}],details:{}};}
+ }),{name:personaFeedbackTool.name});
+ return binding;
 }
 export default {id:'openape',name:'OpenAPE',register(api:any){const config=fromEnvironment(HOST_VERSION);if(config)install(api,config);}};

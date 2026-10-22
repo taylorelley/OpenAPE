@@ -4,7 +4,7 @@ import json
 import os
 from dataclasses import dataclass
 
-SCOPES={'persona:express','observations:write','feedback:write','persona:admin','training:admin'}
+SCOPES={'persona:express','observations:write','feedback:write','persona:admin','training:admin','reflection:write'}
 @dataclass(frozen=True)
 class Principal:
     tenant: str

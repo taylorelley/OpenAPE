@@ -12,15 +12,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 import torch
 from fastapi import FastAPI, Depends, Request
+from pydantic import BaseModel
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from engine.api.contracts import *
-from engine.security.auth import Auth
+from engine.security.auth import Auth, Principal
 from engine.storage.store import Store
 from engine.neural.policy import Decoder, CATALOGUE, ACTIONS, CORE_DIM, REL_DIM, mask_reason
-from engine.neural.profiles import fit_seed_latent
+from engine.neural.profiles import fit_seed_latent, seed_profile, ARCHETYPES
 from engine.learning.trainer import fit_candidate
-from engine.evaluation.policy import group_split, evaluate_candidate, policy_for
+from engine.learning import maturation
+from engine.learning.reflection import adjusted_control
+from engine.evaluation.policy import group_split, evaluate_candidate, evaluate_maturation, policy_for
 
 ROOT=Path(__file__).resolve().parents[2]
 DEFAULT_DECODER=ROOT/'models/decoder-v2/decoder.safetensors'
@@ -29,6 +32,14 @@ def wire(**kwargs): return {'protocol_version':'upap/1',**kwargs}
 class Fault(Exception):
     def __init__(self,code,message,status=400,retryable=False): self.code,self.message,self.status,self.retryable=code,message,status,retryable
 VERSION_COLUMNS='(tenant,persona,id,hash,parent,scope,user_id,job,core_base)'
+# Automatic learning waits for this many new usable examples since its last attempt.
+AUTO_EVIDENCE_STEP={'relationship':4,'core':8}
+REFLECTIONS_PER_SESSION=3
+AUTO_ACTOR='openape:auto-evolution'; MATURATION_ACTOR='openape:maturation'
+def system_principal(tenant,persona_id,actor):
+    """Engine-internal identity for automatic evolution of one persona."""
+    return Principal(tenant,actor,frozenset({'training:admin'}),(persona_id,),('*',))
+def short_id(value): return value if len(value)<=100 else hashlib.sha256(value.encode()).hexdigest()
 
 def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_minute=600):
     auth=Auth(credentials); store=Store(data_dir or os.environ.get('OPENAPE_DATA','.openape'))
@@ -39,6 +50,12 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
     app=FastAPI(title='OpenAPE — Agent Personality Engine',version='0.2.0')
     app.state.store=store; app.state.decoder=decoder
     pool=ThreadPoolExecutor(max_workers=1,thread_name_prefix='openape-training')
+    def drain():
+        """Wait until no training/evolution job is queued (single worker; for tests and tools)."""
+        while True:
+            pool.submit(lambda:None).result()
+            if not store.one("SELECT 1 FROM jobs WHERE status='queued'"):return
+    app.state.drain=drain
     pending=threading.BoundedSemaphore(4)
     limits=defaultdict(deque); limit_lock=threading.Lock()
     @asynccontextmanager
@@ -97,44 +114,59 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
     @app.get('/v1/capabilities')
     def capabilities(p=Depends(principal)):
         return wire(protocol_versions=['upap/1'],control_schema='behaviour-controls/1',controls=len(CATALOGUE),encoder=decoder.meta.get('encoder'),decoder_hash=decoder.hash,engine_status=engine_status,
-            max_payload_bytes=65536,modes=['disabled','shadow','active','frozen'],initializations=['neutral_prior','seed_preferences','snapshot','imported'],
-            features=['pairwise_learning','logged_bandit_learning','independent_evaluator','cas_promotion','rollback','lineage_revocation','core_export','subagent_snapshot'],
-            session_state='zero ephemeral; no checkpoints',automatic_promotion=False)
-    def insert_persona(db,p,id,artifact,initialization,parent=None):
+            max_payload_bytes=65536,modes=['disabled','shadow','active','frozen'],initializations=['archetype','seed_preferences','snapshot','imported','neutral_prior'],
+            archetypes={k:list(v) for k,v in ARCHETYPES.items()},maturation_rates={k:dict(relationship_horizon=v[0],core_horizon=v[1]) for k,v in maturation.RATES.items()},
+            features=['pairwise_learning','logged_bandit_learning','independent_evaluator','cas_promotion','rollback','lineage_revocation','core_export','subagent_snapshot','automatic_evolution','maturation','agent_reflection'],
+            session_state='zero ephemeral; no checkpoints',automatic_promotion='persona_policy')
+    def insert_persona(db,p,id,artifact,initialization,parent=None,archetype=None,seeds=(),evolution='manual',rate=None,agent_feedback=False):
         if db.execute('SELECT 1 FROM personas WHERE tenant=? AND id=?',(p.tenant,id)).fetchone():raise Fault('VERSION_CONFLICT','Persona already exists',409)
         v=uid()
-        db.execute('INSERT INTO personas(tenant,id,active,initialization,parent) VALUES(?,?,?,?,?)',(p.tenant,id,v,initialization,parent))
+        db.execute('INSERT INTO personas(tenant,id,active,initialization,parent,archetype,seeds,evolution,maturation,agent_feedback) VALUES(?,?,?,?,?,?,?,?,?,?)',
+            (p.tenant,id,v,initialization,parent,archetype,json.dumps(sorted(seeds)),evolution,json.dumps(maturation.horizons(rate)),int(agent_feedback)))
         db.execute(f'INSERT INTO versions{VERSION_COLUMNS} VALUES(?,?,?,?,?,?,?,?,?)',(p.tenant,id,v,artifact,None,'core',None,None,None))
         return v
     @app.post('/v1/personas')
     def create(req:Create,p=Depends(principal)):
         scope(p,'persona:admin',req.persona_id)
-        if req.parent_persona_id and req.seed_preferences:raise Fault('INVALID_CONTEXT','Choose a snapshot parent or seed preferences, not both')
-        parent=None
+        chosen=[x for x in (req.archetype,req.seed_preferences,req.parent_persona_id) if x]
+        if len(chosen)>1:raise Fault('INVALID_CONTEXT','Choose one of archetype, seed preferences or a snapshot parent')
+        if not chosen:raise Fault('INVALID_CONTEXT','Choose a starting archetype ('+', '.join(ARCHETYPES)+'), seed preferences or a snapshot parent')
+        parent=None; archetype=req.archetype
         if req.parent_persona_id:
             # Subagent semantics: a new scoped identity holding an immutable copy of the
             # parent's approved core version. No mutable weights are shared.
             scope(p,'persona:admin',req.parent_persona_id); src=persona(p,req.parent_persona_id)
             x=latent(p,req.parent_persona_id,src['active'],CORE_DIM); initialization='snapshot'; parent=f"{req.parent_persona_id}@{src['active']}"
-        elif req.seed_preferences:
-            try:x=fit_seed_latent(decoder,req.seed_preferences)
+            archetype=src['archetype']; seeds=json.loads(src['seeds'] or '[]')
+        else:
+            seeds=list(ARCHETYPES[archetype]) if archetype else req.seed_preferences
+            try:x=fit_seed_latent(decoder,seeds)
             except ValueError as exc:raise Fault('INVALID_CONTEXT',str(exc))
-            initialization='seed_preferences'
-        else:x=torch.zeros(CORE_DIM); initialization='neutral_prior'
+            initialization='archetype' if archetype else 'seed_preferences'
+        rate=req.maturation_rate.model_dump() if isinstance(req.maturation_rate,BaseModel) else req.maturation_rate or os.environ.get('OPENAPE_MATURATION_RATE')
         h=store.put(x)
         with store.tx() as db:
-            v=insert_persona(db,p,req.persona_id,h,initialization,parent)
-            store.audit(db,p.tenant,req.persona_id,'created',{'actor':p.actor,'initialization':initialization,'seed_preferences':req.seed_preferences,'parent':parent})
-        return wire(persona_id=req.persona_id,active_version=v,initialization=initialization,seed_preferences_applied=initialization=='seed_preferences',parent=parent)
+            v=insert_persona(db,p,req.persona_id,h,initialization,parent,archetype,seeds,req.evolution,rate,req.agent_feedback)
+            store.audit(db,p.tenant,req.persona_id,'created',{'actor':p.actor,'initialization':initialization,'archetype':archetype,'seed_preferences':req.seed_preferences,'parent':parent,
+                'evolution':req.evolution,'maturation_rate':maturation.public_rate(maturation.horizons(rate)),'agent_feedback':req.agent_feedback})
+        return wire(persona_id=req.persona_id,active_version=v,initialization=initialization,archetype=archetype,seed_preferences_applied=initialization=='seed_preferences',parent=parent,
+            evolution=req.evolution,maturation_rate=maturation.public_rate(maturation.horizons(rate)),agent_feedback=req.agent_feedback)
     @app.get('/v1/personas')
     def list_personas(p=Depends(principal)):
         scope(p,'persona:express')
         rows=store.all('SELECT id,active,initialization,parent FROM personas WHERE tenant=?',(p.tenant,))
         return wire(personas=[dict(r) for r in rows if p.allows(r['id'])])
     @app.get('/v1/personas/{id}')
-    def inspect(id:str,p=Depends(principal)):
-        scope(p,'persona:express',id); r=persona(p,id)
-        return wire(persona_id=id,active_version=r['active'],initialization=r['initialization'],parent=r['parent'],decoder_hash=decoder.hash,engine_status=engine_status)
+    def inspect(id:str,user_id:str|None=None,p=Depends(principal)):
+        scope(p,'persona:express',id,user_id); r=persona(p,id); hz=json.loads(r['maturation'] or 'null') or maturation.horizons(None)
+        def level(user,horizon):
+            row=store.one('SELECT experience FROM maturation WHERE tenant=? AND persona=? AND user_id=?',(p.tenant,id,user))
+            t=row['experience'] if row else 0
+            return dict(experience=t,horizon=horizon,maturity=round(maturation.maturity(t,horizon),4))
+        growth=dict(core=level('',hz['core']))
+        if user_id:growth['relationship']=level(user_id,hz['relationship'])
+        return wire(persona_id=id,active_version=r['active'],initialization=r['initialization'],archetype=r['archetype'],parent=r['parent'],evolution=r['evolution'],
+            maturation_rate=maturation.public_rate(hz),agent_feedback=bool(r['agent_feedback']),growth=growth,decoder_hash=decoder.hash,engine_status=engine_status)
     @app.get('/v1/personas/{id}/history')
     def history(id:str,p=Depends(principal)):
         scope(p,'persona:admin',id); persona(p,id)
@@ -187,6 +219,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         scope(p,'feedback:write')
         if req.actor_id!=p.actor:raise Fault('FORBIDDEN_SCOPE','actor_id must match credential',403)
         if req.source in ('owner','verified_evaluator') and 'training:admin' not in p.scopes:raise Fault('FORBIDDEN_SCOPE','Privileged source requires training administrator',403)
+        if req.source=='agent_reflection':raise Fault('FORBIDDEN_SCOPE','Agent reflections are recorded only through /v1/reflections',403)
         if req.consent_scope=='core':scope(p,'training:admin')
         d=store.one('SELECT * FROM decisions WHERE tenant=? AND id=?',(p.tenant,req.decision_id))
         if not d:raise Fault('INVALID_CONTEXT','Unknown decision')
@@ -207,7 +240,9 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
             if not old:
                 db.execute('INSERT INTO feedback VALUES(?,?,?,?,?,?,1)',(p.tenant,req.feedback_id,d['persona'],d['user_id'],p.actor,raw))
                 store.audit(db,p.tenant,d['persona'],'feedback_recorded',{'feedback_id':req.feedback_id,'actor':p.actor,'source':req.source,'kind':req.kind,'consent_scope':req.consent_scope,'learning_consent':req.learning_consent,'received_at':datetime.now(timezone.utc).isoformat()})
-        return wire(feedback_id=req.feedback_id,deduplicated=bool(old),learning_recorded=req.learning_consent and req.consent_scope not in ('record_only','session'))
+        learning=req.learning_consent and req.consent_scope not in ('record_only','session')
+        if learning and not old:maybe_learn(p.tenant,d['persona'],req.consent_scope,d['user_id'] if req.consent_scope=='relationship' else None)
+        return wire(feedback_id=req.feedback_id,deduplicated=bool(old),learning_recorded=learning)
     def invalidate(db,p,persona_id,feedback_id):
         """Lineage-based revocation: only candidates and versions derived from the
         revoked evidence (and their descendants) are invalidated."""
@@ -247,7 +282,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         store.gc()
     @app.post('/v1/observations')
     def observations(req:Observations,p=Depends(principal)):
-        scope(p,'observations:write'); inserted=0
+        scope(p,'observations:write'); inserted=0; due=set()
         with store.tx() as db:
             for e in req.events:
                 scope(p,'observations:write',e.persona_id,e.user_id); persona(p,e.persona_id)
@@ -267,52 +302,165 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
                     f=db.execute('SELECT * FROM feedback WHERE tenant=? AND id=?',(p.tenant,e.feedback_id)).fetchone()
                     if not f or f['persona']!=e.persona_id or (f['actor']!=p.actor and 'training:admin' not in p.scopes):raise Fault('FORBIDDEN_SCOPE','Cannot revoke evidence',403)
                     invalidate(db,p,e.persona_id,e.feedback_id)
-                if e.type=='session.ended':db.execute('DELETE FROM sessions WHERE tenant=? AND persona=? AND user_id=? AND adapter=? AND id=?',(p.tenant,e.persona_id,e.user_id or '',req.adapter_id,e.session_id))
+                if e.type=='session.ended':
+                    db.execute('DELETE FROM sessions WHERE tenant=? AND persona=? AND user_id=? AND adapter=? AND id=?',(p.tenant,e.persona_id,e.user_id or '',req.adapter_id,e.session_id))
+                    if e.session_id:due.update(record_experience(db,p.tenant,e.persona_id,e.user_id,req.adapter_id,e.session_id))
                 db.execute('INSERT INTO observations VALUES(?,?,?,?,?)',(p.tenant,req.adapter_id,e.event_id,e.persona_id,raw));inserted+=1
+        for persona_id,scope_name,user in sorted(due,key=str):submit_auto(p.tenant,persona_id,'maturation',scope_name,user,mature)
         return wire(inserted=inserted,deduplicated=len(req.events)-inserted)
-    def run_job(p,req,jid,base,relbase,core,rel,examples):
-        try:
-            train,valid=group_split(examples)
-            x,fit=fit_candidate(decoder,core,rel,train,req.scope,req.seed,policy_for(req.scope).maximum_drift)
-            report=evaluate_candidate(decoder,core,rel,x,req.scope,train,valid)
-            ids=[e['feedback_id'] for e in examples]
-            h=store.put(x)
-            data=dict(scope=req.scope,user_id=req.user_id,base_version=base,base_relationship_version=relbase,artifact=h,fit=fit,report=report,eligible=report['eligible'],evidence_ids=ids,seed=req.seed,decoder_hash=decoder.hash)
-            with store.tx() as db:
-                valid_ids={r['id'] for r in db.execute('SELECT id FROM feedback WHERE tenant=? AND persona=? AND valid=1',(p.tenant,req.persona_id))}
-                if not set(ids)<=valid_ids:data.update(eligible=False,invalidated_by='concurrent_revocation')
-                if not db.execute('SELECT 1 FROM personas WHERE tenant=? AND id=?',(p.tenant,req.persona_id)).fetchone():store.gc();return
-                db.execute('UPDATE jobs SET status=?,data=? WHERE tenant=? AND id=?',('evaluated',json.dumps(data),p.tenant,jid))
-                store.audit(db,p.tenant,req.persona_id,'candidate_evaluated',{'job':jid,'eligible':data['eligible'],'checks':report['checks'],'policy_hash':report['policy_hash']})
-        except Exception as exc:
-            with store.tx() as db:db.execute('UPDATE jobs SET status=?,data=? WHERE tenant=? AND id=?',('failed',json.dumps({'eligible':False,'reason':str(exc)[:300]}),p.tenant,jid))
-        finally:pending.release()
-    @app.post('/v1/consolidations',status_code=202)
-    def consolidate(req:Consolidate,p=Depends(principal)):
-        scope(p,'training:admin',req.persona_id,req.user_id); r=persona(p,req.persona_id)
-        if req.scope=='relationship' and not req.user_id:raise Fault('INVALID_CONTEXT','Linked user required')
-        rows=store.all('SELECT * FROM feedback WHERE tenant=? AND persona=? AND valid=1 ORDER BY rowid DESC LIMIT 1000',(p.tenant,req.persona_id));examples=[];seen=set()
+    def record_experience(db,tenant,persona_id,user_id,adapter,session):
+        """Count an ended session that received an active decision as experience
+        (core, and the linked user's relationship). Returns maturation steps now due."""
+        served=db.execute("""SELECT 1 FROM decisions WHERE tenant=? AND persona=? AND user_id IS ? AND json_extract(data,'$.session.id')=? AND json_extract(data,'$.host.adapter_id')=?
+            AND json_extract(data,'$.response.mode')='active' AND json_extract(data,'$.response.engine_status')!='baseline_fallback' LIMIT 1""",(tenant,persona_id,user_id,session,adapter)).fetchone()
+        if not served:return set()
+        r=db.execute('SELECT evolution,maturation FROM personas WHERE tenant=? AND id=?',(tenant,persona_id)).fetchone(); hz=json.loads(r['maturation'] or 'null') or maturation.horizons(None); due=set()
+        for user,scope_name in (('','core'),)+(((user_id,'relationship'),) if user_id else ()):
+            if db.execute('INSERT OR IGNORE INTO experience VALUES(?,?,?,?,?)',(tenant,persona_id,user,adapter,session)).rowcount==0:continue
+            db.execute('INSERT OR IGNORE INTO maturation(tenant,persona,user_id) VALUES(?,?,?)',(tenant,persona_id,user))
+            db.execute('UPDATE maturation SET experience=experience+1 WHERE tenant=? AND persona=? AND user_id=?',(tenant,persona_id,user))
+            row=db.execute('SELECT experience,last_m FROM maturation WHERE tenant=? AND persona=? AND user_id=?',(tenant,persona_id,user)).fetchone()
+            if r['evolution']=='automatic' and decoder.model and maturation.due(row['experience'],hz[scope_name],row['last_m']) is not None:due.add((persona_id,scope_name,user or None))
+        return due
+    def collect_examples(tenant,persona_id,scope_name,user_id,auto=False):
+        rows=store.all('SELECT * FROM feedback WHERE tenant=? AND persona=? AND valid=1 ORDER BY rowid DESC LIMIT 1000',(tenant,persona_id));examples=[];seen=set()
         for row in rows:
             f=json.loads(row['data'])
-            if not f['learning_consent'] or f['consent_scope']!=req.scope or (req.scope=='relationship' and row['user_id']!=req.user_id):continue
+            if not f['learning_consent'] or f['consent_scope']!=scope_name or (scope_name=='relationship' and row['user_id']!=user_id):continue
             # One training example per (decision, actor, kind): resubmitting the same
             # judgement under a new feedback_id cannot double its weight. Newest wins.
             key=(f['decision_id'],f['actor_id'],f['kind'])
             if key in seen:continue
-            d=store.one('SELECT data FROM decisions WHERE tenant=? AND id=?',(p.tenant,f['decision_id']))
+            d=store.one('SELECT data FROM decisions WHERE tenant=? AND id=?',(tenant,f['decision_id']))
             if not d:continue
             data=json.loads(d['data'])
             if data['response']['decoder_hash']!=decoder.hash:continue
             if data['response']['mode']=='frozen' or data['response']['engine_status']=='baseline_fallback':continue
             seen.add(key)
             examples.append({**f,'evidence_group':data['host']['adapter_id']+':'+data['session']['id'],**{k:data[k] for k in ('context','host','action','selection','propensity')}})
+        if auto:
+            # Agent reflections may never outweigh people's own feedback in an
+            # automatically promoted candidate (newest reflections are kept).
+            explicit=[e for e in examples if e['source']!='agent_reflection'];reflections=[e for e in examples if e['source']=='agent_reflection']
+            if explicit:examples=explicit+reflections[:len(explicit)]
+        return examples
+    def state(tenant,persona_id,user_id):
+        r=store.one('SELECT * FROM personas WHERE tenant=? AND id=?',(tenant,persona_id))
+        rr=store.one('SELECT active FROM relationships WHERE tenant=? AND persona=? AND user_id=?',(tenant,persona_id,user_id)) if user_id else None
+        rv=rr['active'] if rr else None; p=system_principal(tenant,persona_id,AUTO_ACTOR)
+        return r,rv,latent(p,persona_id,r['active'],CORE_DIM),latent(p,persona_id,rv,REL_DIM) if rv else torch.zeros(REL_DIM)
+    def run_job(p,jid,scope_name,user_id,seed,base,relbase,core,rel,examples,auto=False):
+        train,valid=group_split(examples)
+        x,fit=fit_candidate(decoder,core,rel,train,scope_name,seed,policy_for(scope_name,auto).maximum_drift)
+        report=evaluate_candidate(decoder,core,rel,x,scope_name,train,valid,auto)
+        ids=[e['feedback_id'] for e in examples]
+        h=store.put(x)
+        data=dict(scope=scope_name,user_id=user_id,base_version=base,base_relationship_version=relbase,artifact=h,fit=fit,report=report,eligible=report['eligible'],evidence_ids=ids,seed=seed,decoder_hash=decoder.hash)
+        if auto:data.update(auto=True,kind='feedback',examples_seen=len(examples))
+        with store.tx() as db:
+            job_row=db.execute('SELECT persona FROM jobs WHERE tenant=? AND id=?',(p.tenant,jid)).fetchone()
+            if not job_row or not db.execute('SELECT 1 FROM personas WHERE tenant=? AND id=?',(p.tenant,job_row['persona'])).fetchone():store.gc();return
+            persona_id=job_row['persona']
+            valid_ids={r['id'] for r in db.execute('SELECT id FROM feedback WHERE tenant=? AND persona=? AND valid=1',(p.tenant,persona_id))}
+            if not set(ids)<=valid_ids:data.update(eligible=False,invalidated_by='concurrent_revocation')
+            db.execute('UPDATE jobs SET status=?,data=? WHERE tenant=? AND id=?',('evaluated',json.dumps(data),p.tenant,jid))
+            store.audit(db,p.tenant,persona_id,'candidate_evaluated',{'job':jid,'eligible':data['eligible'],'checks':report['checks'],'policy_hash':report['policy_hash'],'automatic':auto})
+            if auto and data['eligible']:promote_automatically(db,p,persona_id,jid,base)
+    def promote_automatically(db,p,persona_id,jid,base):
+        try:apply_promotion(db,p,persona_id,jid,base)
+        except Fault as exc:
+            # Another promotion or rollback won the compare-and-swap; evolution resumes from it.
+            db.execute('UPDATE jobs SET status=? WHERE tenant=? AND id=?',('superseded',p.tenant,jid))
+            store.audit(db,p.tenant,persona_id,'automatic_promotion_skipped',{'job':jid,'reason':exc.code})
+    def submit_auto(tenant,persona_id,kind,scope_name,user_id,work):
+        """Queue one engine-initiated job; at most one per (persona, kind, scope, user)."""
+        with store.tx() as db:
+            for row in db.execute("SELECT data FROM jobs WHERE tenant=? AND persona=? AND status='queued'",(tenant,persona_id)):
+                d=json.loads(row['data'])
+                if d.get('auto') and d.get('kind')==kind and d['scope']==scope_name and d.get('user_id')==user_id:return None
+            if not pending.acquire(blocking=False):return None
+            jid=uid();db.execute('INSERT INTO jobs VALUES(?,?,?,?,?)',(tenant,jid,persona_id,'queued',json.dumps({'scope':scope_name,'user_id':user_id,'auto':True,'kind':kind})))
+        def guarded():
+            try:work(tenant,persona_id,scope_name,user_id,jid)
+            except Exception as exc:
+                with store.tx() as db:db.execute('UPDATE jobs SET status=?,data=? WHERE tenant=? AND id=?',('failed',json.dumps({'eligible':False,'auto':True,'kind':kind,'scope':scope_name,'user_id':user_id,'reason':str(exc)[:300]}),tenant,jid))
+            finally:pending.release()
+        pool.submit(guarded);return jid
+    def skip(tenant,jid,reason):
+        with store.tx() as db:
+            row=db.execute('SELECT data FROM jobs WHERE tenant=? AND id=?',(tenant,jid)).fetchone();data=json.loads(row['data']);data.update(eligible=False,reason=reason)
+            db.execute('UPDATE jobs SET status=?,data=? WHERE tenant=? AND id=?',('skipped',json.dumps(data),tenant,jid))
+    def maybe_learn(tenant,persona_id,scope_name,user_id):
+        """Automatic evolution from consented feedback: retry once enough new evidence exists."""
+        r=store.one('SELECT evolution FROM personas WHERE tenant=? AND id=?',(tenant,persona_id))
+        if not r or r['evolution']!='automatic' or decoder.model is None:return
+        count=len(collect_examples(tenant,persona_id,scope_name,user_id,auto=True)); last=0
+        for row in store.all('SELECT data FROM jobs WHERE tenant=? AND persona=? ORDER BY rowid DESC',(tenant,persona_id)):
+            d=json.loads(row['data'])
+            if d.get('kind')=='feedback' and d.get('scope')==scope_name and d.get('user_id')==user_id:last=d.get('examples_seen') or 0;break
+        if count-last>=AUTO_EVIDENCE_STEP[scope_name]:submit_auto(tenant,persona_id,'feedback',scope_name,user_id,learn)
+    def learn(tenant,persona_id,scope_name,user_id,jid):
+        r,rv,core,rel=state(tenant,persona_id,user_id)
+        if r is None or r['evolution']!='automatic':return skip(tenant,jid,'evolution not automatic')
+        examples=collect_examples(tenant,persona_id,scope_name,user_id,auto=True)
+        try:run_job(system_principal(tenant,persona_id,AUTO_ACTOR),jid,scope_name,user_id,42,r['active'],rv,core,rel,examples,auto=True)
+        except Exception as exc:
+            # Too little or unusable evidence is normal early on; wait for more.
+            with store.tx() as db:db.execute('UPDATE jobs SET status=?,data=? WHERE tenant=? AND id=?',('failed',json.dumps({'eligible':False,'auto':True,'kind':'feedback','scope':scope_name,'user_id':user_id,'examples_seen':len(examples),'reason':str(exc)[:300]}),tenant,jid))
+        maybe_learn(tenant,persona_id,scope_name,user_id)  # evidence that arrived while this job ran
+    def mature(tenant,persona_id,scope_name,user_id,jid):
+        """One natural maturation step on the square-root curve (see engine.learning.maturation)."""
+        r,rv,core,rel=state(tenant,persona_id,user_id)
+        if r is None or r['evolution']!='automatic':return skip(tenant,jid,'evolution not automatic')
+        hz=json.loads(r['maturation'] or 'null') or maturation.horizons(None)
+        st=store.one('SELECT * FROM maturation WHERE tenant=? AND persona=? AND user_id=?',(tenant,persona_id,user_id or ''))
+        step=maturation.due_step(st['experience'],hz[scope_name],st['last_m'])
+        if step is None:return skip(tenant,jid,'no maturation step due')
+        at,m=step;more=maturation.due(st['experience'],hz[scope_name],m) is not None
+        budget=maturation.step_budget(scope_name,m,st['last_m']); last_decision=st['last_decision']; summary={}
+        if scope_name=='relationship':x=maturation.familiarize(decoder,core,rel,seed_profile(json.loads(r['seeds'] or '[]')),m,budget)
+        else:
+            counts={}
+            for row in store.all("SELECT rowid,data FROM decisions WHERE tenant=? AND persona=? AND rowid>? AND json_extract(data,'$.response.mode')='active' AND json_extract(data,'$.response.engine_status')!='baseline_fallback'",(tenant,persona_id,last_decision)):
+                d=json.loads(row['data']);last_decision=max(last_decision,row['rowid'])
+                if d['response']['decoder_hash']!=decoder.hash:continue
+                host={k:d['host'][k] for k in ('provider_family','adapter_id')};key=json.dumps([d['context'],host],sort_keys=True);counts[key]=counts.get(key,0)+1
+            if not counts:return skip(tenant,jid,'no active decisions to habituate to')
+            x=maturation.habituate(decoder,core,[(*json.loads(k),c) for k,c in counts.items()],budget)
+            for k,c in counts.items():task=json.loads(k)[0]['task_type'];summary[task]=summary.get(task,0)+c
+        report=evaluate_maturation(decoder,core,rel,x,scope_name,budget,collect_examples(tenant,persona_id,scope_name,user_id))
+        h=store.put(x);p=system_principal(tenant,persona_id,MATURATION_ACTOR)
+        data=dict(scope=scope_name,user_id=user_id,auto=True,kind='maturation',base_version=r['active'],base_relationship_version=rv,artifact=h,report=report,eligible=report['eligible'],evidence_ids=[],
+            experience=at,horizon=hz[scope_name],maturity=m,previous_maturity=st['last_m'],decoder_hash=decoder.hash)
+        with store.tx() as db:
+            if not db.execute('SELECT 1 FROM personas WHERE tenant=? AND id=?',(tenant,persona_id)).fetchone():store.gc();return
+            db.execute('UPDATE jobs SET status=?,data=? WHERE tenant=? AND id=?',('evaluated',json.dumps(data),tenant,jid))
+            # The curve advances whether or not the step was accepted: a rejected step is skipped, not retried larger.
+            # While replaying a backlog, later steps reuse the same window of decisions.
+            db.execute('UPDATE maturation SET last_m=?,last_decision=? WHERE tenant=? AND persona=? AND user_id=?',(m,st['last_decision'] if more else last_decision,tenant,persona_id,user_id or ''))
+            store.audit(db,tenant,persona_id,'matured',{'job':jid,'scope':scope_name,'maturity':round(m,4),'previous_maturity':round(st['last_m'],4),'experience':at,
+                'drift':round(report['metrics']['drift'],4),'eligible':report['eligible'],'checks':report['checks'],'task_counts':summary})
+            if report['eligible']:promote_automatically(db,p,persona_id,jid,r['active'])
+        # Replay any backlog, including sessions that ended while this step ran.
+        now=store.one('SELECT experience FROM maturation WHERE tenant=? AND persona=? AND user_id=?',(tenant,persona_id,user_id or ''))
+        if now and maturation.due(now['experience'],hz[scope_name],m) is not None:submit_auto(tenant,persona_id,'maturation',scope_name,user_id,mature)
+    @app.post('/v1/consolidations',status_code=202)
+    def consolidate(req:Consolidate,p=Depends(principal)):
+        scope(p,'training:admin',req.persona_id,req.user_id); r=persona(p,req.persona_id)
+        if req.scope=='relationship' and not req.user_id:raise Fault('INVALID_CONTEXT','Linked user required')
+        examples=collect_examples(p.tenant,req.persona_id,req.scope,req.user_id)
         rr=store.one('SELECT active FROM relationships WHERE tenant=? AND persona=? AND user_id=?',(p.tenant,req.persona_id,req.user_id))
         rv=rr['active'] if rr else None
         core=latent(p,req.persona_id,r['active'],CORE_DIM); rel=latent(p,req.persona_id,rv,REL_DIM) if rv else torch.zeros(REL_DIM)
         if not pending.acquire(blocking=False):raise Fault('RATE_LIMITED','Training queue full',429,True)
         jid=uid()
         with store.tx() as db:db.execute('INSERT INTO jobs VALUES(?,?,?,?,?)',(p.tenant,jid,req.persona_id,'queued',json.dumps({'scope':req.scope,'user_id':req.user_id})))
-        pool.submit(run_job,p,req,jid,r['active'],rv,core,rel,examples)
+        def work():
+            try:run_job(p,jid,req.scope,req.user_id,req.seed,r['active'],rv,core,rel,examples)
+            except Exception as exc:
+                with store.tx() as db:db.execute('UPDATE jobs SET status=?,data=? WHERE tenant=? AND id=?',('failed',json.dumps({'eligible':False,'reason':str(exc)[:300]}),p.tenant,jid))
+            finally:pending.release()
+        pool.submit(work)
         return wire(job_id=jid,status='queued')
     @app.get('/v1/consolidations/{id}')
     def job(id:str,p=Depends(principal)):
@@ -321,31 +469,86 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         scope(p,'training:admin',r['persona']); data=json.loads(r['data'])
         if data.get('user_id'):scope(p,'training:admin',r['persona'],data['user_id'])
         return wire(job_id=id,status=r['status'],**data)
+    def apply_promotion(db,p,id,candidate_id,expected_version):
+        """Compare-and-swap promotion shared by operators and automatic evolution."""
+        r=db.execute('SELECT * FROM personas WHERE tenant=? AND id=?',(p.tenant,id)).fetchone()
+        if not r: raise Fault('PERSONA_NOT_FOUND','Persona not found',404)
+        row=db.execute('SELECT * FROM jobs WHERE tenant=? AND id=? AND persona=?',(p.tenant,candidate_id,id)).fetchone()
+        data=json.loads(row['data']) if row else {}
+        if not row or row['status']!='evaluated' or not data.get('eligible'):raise Fault('NOT_ELIGIBLE_FOR_PROMOTION','Candidate failed evaluation or was invalidated',409)
+        scope(p,'training:admin',id,data.get('user_id'))
+        if data['base_version']!=r['active'] or expected_version!=r['active']:raise Fault('VERSION_CONFLICT','Active version changed',409)
+        rel=db.execute('SELECT active FROM relationships WHERE tenant=? AND persona=? AND user_id=?',(p.tenant,id,data['user_id'])).fetchone()
+        if data['scope']=='relationship' and (rel['active'] if rel else None)!=data['base_relationship_version']:raise Fault('VERSION_CONFLICT','Relationship version changed',409)
+        valid={r['id'] for r in db.execute('SELECT id FROM feedback WHERE tenant=? AND valid=1',(p.tenant,))}
+        if not set(data['evidence_ids'])<=valid:raise Fault('NOT_ELIGIBLE_FOR_PROMOTION','Evidence revoked',409)
+        store.get(data['artifact'],CORE_DIM if data['scope']=='core' else REL_DIM)
+        v=uid()
+        if data['scope']=='core':
+            db.execute(f'INSERT INTO versions{VERSION_COLUMNS} VALUES(?,?,?,?,?,?,?,?,?)',(p.tenant,id,v,data['artifact'],r['active'],'core',None,candidate_id,None))
+            db.execute('UPDATE personas SET active=? WHERE tenant=? AND id=?',(v,p.tenant,id))
+        else:
+            db.execute(f'INSERT INTO versions{VERSION_COLUMNS} VALUES(?,?,?,?,?,?,?,?,?)',(p.tenant,id,v,data['artifact'],data['base_relationship_version'],'relationship',data['user_id'],candidate_id,r['active']))
+            db.execute('INSERT OR REPLACE INTO relationships VALUES(?,?,?,?)',(p.tenant,id,data['user_id'],v))
+        db.execute('UPDATE jobs SET status=? WHERE tenant=? AND id=?',('promoted',p.tenant,candidate_id))
+        store.audit(db,p.tenant,id,'promoted',{'candidate':candidate_id,'version':v,'actor':p.actor,'kind':data.get('kind','feedback'),'automatic':bool(data.get('auto'))})
+        return v,data['scope']
     @app.post('/v1/personas/{id}/promotions')
     def promote(id:str,req:Promote,p=Depends(principal)):
         scope(p,'training:admin',id)
         with store.tx() as db:
-            r=persona(p,id)
-            row=db.execute('SELECT * FROM jobs WHERE tenant=? AND id=? AND persona=?',(p.tenant,req.candidate_id,id)).fetchone()
-            data=json.loads(row['data']) if row else {}
-            if not row or row['status']!='evaluated' or not data.get('eligible'):raise Fault('NOT_ELIGIBLE_FOR_PROMOTION','Candidate failed evaluation or was invalidated',409)
-            scope(p,'training:admin',id,data.get('user_id'))
-            if data['base_version']!=r['active'] or req.expected_version!=r['active']:raise Fault('VERSION_CONFLICT','Active version changed',409)
-            rel=db.execute('SELECT active FROM relationships WHERE tenant=? AND persona=? AND user_id=?',(p.tenant,id,data['user_id'])).fetchone()
-            if data['scope']=='relationship' and (rel['active'] if rel else None)!=data['base_relationship_version']:raise Fault('VERSION_CONFLICT','Relationship version changed',409)
-            valid={r['id'] for r in db.execute('SELECT id FROM feedback WHERE tenant=? AND valid=1',(p.tenant,))}
-            if not set(data['evidence_ids'])<=valid:raise Fault('NOT_ELIGIBLE_FOR_PROMOTION','Evidence revoked',409)
-            store.get(data['artifact'],CORE_DIM if data['scope']=='core' else REL_DIM)
-            v=uid()
-            if data['scope']=='core':
-                db.execute(f'INSERT INTO versions{VERSION_COLUMNS} VALUES(?,?,?,?,?,?,?,?,?)',(p.tenant,id,v,data['artifact'],r['active'],'core',None,req.candidate_id,None))
-                db.execute('UPDATE personas SET active=? WHERE tenant=? AND id=?',(v,p.tenant,id))
+            persona(p,id);v,scope_name=apply_promotion(db,p,id,req.candidate_id,req.expected_version)
+        return wire(version=v,scope=scope_name)
+    @app.post('/v1/personas/{id}/evolution')
+    def evolution(id:str,req:Evolution,p=Depends(principal)):
+        scope(p,'persona:admin',id)
+        with store.tx() as db:
+            r=persona(p,id);hz=json.loads(r['maturation'] or 'null') or maturation.horizons(None)
+            mode=req.evolution or r['evolution'];feedback=r['agent_feedback'] if req.agent_feedback is None else int(req.agent_feedback)
+            if req.maturation_rate is not None:hz=maturation.horizons(req.maturation_rate.model_dump() if isinstance(req.maturation_rate,BaseModel) else req.maturation_rate)
+            db.execute('UPDATE personas SET evolution=?,maturation=?,agent_feedback=? WHERE tenant=? AND id=?',(mode,json.dumps(hz),feedback,p.tenant,id))
+            if req.maturation_rate is not None or (mode=='automatic' and r['evolution']!='automatic'):
+                # Re-anchor the curve at current experience so a rate change or resume never jumps the latent.
+                for row in db.execute('SELECT user_id,experience FROM maturation WHERE tenant=? AND persona=?',(p.tenant,id)).fetchall():
+                    db.execute('UPDATE maturation SET last_m=? WHERE tenant=? AND persona=? AND user_id=?',(maturation.maturity(row['experience'],hz['relationship' if row['user_id'] else 'core']),p.tenant,id,row['user_id']))
+            store.audit(db,p.tenant,id,'evolution_changed',{'actor':p.actor,'evolution':mode,'maturation_rate':maturation.public_rate(hz),'agent_feedback':bool(feedback)})
+        return wire(persona_id=id,evolution=mode,maturation_rate=maturation.public_rate(hz),agent_feedback=bool(feedback))
+    @app.post('/v1/reflections')
+    def reflect(req:Reflection,p=Depends(principal)):
+        """Agent-initiated style feedback: bounded trait moves only, never text."""
+        scope(p,'reflection:write')
+        d=store.one('SELECT * FROM decisions WHERE tenant=? AND id=?',(p.tenant,req.decision_id))
+        if not d:raise Fault('INVALID_CONTEXT','Unknown decision')
+        scope(p,'reflection:write',d['persona'],d['user_id'])
+        if d['actor']!=p.actor and 'training:admin' not in p.scopes:raise Fault('FORBIDDEN_SCOPE','Decision actor mismatch',403)
+        r=persona(p,d['persona'])
+        if not r['agent_feedback']:raise Fault('FORBIDDEN_SCOPE','Agent feedback is disabled for this persona',403)
+        data=json.loads(d['data'])
+        if data['context']['turn_origin']!='user':raise Fault('INVALID_CONTEXT','Reflections apply only to user-originated turns')
+        if data['response']['mode']=='frozen' or data['response']['engine_status']=='baseline_fallback':raise Fault('INVALID_CONTEXT','Decision cannot be learned from')
+        scope_name=req.scope or ('relationship' if d['user_id'] else 'core')
+        if scope_name=='relationship' and not d['user_id']:raise Fault('INVALID_CONTEXT','Relationship reflection requires linked user')
+        if scope_name=='core' and d['user_id'] and 'training:admin' not in p.scopes:raise Fault('FORBIDDEN_SCOPE','Core reflections on a linked user\'s turn require training administrator',403)
+        preferred=adjusted_control(data['action'],req.adjustments,data['context'])
+        if preferred is None:raise Fault('INVALID_CONTEXT','No approved style moves that way in this context')
+        group=short_id(data['host']['adapter_id']+':'+data['session']['id']);fid=short_id('reflection:'+req.reflection_id)
+        f=Feedback(protocol_version='upap/1',feedback_id=fid,decision_id=req.decision_id,source='agent_reflection',kind='pairwise_preference',actor_id=p.actor,consent_scope=scope_name,
+            learning_consent=True,preferred_control=preferred,rejected_control=data['action'],evidence_group=group,occurred_at=datetime.now(timezone.utc).isoformat().replace('+00:00','Z'))
+        with store.tx() as db:
+            old=db.execute('SELECT data FROM feedback WHERE tenant=? AND id=?',(p.tenant,fid)).fetchone()
+            if old:
+                prior=json.loads(old['data'])
+                if (prior['decision_id'],prior['preferred_control'],prior['consent_scope'])!=(req.decision_id,preferred,scope_name):raise Fault('VERSION_CONFLICT','Reflection id reused',409)
             else:
-                db.execute(f'INSERT INTO versions{VERSION_COLUMNS} VALUES(?,?,?,?,?,?,?,?,?)',(p.tenant,id,v,data['artifact'],data['base_relationship_version'],'relationship',data['user_id'],req.candidate_id,r['active']))
-                db.execute('INSERT OR REPLACE INTO relationships VALUES(?,?,?,?)',(p.tenant,id,data['user_id'],v))
-            db.execute('UPDATE jobs SET status=? WHERE tenant=? AND id=?',('promoted',p.tenant,req.candidate_id))
-            store.audit(db,p.tenant,id,'promoted',{'candidate':req.candidate_id,'version':v,'actor':p.actor})
-        return wire(version=v,scope=data['scope'])
+                reflected="SELECT COUNT(*) FROM feedback WHERE tenant=? AND persona=? AND json_extract(data,'$.source')='agent_reflection' AND "
+                if db.execute(reflected+"json_extract(data,'$.decision_id')=?",(p.tenant,d['persona'],req.decision_id)).fetchone()[0]:raise Fault('RATE_LIMITED','One reflection per decision',429)
+                if db.execute(reflected+"json_extract(data,'$.evidence_group')=?",(p.tenant,d['persona'],group)).fetchone()[0]>=REFLECTIONS_PER_SESSION:raise Fault('RATE_LIMITED',f'At most {REFLECTIONS_PER_SESSION} reflections per session',429)
+                db.execute('INSERT INTO feedback VALUES(?,?,?,?,?,?,1)',(p.tenant,fid,d['persona'],d['user_id'],p.actor,f.model_dump_json()))
+                store.audit(db,p.tenant,d['persona'],'reflection_recorded',{'feedback_id':fid,'actor':p.actor,'reason':req.reason,'adjustments':req.adjustments,'consent_scope':scope_name,
+                    'preferred_control':preferred,'rejected_control':data['action'],'received_at':datetime.now(timezone.utc).isoformat()})
+        if not old:maybe_learn(p.tenant,d['persona'],scope_name,d['user_id'] if scope_name=='relationship' else None)
+        return wire(reflection_id=req.reflection_id,feedback_id=fid,deduplicated=bool(old),scope=scope_name,preferred_control=preferred,rejected_control=data['action'],
+            control_set_id=f'style-{preferred:02}',controls=CATALOGUE[preferred],learning_recorded=True)
     @app.post('/v1/personas/{id}/rollbacks')
     def rollback(id:str,req:Rollback,p=Depends(principal)):
         scope(p,'persona:admin',id);persona(p,id);v=version(p,id,req.version);scope(p,'persona:admin',id,v['user_id'])
@@ -375,7 +578,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         except (KeyError,TypeError,ValueError,RuntimeError):raise Fault('INVALID_CONTEXT','Invalid bundle')
         artifact=store.put(x)
         with store.tx() as db:
-            v=insert_persona(db,p,req.persona_id,artifact,'imported');store.audit(db,p.tenant,req.persona_id,'imported',{'actor':p.actor,'bundle_sha256':b['sha256']})
+            v=insert_persona(db,p,req.persona_id,artifact,'imported',rate=os.environ.get('OPENAPE_MATURATION_RATE'));store.audit(db,p.tenant,req.persona_id,'imported',{'actor':p.actor,'bundle_sha256':b['sha256']})
         return wire(persona_id=req.persona_id,active_version=v)
     @app.delete('/v1/personas/{id}')
     def delete(id:str,p=Depends(principal)):
@@ -384,7 +587,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         if '*' not in p.users:raise Fault('FORBIDDEN_SCOPE','Deleting a persona requires authority over all linked users',403)
         with store.tx() as db:
             counts={}
-            for table in ('versions','relationships','sessions','requests','decisions','feedback','observations','jobs'):
+            for table in ('versions','relationships','sessions','requests','decisions','feedback','observations','jobs','experience','maturation'):
                 counts[table]=db.execute(f'DELETE FROM {table} WHERE tenant=? AND persona=?',(p.tenant,id)).rowcount
             db.execute('DELETE FROM audit WHERE tenant=? AND persona=?',(p.tenant,id))
             db.execute('DELETE FROM personas WHERE tenant=? AND id=?',(p.tenant,id));store.gc()

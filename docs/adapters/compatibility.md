@@ -42,3 +42,24 @@ persona, host binary and plugin files. Use `openape token add --actor HOST
 
 Outcome observations carry IDs and status only, never rewards or transcript text,
 and have no learning authority.
+
+## Agent feedback tool (`persona_feedback`)
+
+In active mode, adapters offer the agent one tool, defined in
+[`protocol/upap/v1/tools/persona_feedback.json`](../../protocol/upap/v1/tools/persona_feedback.json).
+The model supplies trait moves only; the adapter attaches the turn's decision.
+`OPENAPE_AGENT_FEEDBACK=0` disables it, and the host token needs `reflection:write`.
+
+| Host | How the tool is offered | Smoke evidence (synthetic model) |
+|---|---|---|
+| Claude Code | stdio MCP server bundled with the plugin (`mcp_server.py`, declared in `plugin.json`); reads the latest decision the UserPromptSubmit hook recorded for the persona | Listed as deferred tool `mcp__plugin_openape_openape__persona_feedback` in active mode, absent in shadow (2.1.308). `tests/test_agent_tool.py` drives hook + MCP server against a real HTTP engine. |
+| Hermes | `ctx.register_tool` in toolset `openape` (`provides_tools` in plugin.yaml); `check_fn` hides it outside active mode | Offered as a direct tool in active mode, absent in shadow (0.19.0) |
+| Pi | `pi.registerTool` | Registered and called through Pi's tool wrapper; reflection recorded by the engine (1.3.0) |
+| OpenClaw | `api.registerTool` factory; `contracts.tools` declares it | Direct tool schemas unchanged; listed in the embedded runner's Tool Search catalog in active mode only (2026.10.5) |
+| OpenCogni | not offered: the planner patch has no tool hook | — |
+
+Limitation: in Claude Code the MCP server cannot see the host session ID, so with
+several concurrent sessions on one persona a call attaches to the most recent
+decision (within one hour). The engine still enforces the actor, the
+one-per-decision limit and the three-per-session limit.
+
