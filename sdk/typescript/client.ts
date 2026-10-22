@@ -1,4 +1,8 @@
 import catalogue from '../../renderers/controls-v1.json' with { type:'json' };
+import personaFeedbackTool from '../../protocol/upap/v1/tools/persona_feedback.json' with { type:'json' };
+/** Canonical agent tool: the model supplies trait moves, the adapter supplies the decision. */
+export {personaFeedbackTool};
+export type Reflection={adjustments:Record<string,'more'|'less'>;reason:'user_requested'|'user_corrected'|'observed_preference'};
 export type Mode = 'disabled'|'shadow'|'active'|'frozen';
 export type PersonalityContext = {
  protocol_version:'upap/1'; request_id:string;
@@ -57,6 +61,16 @@ export class Client {
     const result=await r.json();if(result.protocol_version!=='upap/1')throw Error('Unsupported protocol');return result;
    }catch(e){if(!retry||attempt||signal.aborted)throw e;}
   }throw Error('Engine unavailable');
+ }
+ /** Record a persona_feedback tool call for one decision; returns a short model-facing result. */
+ async reflect(decisionId:string|undefined,args:Reflection,scope?:'core'|'relationship'):Promise<string>{
+  if(!decisionId)return 'Not recorded: no persona decision for this turn.';
+  const traits=Object.keys(catalogue[0]);const moves=Object.entries(args?.adjustments??{});
+  if(!moves.length||moves.length>3||moves.some(([k,v])=>!traits.includes(k)||!['more','less'].includes(v)))return 'Not recorded: adjustments must map 1-3 style traits to "more" or "less".';
+  const saved=this.timeout;this.timeout=Math.max(saved,2000);
+  try{await this.request('POST','/v1/reflections',{reflection_id:decisionId,decision_id:decisionId,adjustments:args.adjustments,reason:args.reason,...(scope?{scope}:{})});return 'Recorded. Your persona will adapt gradually in future sessions if this preference is consistent.';}
+  catch(e){return `Not recorded: ${String((e as Error).message).slice(0,200)}`;}
+  finally{this.timeout=saved;}
  }
  async express(request:PersonalityContext,mode:Mode='shadow'):Promise<RenderedExpression>{
   if(mode==='disabled')return {text:'',status:'disabled',decision:null};

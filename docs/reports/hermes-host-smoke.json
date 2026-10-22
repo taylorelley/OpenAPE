@@ -9,15 +9,38 @@
     "soul_md_coexists_in_system_prompt": true,
     "resume_one_copy_in_current_turn": true,
     "prompt_cache_prefix_byte_stable": true,
+    "persona_feedback_only_in_active_mode": true,
     "shadow_records_without_injection": true,
     "decision_linked_turn_completed": true,
     "approved_feedback_linked_to_host_decision": true,
     "migration_dry_run_writes_nothing": true,
     "migration_backs_up_and_keeps_operational": true,
     "migrated_persona_expressed": true,
+    "doctor_ok": true,
     "engine_outage_fail_open": true,
     "uninstall_removes_plugin": true
   },
+  "tools_active": [
+    "clarify",
+    "cronjob",
+    "delegate_task",
+    "execute_code",
+    "memory",
+    "patch",
+    "persona_feedback",
+    "process",
+    "read_file",
+    "search_files",
+    "session_search",
+    "skill_manage",
+    "skill_view",
+    "skills_list",
+    "terminal",
+    "text_to_speech",
+    "todo",
+    "vision_analyze",
+    "write_file"
+  ],
   "resume_history_style_copies": 2,
   "observations": [
     "session.ended",
@@ -25,18 +48,19 @@
   ],
   "doctor": {
     "host": "hermes",
-    "ok": false,
+    "ok": true,
     "checks": {
       "engine_ready": "experimental_synthetic",
       "token_valid": true,
       "decoder": "sha256:dda6b8441ab83f351c7b2488fb314c611339a575bbe0433b825eec692862b643",
       "engine_status": "experimental_synthetic",
       "persona_visible": true,
-      "host_binary": "not found on PATH",
+      "host_binary": "/home/user/OpenAPE/.host-test/hermes-venv/bin/hermes",
+      "host_version": "Hermes Agent v0.19.0 (2026.7.20)\nInstall directory: /home/user/OpenAPE/.host-tes",
       "plugin_installed": true,
       "soul_md_present": true,
       "mode": "shadow",
-      "adapter_release_status": "unsupported_release_gate"
+      "adapter_release_status": "host_lifecycle_verified_synthetic_model"
     }
   },
   "status": "PASS"

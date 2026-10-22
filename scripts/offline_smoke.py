@@ -8,11 +8,11 @@ import time
 from pathlib import Path
 import httpx
 from sdk.python.client import Client
-from scripts.offline_demo import demo
+from scripts.offline_demo import demo, evolution_demo
 ROOT=Path(__file__).resolve().parents[1]
 TOKEN='offline-smoke-owner-token-00000000000'
 def main():
-    env={**os.environ,'OPENAPE_CREDENTIALS':json.dumps([dict(token=TOKEN,tenant='local',actor='owner',scopes=['persona:express','persona:admin','feedback:write','training:admin'],personas=['*'],users=['*'])])}
+    env={**os.environ,'OPENAPE_CREDENTIALS':json.dumps([dict(token=TOKEN,tenant='local',actor='owner',scopes=['persona:express','persona:admin','feedback:write','training:admin','observations:write','reflection:write'],personas=['*'],users=['*'])])}
     with tempfile.TemporaryDirectory() as tmp:
         def launch():
             log=open(Path(tmp)/'server.log','a')
@@ -25,8 +25,8 @@ def main():
             proc.terminate();raise RuntimeError('startup timeout')
         proc,c,log=launch()
         try:
-            c.request('POST','/v1/personas',dict(persona_id='neutral-two'))
-            result=demo(c)
+            c.request('POST','/v1/personas',dict(persona_id='neutral-two',archetype='balanced'))
+            result=demo(c);result['automatic_evolution']=evolution_demo(c)
         finally:c.close();proc.terminate();proc.wait(timeout=10);log.close()
         proc,c,log=launch()
         try:

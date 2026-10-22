@@ -4,7 +4,7 @@ from engine.api import contracts as c
 from engine.api.app import create_app
 ROOT=Path(__file__).resolve().parents[1]
 P=ROOT/'protocol/upap/v1'
-for name in ['Express','Decision','Create','Feedback','Observations','Consolidate','Promote','Rollback','Export','Import']:
+for name in ['Express','Decision','Create','Feedback','Observations','Consolidate','Promote','Rollback','Export','Import','Evolution','Reflection']:
  (P/'schema'/f'{name.lower()}.json').write_text(json.dumps(getattr(c,name).model_json_schema(),indent=2)+'\n')
 app=create_app('/tmp/openape-schema',credentials=[dict(token='schema-generator-not-a-real-secret',tenant='schema',actor='schema',scopes=[],personas=[],users=[])])
 (P/'openapi.json').write_text(json.dumps(app.openapi(),indent=2)+'\n');app.state.store.db.close()
@@ -18,3 +18,5 @@ fixtures=[dict(name='valid active',valid=True,value=d,rendered=render(d)),dict(n
  dict(name='cache ttl above bound',valid=False,value={**d,'cache_ttl_ms':999999}),dict(name='controls from another row',valid=False,value={**d,'controls':CATALOGUE[1]}),dict(name='disabled is not a wire mode',valid=False,value={**d,'mode':'disabled'}),dict(name='wrong protocol',valid=False,value={**d,'protocol_version':'upap/2'}),dict(name='unknown control',valid=False,value={**d,'controls':{**d['controls'],'warmth':'unbounded'}}),dict(name='catalogue mismatch',valid=False,value={**d,'control_set_id':'style-99'}),dict(name='wrong control schema',valid=False,value={**d,'control_schema':'unknown'})]
 (P/'conformance.json').write_text(json.dumps({'request':req,'decisions':fixtures},indent=2)+'\n')
 (ROOT/'examples/express.json').write_text(json.dumps(req,indent=2)+'\n')
+from sdk.python.lite import TOOL
+(P/'tools').mkdir(exist_ok=True);(P/'tools/persona_feedback.json').write_text(json.dumps(TOOL,indent=2)+'\n')

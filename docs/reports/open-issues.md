@@ -42,3 +42,13 @@ Revocation follows candidate lineage and resets to the nearest clean ancestor, b
 re-deriving state from the remaining evidence needs an explicit admin consolidation.
 Exports support same-tenant core state only; relationship export is rejected.
 Hermes SOUL migration uses keyword heuristics and is always a reviewed dry run first.
+
+## ISSUE-006 — Automatic evolution is unvalidated
+
+Maturation (square-root curve, familiarity profile, context habituation) is a fixed
+design prior. It is not learned from or validated against people, and no study shows
+users prefer a maturing persona. The agent `persona_feedback` tool is offered in
+the real Claude Code, Hermes, Pi and OpenClaw builds (host smokes, synthetic model),
+and a Pi call is recorded end to end. No live model has used it, so there is no
+evidence yet on how often models call it, or how accurately. Autonomous
+promotion thresholds were tuned on synthetic labels only.

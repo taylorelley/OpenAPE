@@ -8,10 +8,14 @@
     "properties": {}
   },
   "version": "0.2.0",
+  "contracts": {
+    "tools": ["persona_feedback"]
+  },
   "activation": {
     "onStartup": true,
     "onCapabilities": [
-      "hook"
+      "hook",
+      "tool"
     ]
   }
 }

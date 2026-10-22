@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 TOKEN='offline-host-smoke-token-000000000000'
 def main():
-    env={**os.environ,'OPENAPE_CREDENTIALS':json.dumps([dict(token=TOKEN,tenant='local',actor='host-smoke',scopes=['persona:express','persona:admin','observations:write'],personas=['host-smoke'],users=[])]),'OPENAPE_TOKEN':TOKEN,'OPENAPE_URL':'http://127.0.0.1:18765'}
+    env={**os.environ,'OPENAPE_CREDENTIALS':json.dumps([dict(token=TOKEN,tenant='local',actor='host-smoke',scopes=['persona:express','persona:admin','observations:write','reflection:write'],personas=['host-smoke'],users=[])]),'OPENAPE_TOKEN':TOKEN,'OPENAPE_URL':'http://127.0.0.1:18765'}
     with tempfile.TemporaryDirectory() as tmp:
         log=open(Path(tmp)/'server.log','w')
         proc=subprocess.Popen([sys.executable,'-m','sdk.cli.main','serve','--port','18765','--data',tmp],cwd=ROOT,env=env,stdout=log,stderr=log)
@@ -22,7 +22,7 @@ def main():
                     except httpx.TransportError:pass
                     time.sleep(.1)
                 else:raise RuntimeError('engine startup timed out')
-                c.post('/v1/personas',json={'protocol_version':'upap/1','persona_id':'host-smoke'}).raise_for_status()
+                c.post('/v1/personas',json={'protocol_version':'upap/1','persona_id':'host-smoke','archetype':'balanced','evolution':'manual'}).raise_for_status()
                 result=subprocess.run(['node','scripts/pi_host_smoke.mjs'],cwd=ROOT,env={**env,'OPENAPE_SMOKE_ENGINE_PID':str(proc.pid)},capture_output=True,text=True,timeout=45)
                 print(result.stdout);print(result.stderr,file=sys.stderr)
                 if result.returncode:raise SystemExit(result.returncode)
@@ -33,6 +33,7 @@ def main():
                 sessions=db.execute("SELECT count(DISTINCT json_extract(data,'$.session.id')) FROM decisions").fetchone()[0]
                 versions=db.execute("SELECT count(DISTINCT json_extract(data,'$.response.persona_version')) FROM decisions").fetchone()[0]
                 assert sessions>=2 and versions==1,(sessions,versions)
+                assert db.execute("SELECT count(*) FROM feedback WHERE json_extract(data,'$.source')='agent_reflection'").fetchone()[0]==1
                 db.close();print('PASS: real engine recorded host decisions for 2 sessions on one persona version, plus canonical observations')
                 (ROOT/'docs/reports/pi-native-smoke.txt').write_text(result.stdout.strip()+'\nPASS: engine ledger: >=2 host sessions, one persona version, observations recorded\n')
         finally:proc.terminate();proc.wait(timeout=10);log.close()

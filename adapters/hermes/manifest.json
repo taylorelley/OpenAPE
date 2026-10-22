@@ -9,7 +9,8 @@
   "concurrency": "host session IDs scoped by adapter and persona; no mutable latent sharing",
   "permissions": [
     "persona:express",
-    "observations:write"
+    "observations:write",
+    "reflection:write"
   ],
   "host_compatibility": "hermes-agent 0.19.0",
   "host_commit": null,
@@ -33,5 +34,8 @@
   ],
   "subagents": "opt out: sessions announced by subagent_start receive no injection",
   "smoke": "python -m scripts.hermes_host_smoke",
-  "release_status": "host_lifecycle_verified_synthetic_model"
+  "release_status": "host_lifecycle_verified_synthetic_model",
+  "agent_tools": [
+    "persona_feedback (ctx.register_tool, toolset openape; active mode only)"
+  ]
 }

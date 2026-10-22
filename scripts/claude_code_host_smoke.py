@@ -51,6 +51,10 @@ def main():
         compact=run('/compact',resume=first['session'])
         report['compact_exit_code']=compact['code']
         shadow=run('Shadow fixture request.',mode='shadow')
+        # The plugin's stdio MCP server offers persona_feedback in active mode and nothing in shadow
+        # (Claude Code may list it as a deferred tool rather than a direct schema).
+        offered=lambda r:'mcp__plugin_openape_openape__persona_feedback' in json.dumps(r['body'])
+        c['persona_feedback_tool_only_in_active_mode']=offered(first['requests'][-1]) and not offered(shadow['requests'][-1])
         c['shadow_records_without_injection']=shadow['code']==0 and count_marker(shadow['requests'][-1]['body'])==0 and decisions('cc-terse')[-1]['mode']=='shadow'
         kind=run('Fixture request one. Reply briefly.',persona='cc-kind')
         terse_choice=decisions('cc-terse')[0]['control_set_id'];kind_choice=decisions('cc-kind')[0]['control_set_id']

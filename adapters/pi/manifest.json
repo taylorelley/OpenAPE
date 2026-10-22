@@ -9,7 +9,8 @@
   "concurrency": "host session IDs scoped by adapter and persona; no mutable latent sharing",
   "permissions": [
     "persona:express",
-    "observations:write"
+    "observations:write",
+    "reflection:write"
   ],
   "host_compatibility": "@earendil-works/pi-coding-agent 1.3.0",
   "host_commit": "7f225f25d8a961f7db50fec50124c15d11013f93",
@@ -30,5 +31,8 @@
   ],
   "subagents": "custom/background triggers opt out; child lineage unverified",
   "smoke": "python -m scripts.real_host_smoke",
-  "release_status": "host_lifecycle_verified_synthetic_model"
+  "release_status": "host_lifecycle_verified_synthetic_model",
+  "agent_tools": [
+    "persona_feedback (pi.registerTool; active mode only)"
+  ]
 }

@@ -27,10 +27,14 @@ class Store:
         CREATE TABLE IF NOT EXISTS observations(tenant TEXT,adapter TEXT,id TEXT,persona TEXT,data TEXT,PRIMARY KEY(tenant,adapter,id));
         CREATE TABLE IF NOT EXISTS jobs(tenant TEXT,id TEXT,persona TEXT,status TEXT,data TEXT,PRIMARY KEY(tenant,id));
         CREATE TABLE IF NOT EXISTS audit(seq INTEGER PRIMARY KEY,tenant TEXT,persona TEXT,action TEXT,data TEXT);
+        CREATE TABLE IF NOT EXISTS experience(tenant TEXT,persona TEXT,user_id TEXT,adapter TEXT,session TEXT,PRIMARY KEY(tenant,persona,user_id,adapter,session));
+        CREATE TABLE IF NOT EXISTS maturation(tenant TEXT,persona TEXT,user_id TEXT,experience INTEGER DEFAULT 0,last_m REAL DEFAULT 0,last_decision INTEGER DEFAULT 0,PRIMARY KEY(tenant,persona,user_id));
         ''')
         self.db.row_factory=sqlite3.Row
         # Additive migrations from the 0.1.0 schema. Lineage columns drive revocation.
-        for table,column,decl in (('personas','parent','TEXT'),('versions','job','TEXT'),('versions','core_base','TEXT'),('versions','revoked','INTEGER DEFAULT 0')):
+        # Personas from 0.2.0 keep manual evolution and no agent feedback until changed.
+        for table,column,decl in (('personas','parent','TEXT'),('versions','job','TEXT'),('versions','core_base','TEXT'),('versions','revoked','INTEGER DEFAULT 0'),
+                ('personas','archetype','TEXT'),('personas','seeds',"TEXT DEFAULT '[]'"),('personas','evolution',"TEXT DEFAULT 'manual'"),('personas','maturation','TEXT'),('personas','agent_feedback','INTEGER DEFAULT 0')):
             if column not in {r['name'] for r in self.db.execute(f'PRAGMA table_info({table})')}:
                 self.db.execute(f'ALTER TABLE {table} ADD COLUMN {column} {decl}')
     @contextmanager

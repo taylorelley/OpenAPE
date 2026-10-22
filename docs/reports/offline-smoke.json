@@ -1,18 +1,29 @@
 {
-  "persona": "demo-b313a8f8",
-  "prior": "536f4426-52f1-4c49-abf0-0906e3993950",
-  "candidate": "c3f5038d-ecd8-4e75-84bc-4cc6ca8e5284",
+  "persona": "demo-cf748f72",
+  "prior": "bdec1ddf-669f-48f2-ad7f-1419529f30a0",
+  "candidate": "39fc77d9-b480-448c-84c7-a7fa9f4490ff",
   "promoted": {
     "protocol_version": "upap/1",
-    "version": "aaab5e9c-283a-40eb-9a3e-04be6a2545ed",
+    "version": "11d5fe92-4788-4cf7-9c36-750ddfbe1296",
     "scope": "core"
   },
   "rollback": {
     "protocol_version": "upap/1",
-    "persona_id": "demo-b313a8f8",
-    "active_version": "536f4426-52f1-4c49-abf0-0906e3993950",
-    "initialization": "neutral_prior",
+    "persona_id": "demo-cf748f72",
+    "active_version": "bdec1ddf-669f-48f2-ad7f-1419529f30a0",
+    "initialization": "archetype",
+    "archetype": "balanced",
     "parent": null,
+    "evolution": "manual",
+    "maturation_rate": "normal",
+    "agent_feedback": true,
+    "growth": {
+      "core": {
+        "experience": 0,
+        "horizon": 100,
+        "maturity": 0.0
+      }
+    },
     "decoder_hash": "sha256:dda6b8441ab83f351c7b2488fb314c611339a575bbe0433b825eec692862b643",
     "engine_status": "experimental_synthetic"
   },
@@ -50,6 +61,149 @@
   },
   "export_checksum": "64a1837f9ce161054da1e019d8499640b176de3e0d9f1e837dec2f8301c63131",
   "evidence": "Synthetic explicit preference labels. No live-model benefit claimed.",
+  "automatic_evolution": {
+    "persona": "evolve-17038257",
+    "archetype": "mentor",
+    "maturation_steps": [
+      {
+        "scope": "core",
+        "experience": 1,
+        "maturity": 0.1826,
+        "drift": 0.1001
+      },
+      {
+        "scope": "relationship",
+        "experience": 1,
+        "maturity": 0.3162,
+        "drift": 0.3042
+      },
+      {
+        "scope": "core",
+        "experience": 2,
+        "maturity": 0.2582,
+        "drift": 0.0436
+      },
+      {
+        "scope": "relationship",
+        "experience": 2,
+        "maturity": 0.4472,
+        "drift": 0.1284
+      },
+      {
+        "scope": "core",
+        "experience": 3,
+        "maturity": 0.3162,
+        "drift": 0.0336
+      },
+      {
+        "scope": "relationship",
+        "experience": 3,
+        "maturity": 0.5477,
+        "drift": 0.0985
+      },
+      {
+        "scope": "core",
+        "experience": 5,
+        "maturity": 0.4082,
+        "drift": 0.0517
+      },
+      {
+        "scope": "relationship",
+        "experience": 4,
+        "maturity": 0.6325,
+        "drift": 0.083
+      },
+      {
+        "scope": "core",
+        "experience": 7,
+        "maturity": 0.483,
+        "drift": 0.0425
+      },
+      {
+        "scope": "relationship",
+        "experience": 5,
+        "maturity": 0.7071,
+        "drift": 0.0732
+      },
+      {
+        "scope": "core",
+        "experience": 9,
+        "maturity": 0.5477,
+        "drift": 0.0366
+      },
+      {
+        "scope": "relationship",
+        "experience": 6,
+        "maturity": 0.7746,
+        "drift": 0.0661
+      },
+      {
+        "scope": "core",
+        "experience": 11,
+        "maturity": 0.6055,
+        "drift": 0.0325
+      },
+      {
+        "scope": "relationship",
+        "experience": 7,
+        "maturity": 0.8367,
+        "drift": 0.0608
+      },
+      {
+        "scope": "core",
+        "experience": 13,
+        "maturity": 0.6583,
+        "drift": 0.0295
+      },
+      {
+        "scope": "relationship",
+        "experience": 8,
+        "maturity": 0.8944,
+        "drift": 0.0566
+      },
+      {
+        "scope": "core",
+        "experience": 16,
+        "maturity": 0.7303,
+        "drift": 0.0394
+      },
+      {
+        "scope": "relationship",
+        "experience": 9,
+        "maturity": 0.9487,
+        "drift": 0.0532
+      },
+      {
+        "scope": "core",
+        "experience": 19,
+        "maturity": 0.7958,
+        "drift": 0.0356
+      },
+      {
+        "scope": "relationship",
+        "experience": 10,
+        "maturity": 1.0,
+        "drift": 0.0503
+      }
+    ],
+    "automatic_promotions": {
+      "feedback": 1,
+      "maturation": 20
+    },
+    "growth": {
+      "core": {
+        "experience": 20,
+        "horizon": 30,
+        "maturity": 0.8165
+      },
+      "relationship": {
+        "experience": 20,
+        "horizon": 10,
+        "maturity": 1.0
+      }
+    },
+    "evidence": "Fixed maturation prior and synthetic explicit labels. No live-model benefit claimed."
+  },
   "restart_persistence": "PASS",
   "two_independent_personas": "PASS"
 }

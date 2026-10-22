@@ -9,7 +9,8 @@
   "concurrency": "host session IDs scoped by adapter and persona; no mutable latent sharing",
   "permissions": [
     "persona:express",
-    "observations:write"
+    "observations:write",
+    "reflection:write"
   ],
   "host_compatibility": "Claude Code 2.1.307",
   "host_commit": null,
@@ -39,5 +40,8 @@
   ],
   "subagents": "opt out: no injection or observation inside agent_id contexts; bind a separately scoped child persona instead",
   "smoke": "python -m scripts.claude_code_host_smoke",
-  "release_status": "host_lifecycle_verified_synthetic_model"
+  "release_status": "host_lifecycle_verified_synthetic_model",
+  "agent_tools": [
+    "persona_feedback (stdio MCP server, active mode only)"
+  ]
 }

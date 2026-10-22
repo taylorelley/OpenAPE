@@ -17,15 +17,28 @@ user linking. Missing or invalid authentication returns 401; forbidden scopes 40
 
 Reads: health/live, health/ready; authenticated capabilities, persona list,
 metadata/history, consolidation status. Writes: persona creation/import/export,
-express, observations, feedback, consolidations, promotion, rollback, deletion.
+express, observations, feedback, reflections, consolidations, promotion, rollback,
+evolution settings, deletion.
 Path and exact request schemas are in OpenAPI. Metadata and raw transcript fields
 are deliberately absent in this profile. Observations never imply reward.
 
-Personas are created from a neutral prior, from declared `seed_preferences`
-(concise, detailed, warm, reserved, formal, casual, direct, gentle, playful,
-serious; conflicting pairs are rejected), as a `parent_persona_id` snapshot (new
-scoped identity with an immutable copy of the parent's active core; used for
-subagents), or by import. The response labels the initialization method.
+Creation requires exactly one starting point: an `archetype` (balanced, mentor,
+pragmatic_engineer, concierge, collaborator, analyst, critic; each a fixed seed
+combination listed in capabilities), advanced `seed_preferences` (concise,
+detailed, warm, reserved, formal, casual, direct, gentle, playful, serious;
+conflicting pairs are rejected), or a `parent_persona_id` snapshot (new scoped
+identity with an immutable copy of the parent's active core and its archetype;
+used for subagents). Neither is INVALID_CONTEXT; `balanced` is the explicit neutral
+start. Import creates a persona with manual evolution. The response labels the
+initialization method. Creation also sets the evolution policy: `evolution`
+(`automatic`, default, or `manual`), `maturation_rate` (`fast`, `normal`, default,
+`slow`, or `{relationship_horizon, core_horizon}` in ended sessions, 3-1000; the
+engine default can be set with OPENAPE_MATURATION_RATE) and `agent_feedback`
+(default true). `POST /v1/personas/{id}/evolution` (persona:admin) changes them; a
+rate change or resume re-anchors the maturation curve at current experience, so
+the state never jumps. `GET /v1/personas/{id}?user_id=` reports growth (experience,
+horizon, maturity) for the core and, when scoped to that user, the relationship.
+Personas stored by 0.2.0 keep manual evolution and no agent feedback until changed.
 
 Express requests identify tenant/persona/user, adapter, provider, session and turn.
 Versions pin per scoped session. Ordinary inference changes neither persistent
@@ -48,12 +61,51 @@ record-only feedback is retained but not trained in this release. Pairwise
 options must be distinct approved catalogue indices. Latent learning uses canonical
 adapter/session groups, not caller-supplied claims of independent evidence.
 
+Agent reflections (`POST /v1/reflections`, scope `reflection:write`) are how a host
+exposes the `persona_feedback` tool (`tools/persona_feedback.json`) to its agent.
+The body names a decision, 1-3 `adjustments` (trait to `more`/`less`) and a `reason`
+enum; there is no free text. The engine moves the served catalogue row one level
+per trait, picks the nearest approved row valid under that context's mask, and
+records it as a consented pairwise preference with source `agent_reflection` (that
+source is refused on `/v1/feedback`). Rules: only user-originated, non-frozen,
+non-fallback decisions by the same actor; one reflection per decision (replaying
+the same one deduplicates) and 3 per session (RATE_LIMITED); the persona's
+`agent_feedback` must be on; scope defaults to relationship when a user is linked,
+and core reflections on a linked user's turn need training:admin. Reflections are
+revocable like other evidence.
+
+Automatic evolution (personas with `evolution: automatic`) needs no operator:
+1. Feedback. Once enough new consented core/relationship examples exist since the
+   last attempt (4 relationship, 8 core), the engine queues a consolidation, runs
+   the same trainer and independent evaluator under stricter autonomous thresholds
+   (relationship 6 train/3 held-out groups, core 12/6 and drift 1.0 -> 0.6, held-out
+   gain >= 0.005) and promotes an eligible candidate itself via the same
+   compare-and-swap (audit actor `openape:auto-evolution`). Agent reflections never
+   exceed half of the examples in an automatically promoted candidate when people's
+   feedback exists. A lost compare-and-swap marks the job `superseded`.
+2. Maturation. An ended session that received an active, non-fallback decision
+   counts as experience for the core and, with a linked user, that relationship.
+   Maturity is m(t) = sqrt(min(t/T, 1)) for horizon T. A step is due when m has
+   risen by 0.05 since the last step (or reaches 1), and may move the latent at most
+   (m - m_last) x budget (relationship 1.0, core 0.6), so changes are frequent and
+   larger early, rarer and smaller later, and stop at T. A backlog is replayed step
+   by step. Relationship steps grow a fixed familiarity profile (warmer, less
+   formal, briefer) on the archetype, mixed 30% into the current policy; core steps
+   lean toward the documented context norms of the contexts actually served,
+   weighted by frequency. A step is promoted only if it is finite, within budget
+   and the norm bound, and does not reduce agreement with the persona's valid
+   consented preferences (feedback wins). Audit actor `openape:maturation`,
+   action `matured`. Maturation is a fixed prior, never reward; outcomes,
+   engagement and text are never read.
+Manual personas keep the operator path below. Session pins mean every automatic
+change applies from the next session.
+
 Consolidation returns 202/job_id. The independent evaluator splits evidence by
 actor/session group; the trainer fits only the training split; the evaluator
 re-scores held-out groups and applies fixed thresholds (held-out gain, minimum
 groups, latent drift trust region, state-norm bound). Repeated judgements on the
 same decision by the same actor count once. No candidate can promote itself.
-Promotion requires training:admin, an eligible non-revoked candidate, matching
+Operator promotion requires training:admin, an eligible non-revoked candidate, matching
 expected core version and relationship parent. A candidate promotes only once.
 Rollback requires persona:admin, valid immutable artifact and reason. Active
 sessions retain pins. Revoke evidence with an experience.corrected observation;

@@ -36,3 +36,16 @@ test('OpenClaw embedded runner: run id fallback, explicit empty request opts out
  assert.equal(await fn({currentUserMessage:'',currentUserMessageId:'u'},{sessionId:'s',runId:'r2'}),undefined);
  assert.equal(await fn({prompt:'tick'},{sessionId:'s',runId:'r3',trigger:'heartbeat'}),undefined);
 });
+test('Pi and OpenClaw register persona_feedback only in active mode',async()=>{
+ for(const [install,mode,expected] of [[pi,'active',1],[pi,'shadow',0],[claw,'active',1],[claw,'shadow',0]] as const){
+  const tools:any[]=[];const reflected:any[]=[];
+  const binding={last:new Map(),express:async()=>({text:'',decision:null}),observe:async()=>{},reflect:async(...a:any[])=>{reflected.push(a);return 'Recorded.';}};
+  install({on:()=>{},registerTool:(t:any,o?:any)=>tools.push([t,o])},{...config,mode},binding);
+  assert.equal(tools.length,expected);if(!expected)continue;
+  const [entry,opts]=tools[0];const tool=typeof entry==='function'?entry({sessionId:'s'}):entry;
+  assert.equal(tool.name,'persona_feedback');assert.deepEqual(Object.keys(tool.parameters.properties),['adjustments','reason']);
+  if(install===claw)assert.equal(opts.name,'persona_feedback');
+  const result=await tool.execute('call',{adjustments:{humour:'less'},reason:'user_corrected'},undefined,undefined,{sessionManager:{getSessionId:()=> 's'}});
+  assert.equal(result.content[0].text,'Recorded.');assert.equal(reflected[0][0],'s');assert.deepEqual(reflected[0][1].adjustments,{humour:'less'});
+ }
+});

@@ -13,7 +13,7 @@ const loader=new DefaultResourceLoader({cwd:root,agentDir:root,extensionFactorie
 await loader.reload();
 // Tiny keepRecentTokens so a short fixture session is eligible for manual compaction.
 const settingsManager=SettingsManager.inMemory({compaction:{enabled:true,reserveTokens:16,keepRecentTokens:1}});
-const {session}=await createAgentSession({cwd:root,agentDir:root,modelRuntime,model,thinkingLevel:'off',tools:[],resourceLoader:loader,settingsManager,sessionManager:SessionManager.inMemory()});
+const {session}=await createAgentSession({cwd:root,agentDir:root,modelRuntime,model,thinkingLevel:'off',tools:['persona_feedback'],resourceLoader:loader,settingsManager,sessionManager:SessionManager.inMemory()});
 const seen=[];
 session.agent.streamFunction=(_model,context)=>{
  seen.push(context);
@@ -25,7 +25,10 @@ try{
  await session.prompt('Fixture request; do not access files or tools.');
  assert.equal(seen.length,1);const prompt=JSON.stringify(seen[0]);
  assert(prompt.includes('Style preferences only.'));assert.equal((prompt.match(/Style preferences only\./g)||[]).length,1);
- assert.equal(session.agent.state.tools.length,0);
+ // The only tool added is OpenAPE's own persona_feedback (active mode); it records a reflection.
+ assert.deepEqual(session.agent.state.tools.map(t=>t.name),['persona_feedback']);
+ const feedback=await session.agent.state.tools[0].execute('fixture-call',{adjustments:{verbosity:'less'},reason:'user_requested'});
+ assert.match(feedback.content[0].text,/^Recorded/,feedback.content[0].text);
  await session.prompt('Second synthetic request.');
  assert.equal((JSON.stringify(seen[1]).match(/Style preferences only\./g)||[]).length,1,'historical style deduplicated');
  const count=i=>(JSON.stringify(seen[i]).match(/Style preferences only\./g)||[]).length;
@@ -52,5 +55,5 @@ try{
   assert.equal(seen.length,before+1);
   assert(!JSON.stringify(seen[seen.length-1]).includes('Style preferences only.'),'no stale style during outage');
  }
- console.log(JSON.stringify({host:'Pi',version:'1.3.0',native_lifecycle:true,controls_reached_model_transport:true,tools_unchanged:true,historical_injection_deduplicated:true,model_switch:true,compaction:true,multi_session:true,engine_outage_continues:true,model:'synthetic transport; no provider API call',status:'PASS'}));
+ console.log(JSON.stringify({host:'Pi',version:'1.3.0',native_lifecycle:true,controls_reached_model_transport:true,tools_unchanged_except_persona_feedback:true,persona_feedback_recorded:true,historical_injection_deduplicated:true,model_switch:true,compaction:true,multi_session:true,engine_outage_continues:true,model:'synthetic transport; no provider API call',status:'PASS'}));
 }finally{session.dispose();}

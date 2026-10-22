@@ -116,6 +116,22 @@
               "type": "string",
               "title": "Id"
             }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
           }
         ],
         "responses": {
@@ -419,6 +435,90 @@
               }
             }
           }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/{id}/evolution": {
+      "post": {
+        "summary": "Evolution",
+        "operationId": "evolution_v1_personas__id__evolution_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Evolution"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reflections": {
+      "post": {
+        "summary": "Reflect",
+        "description": "Agent-initiated style feedback: bounded trait moves only, never text.",
+        "operationId": "reflect_v1_reflections_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Reflection"
+              }
+            }
+          },
+          "required": true
         },
         "responses": {
           "200": {
@@ -781,6 +881,26 @@
             "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
             "title": "Persona Id"
           },
+          "archetype": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "balanced",
+                  "mentor",
+                  "pragmatic_engineer",
+                  "concierge",
+                  "collaborator",
+                  "analyst",
+                  "critic"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archetype"
+          },
           "seed_preferences": {
             "items": {
               "type": "string",
@@ -812,6 +932,39 @@
               }
             ],
             "title": "Parent Persona Id"
+          },
+          "evolution": {
+            "type": "string",
+            "enum": [
+              "automatic",
+              "manual"
+            ],
+            "title": "Evolution",
+            "default": "automatic"
+          },
+          "maturation_rate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "fast",
+                  "normal",
+                  "slow"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/MaturationHorizon"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maturation Rate"
+          },
+          "agent_feedback": {
+            "type": "boolean",
+            "title": "Agent Feedback",
+            "default": true
           }
         },
         "additionalProperties": false,
@@ -1047,6 +1200,66 @@
         ],
         "title": "Event"
       },
+      "Evolution": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/1",
+            "title": "Protocol Version"
+          },
+          "evolution": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "automatic",
+                  "manual"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evolution"
+          },
+          "maturation_rate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "fast",
+                  "normal",
+                  "slow"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/MaturationHorizon"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maturation Rate"
+          },
+          "agent_feedback": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Feedback"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version"
+        ],
+        "title": "Evolution"
+      },
       "Export": {
         "properties": {
           "protocol_version": {
@@ -1177,7 +1390,8 @@
             "enum": [
               "explicit_user",
               "owner",
-              "verified_evaluator"
+              "verified_evaluator",
+              "agent_reflection"
             ],
             "title": "Source"
           },
@@ -1408,6 +1622,29 @@
         ],
         "title": "Import"
       },
+      "MaturationHorizon": {
+        "properties": {
+          "relationship_horizon": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 3.0,
+            "title": "Relationship Horizon"
+          },
+          "core_horizon": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 3.0,
+            "title": "Core Horizon"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "relationship_horizon",
+          "core_horizon"
+        ],
+        "title": "MaturationHorizon"
+      },
       "Observations": {
         "properties": {
           "protocol_version": {
@@ -1491,6 +1728,83 @@
           "expected_version"
         ],
         "title": "Promote"
+      },
+      "Reflection": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/1",
+            "title": "Protocol Version"
+          },
+          "reflection_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Reflection Id"
+          },
+          "decision_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Decision Id"
+          },
+          "adjustments": {
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "more",
+                "less"
+              ]
+            },
+            "propertyNames": {
+              "enum": [
+                "directness",
+                "warmth",
+                "verbosity",
+                "humour",
+                "formality",
+                "explanation_depth",
+                "assertiveness"
+              ]
+            },
+            "type": "object",
+            "maxProperties": 3,
+            "minProperties": 1,
+            "title": "Adjustments"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "user_requested",
+              "user_corrected",
+              "observed_preference"
+            ],
+            "title": "Reason"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "core",
+                  "relationship"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "reflection_id",
+          "decision_id",
+          "adjustments",
+          "reason"
+        ],
+        "title": "Reflection"
       },
       "Rollback": {
         "properties": {

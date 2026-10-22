@@ -9,7 +9,8 @@
   "concurrency": "host session IDs scoped by adapter and persona; no mutable latent sharing",
   "permissions": [
     "persona:express",
-    "observations:write"
+    "observations:write",
+    "reflection:write"
   ],
   "host_compatibility": "openclaw 2026.10.5 (embedded runner; Node >=24.16)",
   "host_commit": null,
@@ -33,5 +34,8 @@
   ],
   "subagents": "heartbeat, cron and non-user triggers opt out",
   "smoke": "python -m scripts.openclaw_host_smoke",
-  "release_status": "host_lifecycle_verified_synthetic_model"
+  "release_status": "host_lifecycle_verified_synthetic_model",
+  "agent_tools": [
+    "persona_feedback (api.registerTool, contracts.tools; active mode only)"
+  ]
 }

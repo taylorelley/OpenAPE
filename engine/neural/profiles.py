@@ -21,6 +21,17 @@ SEEDS = {
     'playful': {'humour': (1, 1.6)},
     'serious': {'humour': (0, 1.2)},
 }
+# Named starting personas. Each is a fixed, documented combination of seeds; the
+# chosen archetype is the anchor that natural maturation builds on.
+ARCHETYPES = {
+    'balanced': (),
+    'mentor': ('warm', 'detailed', 'gentle'),
+    'pragmatic_engineer': ('concise', 'direct', 'casual'),
+    'concierge': ('warm', 'formal'),
+    'collaborator': ('warm', 'casual', 'playful'),
+    'analyst': ('detailed', 'formal', 'reserved', 'serious'),
+    'critic': ('direct', 'detailed', 'reserved'),
+}
 CONFLICTS = [{'concise', 'detailed'}, {'warm', 'reserved'}, {'formal', 'casual'}, {'direct', 'gentle'}, {'playful', 'serious'}]
 
 def seed_profile(seeds):
@@ -77,6 +88,7 @@ def reference_contexts():
 def fit_seed_latent(decoder, seeds, steps=150, max_norm=None):
     """Explicit seed initialization: fit a core latent to the declared profile with the
     frozen decoder. Deterministic; labelled `seed_preferences`, never `learned`."""
+    if not seeds: return torch.zeros(CORE_DIM)  # the explicit `balanced` archetype
     if decoder.model is None: raise ValueError('trained decoder required for seed initialization')
     profile = seed_profile(seeds); contexts = reference_contexts(); host = {'provider_family': 'other', 'adapter_id': 'seed'}
     targets = torch.stack([target_distribution(c, profile) for c in contexts])
@@ -98,4 +110,4 @@ def agreement(decoder, z, profile, contexts, host=None, rel=None):
     with torch.no_grad():
         return sum(int(decoder.logits(z, rel, c, host).argmax()) == int(target_distribution(c, profile).argmax()) for c in contexts) / len(contexts)
 
-__all__ = ['seed_profile', 'fit_seed_latent', 'target_distribution', 'random_context', 'random_profile', 'reference_contexts', 'agreement', 'SEEDS']
+__all__ = ['ARCHETYPES', 'seed_profile', 'fit_seed_latent', 'target_distribution', 'random_context', 'random_profile', 'reference_contexts', 'agreement', 'SEEDS']

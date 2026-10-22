@@ -28,7 +28,7 @@ def main():
                         time.sleep(.05)
                     else:raise RuntimeError('Startup timeout')
                     cold=time.perf_counter()-start
-                    c.post('/v1/personas',json=dict(protocol_version='upap/1',persona_id='ape')).raise_for_status()
+                    c.post('/v1/personas',json=dict(protocol_version='upap/1',persona_id='ape',archetype='balanced',evolution='manual')).raise_for_status()
                     req=json.loads((ROOT/'examples/express.json').read_text());req['mode']='active';latencies=[]
                     for i in range(520):
                         req['request_id']=f'perf-{i}';req['session']['turn_id']=f'turn-{i}'

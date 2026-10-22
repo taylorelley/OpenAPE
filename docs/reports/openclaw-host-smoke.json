@@ -8,6 +8,7 @@
     "style_reached_model_once": true,
     "second_turn_single_copy": true,
     "tool_surface_unchanged": true,
+    "persona_feedback_in_tool_catalog": true,
     "disabled_makes_no_engine_call": true,
     "shadow_records_without_injection": true,
     "decision_linked_turn_completed": true,

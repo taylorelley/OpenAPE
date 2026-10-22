@@ -1,0 +1,88 @@
+{
+  "$defs": {
+    "MaturationHorizon": {
+      "additionalProperties": false,
+      "properties": {
+        "relationship_horizon": {
+          "maximum": 1000,
+          "minimum": 3,
+          "title": "Relationship Horizon",
+          "type": "integer"
+        },
+        "core_horizon": {
+          "maximum": 1000,
+          "minimum": 3,
+          "title": "Core Horizon",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "relationship_horizon",
+        "core_horizon"
+      ],
+      "title": "MaturationHorizon",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "protocol_version": {
+      "const": "upap/1",
+      "title": "Protocol Version",
+      "type": "string"
+    },
+    "evolution": {
+      "anyOf": [
+        {
+          "enum": [
+            "automatic",
+            "manual"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Evolution"
+    },
+    "maturation_rate": {
+      "anyOf": [
+        {
+          "enum": [
+            "fast",
+            "normal",
+            "slow"
+          ],
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/MaturationHorizon"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Maturation Rate"
+    },
+    "agent_feedback": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Agent Feedback"
+    }
+  },
+  "required": [
+    "protocol_version"
+  ],
+  "title": "Evolution",
+  "type": "object"
+}

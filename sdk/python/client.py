@@ -7,7 +7,7 @@ import hashlib
 import json
 import time
 import httpx
-from sdk.python.lite import validate_decision, render, check_endpoint, LOOPBACK
+from sdk.python.lite import validate_decision, render, check_endpoint, LOOPBACK, TOOL
 
 class UPAPError(Exception):
     def __init__(self,status,code,message,retryable=False):
@@ -53,3 +53,8 @@ class Client:
             old=self.cache.get(key)
             if old and old[0]>time.monotonic():return {'text':old[1],'status':'cached','decision':old[2]}
             return {'text':'','status':'unavailable','decision':None}
+    def reflect(self,decision_id,adjustments,reason,scope=None,reflection_id=None):
+        """Record an agent's persona_feedback tool call (see lite.TOOL) for one decision."""
+        body={'reflection_id':reflection_id or decision_id,'decision_id':decision_id,'adjustments':adjustments,'reason':reason}
+        if scope:body['scope']=scope
+        return self.request('POST','/v1/reflections',body)
