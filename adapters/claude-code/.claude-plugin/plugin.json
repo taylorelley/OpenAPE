@@ -1,0 +1,6 @@
+{
+  "name": "openape",
+  "version": "0.2.0",
+  "description": "Experimental OpenAPE (UPAP/1) bounded style context. Coexists with CLAUDE.md, AGENTS.md, permissions and tools; never edits them.",
+  "license": "Apache-2.0"
+}

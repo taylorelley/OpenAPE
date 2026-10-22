@@ -32,7 +32,7 @@ export function validateDecision(raw:unknown):Decision {
  if(!d || d.protocol_version!=='upap/1'||d.control_schema!=='behaviour-controls/1'||!/^style-\d{2}$/.test(d.control_set_id))throw Error('Unsupported decision');
  const idx=Number(d.control_set_id.slice(6));const expected=catalogue[idx];
  if(!expected||!d.controls||Object.keys(d.controls).length!==7||Object.entries(expected).some(([k,v])=>d.controls[k]!==v))throw Error('Catalogue mismatch');
- if(!['shadow','active','frozen'].includes(d.mode)||d.applies_to!=='next_model_request'||!d.policy?.eligible||!Number.isInteger(d.cache_ttl_ms)||d.cache_ttl_ms<0||d.cache_ttl_ms>30000||typeof d.decision_id!=='string'||typeof d.persona_version!=='string'||typeof d.decoder_hash!=='string')throw Error('Invalid decision');
+ if(!['shadow','active','frozen'].includes(d.mode)||d.applies_to!=='next_model_request'||!d.policy?.eligible||!Number.isInteger(d.cache_ttl_ms)||d.cache_ttl_ms<0||d.cache_ttl_ms>30000||typeof d.request_id!=='string'||typeof d.decision_id!=='string'||typeof d.persona_version!=='string'||typeof d.decoder_hash!=='string')throw Error('Invalid decision');
  return d;
 }
 export function render(raw:unknown):string {

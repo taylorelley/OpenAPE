@@ -1,1 +1,0 @@
-{"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"command","command":"/ABSOLUTE/OpenAPE/.venv/bin/python /ABSOLUTE/OpenAPE/adapters/claude-code/hook.py","timeout":2}]}]}}
