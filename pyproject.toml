@@ -23,3 +23,5 @@ testpaths = ["tests"]
 
 [tool.setuptools.package-data]
 models = ["decoder-v3/*.safetensors", "decoder-v3/*.json", "decoder-v3/MODEL_CARD.md"]
+sdk = ["cli/dashboard.html"]
+protocol = ["upap/v2/*.json"]

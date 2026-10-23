@@ -1,16 +1,17 @@
-From 57777cab2fd53897efa5ee48594d39645d25b4b2 Mon Sep 17 00:00:00 2001
-From: OpenAPE build <noreply@anthropic.com>
-Date: Thu, 22 Oct 2026 00:59:14 +0000
+From a4ce3fd6a69086253c81a67bf1e146e4f26b257d Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 23 Oct 2026 08:53:34 +0000
 Subject: [PATCH] planner.http: optional bounded presentation-style provider
 
 Adds HttpPlannerOptions.presentationStyle, an optional fail-open provider whose
-text only shapes the wording of plan summary/rationale. It is a separate
-lower-priority system message, counted in the input budget, capped at 900 chars
-and bounded by presentationStyleTimeoutMs (default 300 ms). Actions, permission
-checks, routing, usage accounting and the evaluator are unchanged.
+text only shapes the wording of plan summary/rationale (for example an
+OpenAPE/UPAP personality service). It is a separate lower-priority system
+message, counted in the input budget, capped at 1400 chars and bounded by
+presentationStyleTimeoutMs (default 300 ms). Actions, permission checks,
+routing, usage accounting and the evaluator are unchanged.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01VoLXf5LdpKPf9okVbikyen
+Claude-Session: https://claude.ai/code/session_019yYfNBZEarUprrgszvBK49
 ---
  packages/adapters/src/planner-http.ts      | 47 +++++++++++++--
  tests/contracts/presentation-style.test.ts | 67 ++++++++++++++++++++++
@@ -18,7 +19,7 @@ Claude-Session: https://claude.ai/code/session_01VoLXf5LdpKPf9okVbikyen
  create mode 100644 tests/contracts/presentation-style.test.ts
 
 diff --git a/packages/adapters/src/planner-http.ts b/packages/adapters/src/planner-http.ts
-index 4b101f5..8c87a15 100644
+index 4b101f5..fd01237 100644
 --- a/packages/adapters/src/planner-http.ts
 +++ b/packages/adapters/src/planner-http.ts
 @@ -12,8 +12,21 @@ export interface HttpPlannerOptions {
@@ -38,7 +39,7 @@ index 4b101f5..8c87a15 100644
  }
  
 +/** Hard cap on accepted presentation-style text. */
-+export const MAX_PRESENTATION_STYLE_CHARS = 900
++export const MAX_PRESENTATION_STYLE_CHARS = 1400
 +
  const SYSTEM_PROMPT = `You are the planning component of an operations harness for a simulated service network.
  Return ONLY a JSON object with this shape (no prose, no code fences):

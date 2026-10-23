@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from sdk.python.client import Client, UPAPError
 
-ALL_SCOPES=['persona:express','observations:write','feedback:write','persona:admin','training:admin','reflection:write']
+ALL_SCOPES=['persona:express','observations:write','feedback:write','persona:admin','training:admin','reflection:write','settings:write']
 CREDENTIALS=Path('.openape/credentials.json');DOCKER_CREDENTIALS=Path('.openape/docker-credentials.json')
 
 def write_credentials(records):
@@ -14,6 +14,30 @@ def write_credentials(records):
         tmp=path.with_suffix('.tmp');fd=os.open(tmp,os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
         with os.fdopen(fd,'w') as f:json.dump(records,f,indent=2)
         os.chmod(tmp,mode);os.replace(tmp,path)
+
+def dashboard_html(data):
+    """The dashboard template with the data embedded as inert JSON (no network, no scripts from elsewhere)."""
+    payload=json.dumps(data).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
+    return (Path(__file__).with_name('dashboard.html')).read_text().replace('__DATA__',payload)
+
+def answer(client,args):
+    """`compare` and `rate`: the user's own feedback on one served decision."""
+    import uuid
+    from sdk.python.lite import CONTROLS,TRAITS,HABITS
+    actor=client.request('GET','/v1/whoami')['actor']
+    body=dict(feedback_id='cli-'+uuid.uuid4().hex,decision_id=args.decision,source='explicit_user',actor_id=actor,consent_scope=args.scope,
+        learning_consent=args.scope!='record_only',evidence_group='cli-'+args.decision[:90])
+    if args.cmd=='rate':
+        if not -1<=args.value<=1:raise SystemExit('rating must be between -1 and 1')
+        return client.request('POST','/v1/feedback',{**body,'kind':'rating','value':args.value})
+    options=client.request('POST','/v1/comparisons',{'decision_id':args.decision})['options']
+    for label,o in zip('ab',options):
+        lines=[CONTROLS['templates'][t][o['controls'][t]] for t in TRAITS]+[HABITS[h]['text'] for h in o['habits']]
+        print(f'--- style {label} ---\n'+'\n'.join(lines)+'\n',file=sys.stderr)
+    choice=args.choose or input('Which style did you prefer? [a/b, anything else skips] ').strip().lower()
+    if choice not in ('a','b'):return {'skipped':True}
+    k='ab'.index(choice)
+    return client.request('POST','/v1/feedback',{**body,'kind':'pairwise_preference','preferred':options[k],'rejected':options[1-k]})
 
 def main():
     parser=argparse.ArgumentParser(prog='openape',description='OpenAPE — Agent Personality Engine')
@@ -43,6 +67,21 @@ def main():
     adapter.add_argument('action',choices=['install','uninstall','doctor','migrate-soul']);adapter.add_argument('host',nargs='?',choices=['claude-code','hermes','pi','openclaw','opencogni'],default='hermes')
     adapter.add_argument('--hermes-home');adapter.add_argument('--persona');adapter.add_argument('--apply',action='store_true');adapter.add_argument('--force',action='store_true')
     sub.add_parser('bridge')
+    st=sub.add_parser('settings',help="a linked user's own settings for a persona: preferences, pins, habit vetoes, freeze, cohort consent")
+    st.add_argument('action',choices=['get','set']);st.add_argument('persona');st.add_argument('user')
+    st.add_argument('--prefer',action='append',default=[],help='slot=value, e.g. spelling=british, units=metric, format=code_first (slot= clears it)')
+    st.add_argument('--pin',action='append',default=[],help='trait=min-max (0-4), e.g. humour=0-0 for never humorous; trait= clears it')
+    st.add_argument('--veto',action='append',default=[],help='habit id never to use (repeatable); --veto none clears vetoes')
+    st.add_argument('--freeze',action='store_true');st.add_argument('--unfreeze',action='store_true')
+    st.add_argument('--cohort',choices=['on','off'],help="contribute this relationship to the persona's cohort prior")
+    st.add_argument('--explore',choices=['on','off'],help='occasionally try a nearby style on low-stakes turns so you can compare')
+    cmp=sub.add_parser('compare',help='which style did you prefer? Shows the served style and an alternative, records your choice')
+    cmp.add_argument('decision');cmp.add_argument('--choose',choices=['a','b'],help='answer without prompting')
+    cmp.add_argument('--scope',choices=['relationship','session','core'],default='relationship',help='where your answer may be learned (default relationship)')
+    dash=sub.add_parser('dashboard',help="write a self-contained HTML page: the persona's trait timeline and why its latest style was chosen")
+    dash.add_argument('persona');dash.add_argument('--user');dash.add_argument('--decision',help='explain this decision');dash.add_argument('--out',default='openape-dashboard.html')
+    rate=sub.add_parser('rate',help='rate a served style from -1 (disliked) to 1 (liked)');rate.add_argument('decision');rate.add_argument('value',type=float)
+    rate.add_argument('--scope',choices=['relationship','session','core','record_only'],default='relationship')
     migrate=sub.add_parser('migrate',help='reset a data directory from an earlier release for decoder-v3 (learned state is dropped)')
     migrate.add_argument('--reset',action='store_true',required=True,help='re-create personas from their recorded archetypes');migrate.add_argument('--data',default='.openape')
     args=parser.parse_args()
@@ -120,6 +159,30 @@ def main():
             elif args.action=='inspect' and args.user:result=client.request('GET',f'/v1/personas/{args.id}?user_id={args.user}')
             else:result=client.request('DELETE' if args.action=='delete' else 'GET',f'/v1/personas/{args.id}'+('/history' if args.action=='history' else ''))
         elif args.cmd=='job':result=client.request('GET',f'/v1/consolidations/{args.id}')
+        elif args.cmd=='settings':
+            path=f'/v1/personas/{args.persona}/users/{args.user}/settings';current=client.request('GET',path)
+            if args.action=='get':result=current
+            else:
+                body={k:current[k] for k in ('preferences','pins','vetoes','frozen','cohort_contribution','exploration')}
+                for item in args.prefer:
+                    slot,_,value=item.partition('=');body['preferences'][slot]=value or None
+                for item in args.pin:
+                    trait,_,span=item.partition('=')
+                    if not span:body['pins'].pop(trait,None);continue
+                    lo,_,hi=span.partition('-');body['pins'][trait]={'min':int(lo),'max':int(hi or lo)}
+                if args.veto==['none']:body['vetoes']=[]
+                else:body['vetoes']=sorted(set(body['vetoes'])|set(args.veto))
+                if args.freeze and args.unfreeze:parser.error('choose --freeze or --unfreeze')
+                if args.freeze or args.unfreeze:body['frozen']=args.freeze
+                if args.cohort:body['cohort_contribution']=args.cohort=='on'
+                if args.explore:body['exploration']=args.explore=='on'
+                result=client.request('PUT',path,body)
+        elif args.cmd in ('compare','rate'):result=answer(client,args)
+        elif args.cmd=='dashboard':
+            from urllib.parse import quote
+            data={'timeline':client.request('GET',f'/v1/personas/{quote(args.persona)}/timeline'+(f'?user_id={quote(args.user)}' if args.user else '')),
+                'explanation':client.request('GET',f'/v1/decisions/{quote(args.decision)}/explanation') if args.decision else None}
+            Path(args.out).write_text(dashboard_html(data));result={'written':args.out,'versions':len(data['timeline']['versions'])}
         else:
             data=json.load(sys.stdin) if args.file=='-' else json.loads(Path(args.file).read_text())
             if args.cmd=='preview':

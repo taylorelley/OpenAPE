@@ -37,18 +37,49 @@
       "expert",
       "error_present",
       "first_turn",
-      "long_session"
+      "long_session",
+      "returning",
+      "corrected"
+    ],
+    "language": [
+      "none",
+      "python",
+      "typescript",
+      "javascript",
+      "go",
+      "rust",
+      "java",
+      "c_cpp",
+      "csharp",
+      "ruby",
+      "php",
+      "shell",
+      "sql",
+      "markup",
+      "config",
+      "other"
+    ],
+    "repo_kind": [
+      "unknown",
+      "software",
+      "infrastructure",
+      "documentation",
+      "data_science"
     ]
   },
   "engine_tags": [
     "first_turn",
-    "long_session"
+    "long_session",
+    "returning",
+    "corrected"
   ],
   "defaults": {
     "task_type": "general",
     "channel": "terminal",
     "stakes": "medium",
-    "turn_origin": "user"
+    "turn_origin": "user",
+    "language": "none",
+    "repo_kind": "unknown"
   },
   "tools": [
     {
@@ -119,74 +150,115 @@
   "plan_mode": {
     "task_type": "planning"
   },
-  "text": [
+  "extensions": {
+    "py": "python",
+    "pyi": "python",
+    "ipynb": "python",
+    "ts": "typescript",
+    "tsx": "typescript",
+    "mts": "typescript",
+    "js": "javascript",
+    "jsx": "javascript",
+    "mjs": "javascript",
+    "cjs": "javascript",
+    "go": "go",
+    "rs": "rust",
+    "java": "java",
+    "kt": "java",
+    "scala": "java",
+    "c": "c_cpp",
+    "h": "c_cpp",
+    "cc": "c_cpp",
+    "cpp": "c_cpp",
+    "hpp": "c_cpp",
+    "cs": "csharp",
+    "rb": "ruby",
+    "php": "php",
+    "sh": "shell",
+    "bash": "shell",
+    "zsh": "shell",
+    "ps1": "shell",
+    "sql": "sql",
+    "md": "markup",
+    "mdx": "markup",
+    "rst": "markup",
+    "txt": "markup",
+    "html": "markup",
+    "css": "markup",
+    "tex": "markup",
+    "json": "config",
+    "yaml": "config",
+    "yml": "config",
+    "toml": "config",
+    "ini": "config",
+    "cfg": "config",
+    "tf": "config",
+    "xml": "config"
+  },
+  "repo": [
     {
-      "pattern": "\\b(review|pr|pull request|code review|lgtm)\\b",
-      "task_type": "code_review",
-      "tags": [
-        "review"
+      "kind": "infrastructure",
+      "names": [
+        "main.tf",
+        "terraform.tf",
+        "chart.yaml",
+        "kustomization.yaml",
+        "ansible.cfg",
+        "pulumi.yaml",
+        "serverless.yml",
+        "cdk.json"
       ]
     },
     {
-      "pattern": "\\b(debug|bug|traceback|exception|stack trace|segfault|error|failing|crash(es|ed)?)\\b",
-      "task_type": "debugging",
-      "tags": [
-        "technical",
-        "error_present"
+      "kind": "documentation",
+      "names": [
+        "mkdocs.yml",
+        "docusaurus.config.js",
+        "book.toml",
+        "_config.yml",
+        "antora.yml",
+        "conf.py"
       ]
     },
     {
-      "pattern": "\\b(story|poem|brainstorm|slogan|lyrics|creative)\\b",
-      "task_type": "creative"
-    },
-    {
-      "pattern": "\\b(plan|roadmap|architecture|design doc|milestones?)\\b",
-      "task_type": "planning"
-    },
-    {
-      "pattern": "\\b(draft|rewrite|proofread|email|blog post|essay|documentation)\\b",
-      "task_type": "writing"
-    },
-    {
-      "pattern": "\\b(implement|refactor|compile|function|unit test)\\b",
-      "task_type": "coding",
-      "tags": [
-        "technical"
+      "kind": "data_science",
+      "names": [
+        "dvc.yaml",
+        "environment.yml",
+        "mlproject",
+        "params.yaml"
+      ],
+      "suffixes": [
+        ".ipynb"
       ]
     },
     {
-      "pattern": "\\b(research|compare|investigate|survey|what is|how does|why does)\\b",
-      "task_type": "research"
-    },
-    {
-      "pattern": "\\b(stuck|confused|not working|frustrat\\w*|help me)\\b",
-      "task_type": "support"
-    },
-    {
-      "pattern": "\\b(urgent|asap|immediately|outage|hotfix|prod(uction)? is down)\\b",
-      "stakes": "high",
-      "tags": [
-        "urgent"
-      ]
-    },
-    {
-      "pattern": "\\b(security|vulnerabilit\\w*|credentials?|password|legal|medical|production database)\\b",
-      "stakes": "high",
-      "tags": [
-        "sensitive"
-      ]
-    },
-    {
-      "pattern": "\\b(beginner|eli5|explain like|new to|first time|never used)\\b",
-      "tags": [
-        "beginner"
-      ]
-    },
-    {
-      "pattern": "\\b(tl;?dr|just the (code|diff|answer)|skip the explanation|no explanation)\\b",
-      "tags": [
-        "expert"
+      "kind": "software",
+      "names": [
+        "package.json",
+        "pyproject.toml",
+        "setup.py",
+        "go.mod",
+        "cargo.toml",
+        "pom.xml",
+        "build.gradle",
+        "build.gradle.kts",
+        "gemfile",
+        "composer.json",
+        "cmakelists.txt",
+        "makefile",
+        "mix.exs"
+      ],
+      "suffixes": [
+        ".csproj",
+        ".sln"
       ]
     }
-  ]
+  ],
+  "classifier": {
+    "stakes_high_tags": [
+      "urgent",
+      "sensitive"
+    ]
+  }
 }

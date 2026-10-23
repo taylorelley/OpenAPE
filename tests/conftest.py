@@ -5,6 +5,22 @@ TOKEN='test-owner-token-0000000000000000'
 USER_TOKEN='test-user-token-0000000000000000'
 OTHER_TOKEN='other-tenant-token-00000000000000'
 CREDENTIALS=[dict(token=TOKEN,tenant='local',actor='owner',scopes=['persona:express','observations:write','feedback:write','persona:admin','training:admin','reflection:write'],personas=['*'],users=['*']),dict(token=USER_TOKEN,tenant='local',actor='alice',scopes=['persona:express','feedback:write','observations:write'],personas=['ape'],users=['alice']),dict(token=OTHER_TOKEN,tenant='other',actor='owner',scopes=['persona:express','persona:admin'],personas=['*'],users=['*'])]
+PG_URL=__import__('os').environ.get('OPENAPE_TEST_DATABASE_URL')
+@pytest.fixture(autouse=True)
+def postgres_backend(monkeypatch):
+    """With OPENAPE_TEST_DATABASE_URL set, every store runs on PostgreSQL in a schema of its
+    own (derived from its data directory), dropped after the test."""
+    if not PG_URL:yield;return
+    import hashlib,psycopg
+    from engine.storage import store
+    schemas=set();original=store.Store.__init__
+    def init(self,root,database_url=None,schema=None):
+        schema=schema or 't_'+hashlib.sha256(str(root).encode()).hexdigest()[:20];schemas.add(schema)
+        original(self,root,database_url or PG_URL,schema)
+    monkeypatch.setattr(store.Store,'__init__',init)
+    yield
+    with psycopg.connect(PG_URL,autocommit=True) as c:
+        for schema in schemas:c.execute(f'DROP SCHEMA IF EXISTS {schema} CASCADE')
 @pytest.fixture
 def api(tmp_path):
     app=create_app(tmp_path,credentials=CREDENTIALS)

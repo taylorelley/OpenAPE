@@ -33,11 +33,12 @@ def load_prompts(path=PROMPTS):
 def context_of(prompt):
     return dict(task_type=prompt['task_type'], channel='terminal', stakes=prompt['stakes'], turn_origin='user', tags=prompt['tags'])
 
-def style_text(controls, habits=()):
-    """The text an adapter would inject for these controls (active mode)."""
+def style_text(controls, habits=(), example=False):
+    """The text an adapter would inject for these controls (active mode); `example`
+    appends the reviewed tone example, as with OPENAPE_STYLE_EXAMPLE=1."""
     return render(dict(protocol_version='upap/2', request_id='live-eval', decision_id='live-eval', persona_version='live-eval', decoder_hash='live-eval',
-        control_schema=SCHEMA, catalogue_hash=CATALOGUE_HASH, controls=dict(controls), habits=list(habits), mode='active',
-        applies_to='next_model_request', policy={'eligible': True}, cache_ttl_ms=0))
+        control_schema=SCHEMA, catalogue_hash=CATALOGUE_HASH, controls=dict(controls), habits=list(habits), preferences={}, mode='active',
+        applies_to='next_model_request', policy={'eligible': True}, cache_ttl_ms=0), example)
 
 def condition_id(controls, habits=()):
     return 'c' + ''.join(str(controls[t]) for t in TRAITS) + ('+' + '+'.join(habits) if habits else '')
@@ -49,21 +50,22 @@ def _enabling(habit):
         controls[t] = min(max(controls[t], lo), hi)
     return controls
 
-def conditions():
+def conditions(example=False):
     """All conditions independent of context: dicts with id, kind, controls, habits, text."""
+    style = lambda c, hs=(): style_text(c, hs, example)
     from benchmarks.baselines import STATIC_MARKDOWN
     out = [dict(id='baseline', kind='baseline', controls=None, habits=[], text=''),
            dict(id='static', kind='static', controls=None, habits=[], text=STATIC_MARKDOWN),
-           dict(id=condition_id(NEUTRAL), kind='neutral', controls=dict(NEUTRAL), habits=[], text=style_text(NEUTRAL))]
+           dict(id=condition_id(NEUTRAL), kind='neutral', controls=dict(NEUTRAL), habits=[], text=style(NEUTRAL))]
     for t in TRAITS:
         for level in range(LEVELS):
             if level == NEUTRAL[t]: continue
             c = dict(NEUTRAL, **{t: level})
-            if coherent(c): out.append(dict(id=condition_id(c), kind='trait', trait=t, level=level, controls=c, habits=[], text=style_text(c)))
+            if coherent(c): out.append(dict(id=condition_id(c), kind='trait', trait=t, level=level, controls=c, habits=[], text=style(c)))
     for h in HABITS:
         c = _enabling(h)
         assert coherent(c) and habit_allowed(h, c), h['id']
-        out.append(dict(id=condition_id(c, [h['id']]), kind='habit', habit=h['id'], controls=c, habits=[h['id']], text=style_text(c, [h['id']]),
+        out.append(dict(id=condition_id(c, [h['id']]), kind='habit', habit=h['id'], controls=c, habits=[h['id']], text=style(c, [h['id']]),
             control_id=condition_id(c)))
     return out
 
@@ -73,9 +75,9 @@ def allowed(condition, context):
     lm = level_mask(context); hm = habit_mask(context)
     return all(bool(lm[i, condition['controls'][t]]) for i, t in enumerate(TRAITS)) and all(bool(hm[HABIT_IDS.index(h)]) for h in condition['habits'])
 
-def plan(prompts, selected=None):
+def plan(prompts, selected=None, example=False):
     """(prompt, condition) pairs to run. `selected` limits condition kinds or ids."""
-    conds = conditions(); rows = []
+    conds = conditions(example); rows = []
     keep = {c['id'] for c in conds if not selected or c['kind'] in selected or c['id'] in selected or c['kind'] in ('baseline', 'neutral')}
     keep |= {c['control_id'] for c in conds if c['kind'] == 'habit' and c['id'] in keep}  # matched controls
     for p in prompts:

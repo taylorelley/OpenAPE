@@ -6,7 +6,7 @@ fixtures=json.loads(Path('protocol/upap/v2/conformance.json').read_text())
 @pytest.mark.parametrize('case',fixtures['decisions'],ids=lambda f:f['name'])
 def test_common_wire_fixtures(case):
     # Identical fixture and golden text are asserted by sdk/typescript/test.ts.
-    if case['valid']:assert render(case['value'])==case['rendered']
+    if case['valid']:assert render(case['value'])==case['rendered'] and render(case['value'],example=True)==case['rendered_with_example']
     else:
         with pytest.raises(ValueError):render(case['value'])
 
@@ -41,7 +41,7 @@ def test_worst_case_rendering_within_bound():
 def test_context_derivation_fixtures(case):
     # The same fixtures are asserted against deriveContext in sdk/typescript/test.ts.
     from sdk.python.lite import derive_context
-    assert derive_context(case['signals'],case['declared'],case['text'])==case['context']
+    assert derive_context(case['signals'],case['declared'],case['text'],project=case.get('project'))==case['context']
 
 def test_context_rules_match_engine_vocabulary():
     from sdk.python.lite import CONTEXT_RULES
@@ -51,9 +51,27 @@ def test_context_rules_match_engine_vocabulary():
     from engine.neural.policy import ENGINE_TAGS
     assert {k:tuple(vocab[k]) for k in VOCAB}==VOCAB and tuple(CONTEXT_RULES['engine_tags'])==ENGINE_TAGS
     Context(**CONTEXT_RULES['defaults'])
-    for rule in CONTEXT_RULES['tools']+CONTEXT_RULES['text']+CONTEXT_RULES['failures']:
+    for rule in CONTEXT_RULES['tools']+CONTEXT_RULES['failures']:
         Context(**{k:rule[k] for k in ('task_type','stakes') if k in rule},tags=rule.get('tags',[]))
     assert json.loads(Path('protocol/upap/v2/context-rules.json').read_text())==CONTEXT_RULES
+
+@pytest.mark.parametrize('case',fixtures['classifier'],ids=lambda f:f['text'][:30] or 'empty')
+def test_classifier_fixtures(case):
+    from sdk.python.lite import classify_text
+    got=classify_text(case['text']);assert (list(got) if got else None)==case['result']
+
+def test_classifier_vendored_and_vocabulary():
+    from sdk.python.lite import CONTEXT_RULES
+    model=json.loads(Path('protocol/upap/v2/context-classifier.json').read_text())
+    for vendored in Path('adapters').glob('*/context-classifier.json'):assert json.loads(vendored.read_text())==model,vendored
+    assert set(model['tasks'])==set(CONTEXT_RULES['vocab']['task_type']) and set(model['tags'])<=set(CONTEXT_RULES['vocab']['tags'])
+    assert set(CONTEXT_RULES['extensions'].values())<=set(CONTEXT_RULES['vocab']['language']) and {r['kind'] for r in CONTEXT_RULES['repo']}<=set(CONTEXT_RULES['vocab']['repo_kind'])
+
+def test_extension_and_repo_helpers_keep_labels_only(tmp_path):
+    from sdk.python.lite import extension_of,repo_files
+    assert extension_of('/home/u/secret-project/src/app.PY')=='py' and extension_of('Makefile') is None and extension_of('/x/y.exe') is None and extension_of(None) is None
+    for name in ('pyproject.toml','private-notes.txt','Main.tf','data.ipynb'):(tmp_path/name).write_text('contents never read')
+    assert repo_files(tmp_path)==['data.ipynb','main.tf','pyproject.toml'] and repo_files(tmp_path/'missing')==[]
 
 def test_derived_context_never_contains_text():
     from sdk.python.lite import derive_context

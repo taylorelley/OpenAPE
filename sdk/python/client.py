@@ -14,8 +14,8 @@ class UPAPError(Exception):
         super().__init__(f'{status} {code}: {message}');self.status,self.code,self.retryable=status,code,retryable
 
 class Client:
-    def __init__(self,url,token,timeout=.25,transport=None):
-        parsed=check_endpoint(url)
+    def __init__(self,url,token,timeout=.25,transport=None,example=False):
+        parsed=check_endpoint(url);self.example=example
         self.http=httpx.Client(base_url=url,headers={'Authorization':'Bearer '+token},timeout=timeout,transport=transport,trust_env=parsed.hostname not in LOOPBACK)
         self.cache={}; self.timeout=timeout
     def close(self): self.http.close()
@@ -45,7 +45,7 @@ class Client:
         try:
             d=validate_decision(self.request('POST','/v1/express',req,retry=True))
             if d['request_id']!=req['request_id'] or d['mode']!=mode:raise ValueError('Response binding mismatch')
-            text=render(d)
+            text=render(d,self.example)
             if len(self.cache)>=128:self.cache.pop(next(iter(self.cache)))
             self.cache[key]=(time.monotonic()+min(d['cache_ttl_ms'],30000)/1000,text,d)
             return {'text':text,'status':'applied' if text else 'shadow','decision':d}

@@ -1,7 +1,7 @@
 """UPAP/2 wire contracts. Unknown fields are rejected throughout."""
 from typing import Literal, Annotated
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
-from protocol.catalogue import HABIT_IDS, MAX_HABITS
+from protocol.catalogue import HABIT_IDS, MAX_HABITS, PREFERENCES
 
 Id = Annotated[str, StringConstraints(pattern=r'^[A-Za-z0-9_.:-]{1,100}$')]
 Level = Annotated[int, Field(ge=0, le=4)]
@@ -33,8 +33,11 @@ class Context(Strict):
     channel: Literal['terminal','chat','voice','background'] = 'terminal'
     stakes: Literal['low','medium','high'] = 'low'
     turn_origin: Literal['user','system','tool','subagent'] = 'user'
-    # first_turn and long_session are set by the engine from the session; host values are ignored.
-    tags: list[Literal['technical','review','sensitive','urgent','beginner','expert','error_present','first_turn','long_session']] = Field(default_factory=list, max_length=9)
+    # first_turn, long_session, returning and corrected are set by the engine; host values are ignored.
+    tags: list[Literal['technical','review','sensitive','urgent','beginner','expert','error_present','first_turn','long_session','returning','corrected']] = Field(default_factory=list, max_length=11)
+    # Labels only: the language of files the agent edited (from extensions) and the kind of repository.
+    language: Literal['none','python','typescript','javascript','go','rust','java','c_cpp','csharp','ruby','php','shell','sql','markup','config','other'] = 'none'
+    repo_kind: Literal['unknown','software','infrastructure','documentation','data_science'] = 'unknown'
 class Express(Envelope):
     request_id: Id
     identity: Identity
@@ -136,6 +139,35 @@ class Choice(Strict):
 class Policy(Strict):
     eligible: bool
     mask_reason: str | None
+def _slot(name):
+    return Literal[tuple(PREFERENCES[name])] | None
+class Preferences(Strict):
+    """The linked user's explicit choices; each value renders one reviewed sentence."""
+    address: _slot('address') = None
+    spelling: _slot('spelling') = None
+    units: _slot('units') = None
+    format: _slot('format') = None
+    dates: _slot('dates') = None
+class Pin(Strict):
+    min: Level = 0
+    max: Level = 4
+    @model_validator(mode='after')
+    def ordered(self):
+        if self.min > self.max: raise ValueError('pin min above max')
+        return self
+class Settings(Envelope):
+    """User-controlled relationship settings: preferences, trait pins (allowed level
+    ranges), habit vetoes, a freeze on relationship evolution, and consent to contribute
+    this relationship to the persona's cohort prior."""
+    preferences: Preferences = Field(default_factory=Preferences)
+    pins: dict[Trait, Pin] = Field(default_factory=dict)
+    vetoes: list[Habit] = Field(default_factory=list, max_length=16)
+    frozen: bool = False
+    cohort_contribution: bool = False
+    # Occasionally serve a nearby style (low-stakes user turns only) so preferences can be compared.
+    exploration: bool = False
+class Comparison(Envelope):
+    decision_id: Id
 class Decision(Envelope):
     protocol_version: Literal['upap/2'] = 'upap/2'
     request_id: Id
@@ -147,6 +179,9 @@ class Decision(Envelope):
     catalogue_hash: str
     controls: Controls
     habits: list[Habit] = Field(max_length=MAX_HABITS)
+    preferences: dict[str, str] = Field(default_factory=dict)
+    # True when the user's opt-in exploration served a style other than the persona's first choice.
+    exploration: bool = False
     mode: Literal['shadow','active','frozen']
     applies_to: Literal['next_model_request'] = 'next_model_request'
     policy: Policy

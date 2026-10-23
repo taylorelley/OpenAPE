@@ -88,6 +88,14 @@ def _rules(ctx):
     if ctx.get('channel') == 'chat': pull('formality', 1.5, 0.3)
     if ctx.get('stakes') == 'high': pull('formality', 2.5, 0.5); pull('explanation_depth', 2.5, 0.4); habit('risks_first', 0.8); habit('flag_uncertainty', 0.8)
     if ctx.get('turn_origin') in ('tool', 'subagent', 'system'): pull('verbosity', 1, 0.5)
+    if 'corrected' in tags: pull('assertiveness', 1.5, 0.3); habit('acknowledge_constraints', 0.6); habit('confirm_goal', 0.4)
+    if 'returning' in tags: pull('formality', 2.5, 0.2); habit('summary_first', 0.4)
+    lang, repo = ctx.get('language', 'none'), ctx.get('repo_kind', 'unknown')
+    if lang == 'markup': pull('formality', 2.5, 0.3)
+    if lang in ('config', 'shell'): pull('verbosity', 1, 0.4)
+    if repo == 'documentation': pull('formality', 2.5, 0.3); habit('structured', 0.4)
+    if repo == 'infrastructure': habit('risks_first', 0.6)
+    if repo == 'data_science': pull('explanation_depth', 3, 0.3); habit('concrete_examples', 0.3)
     return out
 
 def context_table(ctx, weights=None):
@@ -138,7 +146,8 @@ def target_choice(ctx, *profiles):
 def random_context(rng):
     return dict(task_type=rng.choice(VOCAB['task_type']), channel=rng.choice(VOCAB['channel']),
         stakes=rng.choice(VOCAB['stakes']), turn_origin=rng.choices(VOCAB['turn_origin'], weights=[6, 1, 1, 1])[0],
-        tags=sorted(rng.sample(VOCAB['tags'], rng.choice([0, 1, 1, 2]))))
+        tags=sorted(rng.sample(VOCAB['tags'], rng.choice([0, 1, 1, 2]))),
+        language=rng.choice(VOCAB['language']) if rng.random() < 0.6 else 'none', repo_kind=rng.choice(VOCAB['repo_kind']) if rng.random() < 0.6 else 'unknown')
 
 def random_profile(rng, traits=(2, 4), habits=(0, 2)):
     chosen = rng.sample(list(TRAITS), rng.randint(*traits))
@@ -178,10 +187,11 @@ def fit_seed_latent(decoder, seeds, steps=150, max_norm=None, profile=None, arch
     with torch.no_grad(): z.mul_(min(1.0, limit / (float(z.norm()) + 1e-8)))
     return z.detach()
 
-def selected(decoder, z, ctx, host, rel=None):
-    """The decoder's argmax choice for latent z in one context."""
+def selected(decoder, z, ctx, host, rel=None, habit_bias=None):
+    """The decoder's argmax choice for latent z in one context (plus a learned habit bias)."""
     rel = rel if rel is not None else torch.zeros(REL_DIM)
     t, h = decoder.heads(z, rel, ctx, host); action = int(joint(t).argmax())
+    if habit_bias is not None: h = h + habit_bias
     return action, tuple(select_habits(h, action, ctx))
 
 def agreement(decoder, z, profile, contexts, host=None, rel=None):

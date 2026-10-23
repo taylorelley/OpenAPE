@@ -7,7 +7,7 @@
  * (allowPromptInjection / allowConversationAccess) remain host-controlled.
  * In active mode it registers one tool, persona_feedback (declared in
  * contracts.tools; style feedback only; OPENAPE_AGENT_FEEDBACK=0 disables). */
-import {Binding,fromEnvironment,personaFeedbackTool,type Config} from '../common.ts';
+import {Binding,fromEnvironment,personaFeedbackTool,repoFiles,type Config} from '../common.ts';
 export const HOST_VERSION='2026.10.5';
 export function turnIdentity(event:any,ctx:any):string|null{
  // Only user-initiated turns. Heartbeat, cron and other triggers opt out.
@@ -25,10 +25,10 @@ export function channel(ctx:any):string|undefined{
 }
 export function install(api:any,config:Config,binding=new Binding(config,'upap.openclaw')){
  if(typeof api.on!=='function')throw Error('Missing native OpenClaw hook API');
- api.on('after_tool_call',(event:any,ctx:any)=>{binding.noteTool(ctx?.sessionId,event?.toolName??ctx?.toolName,Boolean(event?.error));});
+ api.on('after_tool_call',(event:any,ctx:any)=>{binding.noteTool(ctx?.sessionId,event?.toolName??ctx?.toolName,Boolean(event?.error),event?.params?.path??event?.params?.file_path);});
  api.on('before_prompt_build',async(event:any,ctx:any)=>{
   const turn=turnIdentity(event,ctx);if(!turn)return;
-  const r=await binding.express(ctx.sessionId,turn,ctx.modelProviderId,ctx.modelId,{channel:channel(ctx),text:event.currentUserMessage??event.prompt});
+  const r=await binding.express(ctx.sessionId,turn,ctx.modelProviderId,ctx.modelId,{channel:channel(ctx),repo_files:repoFiles(ctx.workspaceDir),text:event.currentUserMessage??event.prompt});
   ctx.hookInvocation?.assertActive();
   return r.text?{appendContext:r.text}:undefined;
  });

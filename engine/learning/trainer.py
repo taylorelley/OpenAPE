@@ -11,15 +11,25 @@ def pair(e):
     if a is None or b is None or a==b or not choice_allowed(a,e['context']) or not choice_allowed(b,e['context']): return None
     return a,b
 
+def trait_pair(e):
+    """A pair whose trait configurations differ; habit-only pairs belong to the habit
+    bias (engine.learning.habits), so they never drag the latent."""
+    p=pair(e)
+    return p if p is not None and p[0][0]!=p[1][0] else None
+
 def margin(t,h,a,b):
     return choice_score(t,h,APPROVED_LEVELS[a[0]],habit_vector(a[1]))-choice_score(t,h,APPROVED_LEVELS[b[0]],habit_vector(b[1]))
 
+def trait_margin(t,a,b):
+    """Score difference of the trait configurations alone (habits excluded)."""
+    return (t.gather(-1,APPROVED_LEVELS[a[0]].unsqueeze(-1)).sum()-t.gather(-1,APPROVED_LEVELS[b[0]].unsqueeze(-1)).sum())
+
 def loss_for(decoder,core,rel,e,baseline=0.0):
     if e['kind'] in ('pairwise_preference','correction'):
-        p=pair(e)
+        p=trait_pair(e)
         if p is None: return None
-        t,h=decoder.heads(core,rel,e['context'],e['host'])
-        return -F.logsigmoid(margin(t,h,*p))
+        t,_=decoder.heads(core,rel,e['context'],e['host'])
+        return -F.logsigmoid(trait_margin(t,*p))
     # Only seeded sampled actions carry a meaningful logging propensity. Habits are
     # selected deterministically, so the logged-bandit term trains the configuration only.
     if e.get('selection')!='sample' or (e.get('propensity') or 0)<=0 or e.get('value') is None: return None

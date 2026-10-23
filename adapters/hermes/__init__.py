@@ -5,11 +5,12 @@
   transcript). SOUL.md stays Hermes's identity slot and is never read or changed
   here; see `openape adapter migrate-soul` for the explicit, backed-up migration.
 * `post_llm_call` / `on_session_end` send ID-and-status observations only.
-* Turn context comes from metadata: tool names and error status from `post_tool_call`
-  (never arguments or results), the Hermes platform (CLI vs. messaging) and the user's
-  declared context (OPENAPE_CONTEXT). The user message is read only with
-  OPENAPE_CONTEXT_TEXT=local, matched in memory against fixed rules and never sent or
-  stored; only the derived enum labels leave this process.
+* Turn context comes from metadata: tool names, error status and edited files'
+  extensions from `post_tool_call` (never other arguments, paths or results),
+  repository-marker file names in the working directory, the Hermes platform (CLI vs.
+  messaging) and the user's declared context (OPENAPE_CONTEXT). The user message is read
+  only with OPENAPE_CONTEXT_TEXT=local, classified in memory by the on-host context
+  classifier and never sent or stored; only the derived enum labels leave this process.
 * Subagent sessions (announced by `subagent_start`) opt out by default.
 * In active mode, registers one tool, `persona_feedback` (toolset `openape`), so the
   agent can record style feedback on the current turn's decision. Style only, never
@@ -42,7 +43,8 @@ def settings():
     if not token or not persona: return None
     return dict(token=token, persona=persona, url=get_secret('OPENAPE_URL') or 'http://127.0.0.1:8765', tenant=get_secret('OPENAPE_TENANT') or 'local',
         user=get_secret('OPENAPE_LINKED_USER'), mode=get_secret('OPENAPE_MODE') or 'shadow', agent_feedback=(get_secret('OPENAPE_AGENT_FEEDBACK') or '1')!='0',
-        declared=upap_lite.parse_declared(get_secret('OPENAPE_CONTEXT') or '{}'), context_text=get_secret('OPENAPE_CONTEXT_TEXT') == 'local')
+        declared=upap_lite.parse_declared(get_secret('OPENAPE_CONTEXT') or '{}'), context_text=get_secret('OPENAPE_CONTEXT_TEXT') == 'local',
+        example=get_secret('OPENAPE_STYLE_EXAMPLE') == '1')
 
 TERMINAL_PLATFORMS = ('', 'cli', 'local', 'tui', 'acp')
 BACKGROUND_PLATFORMS = ('api_server', 'webhook', 'msgraph_webhook', 'cron')
@@ -64,18 +66,21 @@ def register(ctx):
         return e
     def subagent_start(child_session_id=None, **_):
         if child_session_id: remember(children, child_session_id, True)
-    def tool_used(session_id='', tool_name='', status=None, **_):
+    def tool_used(session_id='', tool_name='', status=None, args=None, **_):
         # Previous-turn signals for the next turn's context: tool names and a failure count only.
         if not session_id or session_id in children: return
-        seen = tools.get(session_id) or {'tools': [], 'failures': 0}
+        seen = tools.get(session_id) or {'tools': [], 'failures': 0, 'extensions': []}
         if isinstance(tool_name, str) and tool_name and tool_name not in seen['tools'] and len(seen['tools']) < 32: seen['tools'].append(tool_name[:64])
+        ext = upap_lite.extension_of((args or {}).get('path') or (args or {}).get('file_path')) if isinstance(args, dict) else None
+        if ext and len(seen['extensions']) < 64: seen['extensions'].append(ext)
         if status == 'error': seen['failures'] += 1
         remember(tools, session_id, seen)
     def prepare(session_id='', turn_id='', model='', user_message=None, platform='', **_):
         if not session_id or session_id in children: return None
         cfg = settings()
         if not cfg or cfg['mode'] == 'disabled': return None
-        signals = dict(tools.pop(session_id, None) or {}, channel=channel(platform), turn_origin='user')
+        import os
+        signals = dict(tools.pop(session_id, None) or {}, channel=channel(platform), turn_origin='user', repo_files=upap_lite.repo_files(os.getcwd()))
         context = upap_lite.derive_context(signals, cfg['declared'], user_message if cfg['context_text'] else None)
         turn = turn_id or str(uuid.uuid4())
         request = dict(request_id=stable(f'{session_id}:{turn}'), identity=dict(tenant_id=cfg['tenant'], persona_id=cfg['persona']),
@@ -83,7 +88,7 @@ def register(ctx):
             host=dict(adapter_id=ADAPTER, adapter_version=VERSION, host_version=HOST_VERSION, provider_family='other', model_id=stable(model or 'unspecified')),
             context=context)
         if cfg['user']: request['identity']['user_id'] = cfg['user']
-        out = upap_lite.express(cfg['url'], cfg['token'], request, cfg['mode'])
+        out = upap_lite.express(cfg['url'], cfg['token'], request, cfg['mode'], example=cfg['example'])
         if out['decision']: remember(decisions, session_id, out['decision']['decision_id'])
         return {'context': out['text']} if out['text'] else None
     def completed(session_id='', **_):

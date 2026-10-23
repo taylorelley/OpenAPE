@@ -37,6 +37,23 @@
         }
       }
     },
+    "/v1/whoami": {
+      "get": {
+        "summary": "Whoami",
+        "description": "The calling credential's identity and grants (never the token).",
+        "operationId": "whoami_v1_whoami_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/capabilities": {
       "get": {
         "summary": "Capabilities",
@@ -302,6 +319,145 @@
         }
       }
     },
+    "/v1/comparisons": {
+      "post": {
+        "summary": "Compare",
+        "description": "Two styles for one served decision, in a blind order: the one served and the\npersona's best different trait configuration in the same context and settings. The\nuser's answer is ordinary pairwise feedback (preferred = the chosen option).",
+        "operationId": "compare_v1_comparisons_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Comparison"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/decisions/{decision_id}/explanation": {
+      "get": {
+        "summary": "Explain Decision",
+        "description": "Why this style: which layer (temperament, character, relationship, session)\nshaped each trait and habit of one served decision, and what limited it.",
+        "operationId": "explain_decision_v1_decisions__decision_id__explanation_get",
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Decision Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/{id}/timeline": {
+      "get": {
+        "summary": "Timeline",
+        "description": "Each version of the persona (and of this user's relationship) in order, with the\ndecoder's expected trait levels and habit probabilities in a fixed reference context.",
+        "operationId": "timeline_v1_personas__id__timeline_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 200,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/observations": {
       "post": {
         "summary": "Observations",
@@ -315,6 +471,107 @@
             }
           },
           "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/{id}/users/{user_id}/settings": {
+      "get": {
+        "summary": "Get Settings",
+        "operationId": "get_settings_v1_personas__id__users__user_id__settings_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Put Settings",
+        "description": "Replace the linked user's settings. Only a credential allowed to act for this\nuser (scope settings:write) may change them; they apply from the next turn.",
+        "operationId": "put_settings_v1_personas__id__users__user_id__settings_put",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Settings"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
@@ -715,6 +972,27 @@
         "title": "Choice",
         "description": "One rendered style: an approved trait configuration and its habits (catalogue order)."
       },
+      "Comparison": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/2",
+            "title": "Protocol Version"
+          },
+          "decision_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Decision Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "decision_id"
+        ],
+        "title": "Comparison"
+      },
       "Consolidate": {
         "properties": {
           "protocol_version": {
@@ -824,12 +1102,49 @@
                 "expert",
                 "error_present",
                 "first_turn",
-                "long_session"
+                "long_session",
+                "returning",
+                "corrected"
               ]
             },
             "type": "array",
-            "maxItems": 9,
+            "maxItems": 11,
             "title": "Tags"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "none",
+              "python",
+              "typescript",
+              "javascript",
+              "go",
+              "rust",
+              "java",
+              "c_cpp",
+              "csharp",
+              "ruby",
+              "php",
+              "shell",
+              "sql",
+              "markup",
+              "config",
+              "other"
+            ],
+            "title": "Language",
+            "default": "none"
+          },
+          "repo_kind": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "software",
+              "infrastructure",
+              "documentation",
+              "data_science"
+            ],
+            "title": "Repo Kind",
+            "default": "unknown"
           }
         },
         "additionalProperties": false,
@@ -1097,6 +1412,18 @@
             "type": "array",
             "maxItems": 3,
             "title": "Habits"
+          },
+          "preferences": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Preferences"
+          },
+          "exploration": {
+            "type": "boolean",
+            "title": "Exploration",
+            "default": false
           },
           "mode": {
             "type": "string",
@@ -1742,6 +2069,27 @@
         ],
         "title": "Observations"
       },
+      "Pin": {
+        "properties": {
+          "min": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Min",
+            "default": 0
+          },
+          "max": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Max",
+            "default": 4
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Pin"
+      },
       "Policy": {
         "properties": {
           "eligible": {
@@ -1767,6 +2115,94 @@
           "mask_reason"
         ],
         "title": "Policy"
+      },
+      "Preferences": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "informal",
+                  "formal"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "spelling": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "american",
+                  "british",
+                  "canadian",
+                  "australian"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spelling"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "metric",
+                  "imperial"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Units"
+          },
+          "format": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "code_first",
+                  "prose_first",
+                  "bullets",
+                  "paragraphs"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Format"
+          },
+          "dates": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "iso",
+                  "day_first",
+                  "month_first"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dates"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Preferences",
+        "description": "The linked user's explicit choices; each value renders one reviewed sentence."
       },
       "Promote": {
         "properties": {
@@ -1950,6 +2386,84 @@
           "turn_id"
         ],
         "title": "Session"
+      },
+      "Settings": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/2",
+            "title": "Protocol Version"
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/Preferences"
+          },
+          "pins": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Pin"
+            },
+            "propertyNames": {
+              "enum": [
+                "directness",
+                "warmth",
+                "verbosity",
+                "humour",
+                "formality",
+                "explanation_depth",
+                "assertiveness"
+              ]
+            },
+            "type": "object",
+            "title": "Pins"
+          },
+          "vetoes": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "summary_first",
+                "risks_first",
+                "next_step",
+                "confirm_goal",
+                "clarify_once",
+                "acknowledge_constraints",
+                "concrete_examples",
+                "analogies",
+                "structured",
+                "plain_words",
+                "precise_terms",
+                "tradeoffs",
+                "acknowledge_progress",
+                "light_aside",
+                "recap_end",
+                "flag_uncertainty"
+              ]
+            },
+            "type": "array",
+            "maxItems": 16,
+            "title": "Vetoes"
+          },
+          "frozen": {
+            "type": "boolean",
+            "title": "Frozen",
+            "default": false
+          },
+          "cohort_contribution": {
+            "type": "boolean",
+            "title": "Cohort Contribution",
+            "default": false
+          },
+          "exploration": {
+            "type": "boolean",
+            "title": "Exploration",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version"
+        ],
+        "title": "Settings",
+        "description": "User-controlled relationship settings: preferences, trait pins (allowed level\nranges), habit vetoes, a freeze on relationship evolution, and consent to contribute\nthis relationship to the persona's cohort prior."
       },
       "ValidationError": {
         "properties": {

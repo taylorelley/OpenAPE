@@ -33,7 +33,7 @@ import torch
 import torch.nn.functional as F
 from protocol.catalogue import TRAITS
 from engine.neural.policy import features, level_mask, habit_vector, choice_score, APPROVED_LEVELS
-from engine.learning.trainer import pair
+from engine.learning.trainer import trait_pair
 
 SURFACE = ('verbosity', 'formality', 'explanation_depth')
 INTERPERSONAL = ('warmth', 'directness', 'assertiveness', 'humour')
@@ -104,19 +104,19 @@ def fit_state(decoder, core, rel, scope, examples, steps=20):
     pairwise preferences (one batched decoder pass per step). Never stored as a
     version; discarded when the session ends."""
     base = core if scope == 'core' else rel
-    usable = [(e, p) for e in examples if (p := pair(e)) is not None]
+    usable = [(e, p) for e in examples if (p := trait_pair(e)) is not None]
     if not usable or decoder.model is None: return torch.zeros_like(base)
     weights = torch.tensor([e.get('weight', 1.0) for e, _ in usable]); weights = weights / weights.sum()
     feats = torch.stack([features(e['context'], e['host']) for e, _ in usable]); lm = torch.stack([level_mask(e['context']) for e, _ in usable])
     la, lb = (torch.stack([APPROVED_LEVELS[p[k][0]] for _, p in usable]) for k in (0, 1))
-    ha, hb = (torch.stack([habit_vector(p[k][1]) for _, p in usable]) for k in (0, 1))
     x = torch.zeros_like(base).requires_grad_(True)
     optimizer = torch.optim.Adam([x], lr=0.15)
     for _ in range(steps):
         optimizer.zero_grad()
         c, r = (core + x, rel) if scope == 'core' else (core, rel + x)
-        t, h = decoder.batch(c, r, feats, lm)
-        loss = -(weights * F.logsigmoid(choice_score(t, h, la, ha) - choice_score(t, h, lb, hb))).sum() + 0.01 * x.square().sum()
+        t, _ = decoder.batch(c, r, feats, lm)
+        trait_score = lambda levels: t.gather(-1, levels.unsqueeze(-1)).squeeze(-1).sum(-1)
+        loss = -(weights * F.logsigmoid(trait_score(la) - trait_score(lb))).sum() + 0.01 * x.square().sum()
         loss.backward(); optimizer.step()
         with torch.no_grad(): x.mul_(min(1.0, STATE_BUDGET / (float(x.norm()) + 1e-8)))
     return x.detach()

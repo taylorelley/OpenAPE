@@ -62,13 +62,50 @@
               "expert",
               "error_present",
               "first_turn",
-              "long_session"
+              "long_session",
+              "returning",
+              "corrected"
             ],
             "type": "string"
           },
-          "maxItems": 9,
+          "maxItems": 11,
           "title": "Tags",
           "type": "array"
+        },
+        "language": {
+          "default": "none",
+          "enum": [
+            "none",
+            "python",
+            "typescript",
+            "javascript",
+            "go",
+            "rust",
+            "java",
+            "c_cpp",
+            "csharp",
+            "ruby",
+            "php",
+            "shell",
+            "sql",
+            "markup",
+            "config",
+            "other"
+          ],
+          "title": "Language",
+          "type": "string"
+        },
+        "repo_kind": {
+          "default": "unknown",
+          "enum": [
+            "unknown",
+            "software",
+            "infrastructure",
+            "documentation",
+            "data_science"
+          ],
+          "title": "Repo Kind",
+          "type": "string"
         }
       },
       "title": "Context",

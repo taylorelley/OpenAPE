@@ -26,7 +26,10 @@ class Refused(Exception):
     pass
 
 def _blocks(prompt, style, placement):
+    """Where the style text goes: `turn` after the task in the user turn (as Claude Code and
+    Hermes inject it), `prefix` before the task, `system` in the system prompt."""
     if style and placement == 'system': return [{'type': 'text', 'text': prompt}], style
+    if style and placement == 'prefix': return [{'type': 'text', 'text': style}, {'type': 'text', 'text': prompt}], None
     return [{'type': 'text', 'text': prompt}] + ([{'type': 'text', 'text': style}] if style else []), None
 
 class AnthropicProvider:
@@ -77,7 +80,7 @@ class OpenAICompatibleProvider:
         return r, choice, dict(served_model=r.model or model, input_tokens=getattr(usage, 'prompt_tokens', 0) or 0, output_tokens=getattr(usage, 'completion_tokens', 0) or 0)
     def generate(self, model, prompt, style, placement='turn', effort=None):
         messages = ([{'role': 'system', 'content': style}] if style and placement == 'system' else []) + \
-            [{'role': 'user', 'content': prompt + ('\n\n' + style if style and placement != 'system' else '')}]
+            [{'role': 'user', 'content': (style + '\n\n' + prompt) if style and placement == 'prefix' else prompt + ('\n\n' + style if style and placement != 'system' else '')}]
         _, choice, meta = self._create(model, messages, effort)
         # A Chat Completions refusal arrives as message.refusal (or finish_reason content_filter).
         refused = bool(getattr(choice.message, 'refusal', None)) or choice.finish_reason == 'content_filter'

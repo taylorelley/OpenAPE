@@ -18,18 +18,27 @@ from fastapi.exceptions import RequestValidationError
 from engine.api.contracts import *
 from engine.security.auth import Auth, Principal
 from engine.storage.store import Store
-from protocol.catalogue import SCHEMA, CATALOGUE_HASH, HABIT_IDS
-from engine.neural.policy import Decoder, ACTIONS, NEUTRAL_ACTION, CORE_DIM, REL_DIM, VOCAB, ENGINE_TAGS, mask_reason, joint, select_habits, levels_of, choice
+from protocol.catalogue import SCHEMA, CATALOGUE_HASH, HABIT_IDS, PREFERENCES
+from engine.neural.policy import Decoder, ACTIONS, NEUTRAL_ACTION, CORE_DIM, REL_DIM, VOCAB, ENGINE_TAGS, mask_reason, joint, select_habits, levels_of, choice, apply_user_settings, pins_satisfiable
 from engine.neural.profiles import fit_seed_latent, seed_profile, ARCHETYPES, ARCHETYPE_HABITS
-from engine.learning.trainer import fit_candidate, state_norm_limit
+from engine.learning.trainer import fit_candidate, state_norm_limit, trait_pair
+from engine.learning import habits as habit_learning
 from engine.learning import maturation, development as dev
 from engine.learning.reflection import adjusted_choice
-from engine.evaluation.policy import group_split, evaluate_candidate, evaluate_maturation, policy_for
+from engine.evaluation.policy import group_split, policy_for
+from engine.evaluation.isolated import Evaluator
+from engine import explain as explanation
 
 ROOT=Path(__file__).resolve().parents[2]
 DEFAULT_DECODER=ROOT/'models/decoder-v3/decoder.safetensors'
 PROTOCOL='upap/2'
 LONG_SESSION=20  # turns after which the engine tags a session long_session
+RETURNING_DAYS=14  # a first turn after this long away is tagged returning
+# Cohort prior: a new relationship starts from the shrunk mean of at least COHORT_MIN
+# relationships whose users opted in (cohort_contribution), never from one user's state.
+COHORT_MIN=5;COHORT_SHRINK=5.0
+JOB_STALE_SECONDS=900  # a queued automatic job older than this was lost with its replica
+EXPLORE_RATE=0.15  # share of eligible turns that sample a nearby style when the user opted in
 def uid(): return str(uuid.uuid4())
 def wire(**kwargs): return {'protocol_version':PROTOCOL,**kwargs}
 class Fault(Exception):
@@ -38,6 +47,8 @@ VERSION_COLUMNS='(tenant,persona,id,hash,parent,scope,user_id,job,core_base)'
 # Automatic learning waits for this many new usable examples since its last attempt.
 AUTO_EVIDENCE_STEP={'relationship':4,'core':8}
 REFLECTIONS_PER_SESSION=3
+# Safety-relevant habits an agent reflection may strengthen but never weaken.
+PEOPLE_ONLY_LESS=('flag_uncertainty','risks_first')
 AUTO_ACTOR='openape:auto-evolution'; MATURATION_ACTOR='openape:maturation'
 def system_principal(tenant,persona_id,actor):
     """Engine-internal identity for automatic evolution of one persona."""
@@ -56,6 +67,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
     try:decoder=Decoder(decoder_location)
     except (ValueError,OSError,RuntimeError,KeyError):decoder=Decoder('/nonexistent-openape-approved-fallback')
     engine_status='experimental_synthetic' if decoder.model else 'baseline_fallback'
+    evaluator=Evaluator(decoder,decoder_location)
     app=FastAPI(title='OpenAPE — Agent Personality Engine',version='0.3.0')
     app.state.store=store; app.state.decoder=decoder
     pool=ThreadPoolExecutor(max_workers=1,thread_name_prefix='openape-training')
@@ -70,7 +82,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
     @asynccontextmanager
     async def lifespan(_app):
         yield
-        pool.shutdown(wait=True); store.db.close()
+        pool.shutdown(wait=True); evaluator.close(); store.db.close()
     app.router.lifespan_context=lifespan
     @app.exception_handler(Fault)
     async def fault(request,exc):
@@ -116,17 +128,46 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         if not row: raise Fault('VERSION_CONFLICT','Version does not exist or was revoked',409)
         return row
     def latent(p,id,v,dim): return store.get(version(p,id,v)['hash'],dim)
+    cohort_cache={}
+    def cohort_prior(tenant,persona_id):
+        """(latent, contributors): where a relationship without a version starts. Habit
+        bias stays per relationship: it is recomputed from the user's own evidence."""
+        rows=store.all("""SELECT v.hash,s.data FROM relationships r JOIN user_settings s ON s.tenant=r.tenant AND s.persona=r.persona AND s.user_id=r.user_id
+            JOIN versions v ON v.tenant=r.tenant AND v.persona=r.persona AND v.id=r.active WHERE r.tenant=? AND r.persona=? AND v.revoked=0 ORDER BY v.hash""",(tenant,persona_id))
+        hashes=tuple(r['hash'] for r in rows if (lambda s:s.get('cohort_contribution') and not s.get('frozen'))(json.loads(r['data'])));key=(tenant,persona_id)
+        if key in cohort_cache and cohort_cache[key][0]==hashes:return cohort_cache[key][1]
+        prior=(torch.zeros(REL_DIM),len(hashes))
+        if len(hashes)>=COHORT_MIN:
+            try:
+                shrink=len(hashes)/(len(hashes)+COHORT_SHRINK)
+                x=shrink*torch.stack([store.get(h,REL_DIM) for h in hashes]).mean(0);x=x*min(1.0,state_norm_limit(decoder,'relationship')/(float(x.norm())+1e-8))
+                prior=(x,len(hashes))
+            except (ValueError,OSError,RuntimeError):pass
+        if len(cohort_cache)>1024:cohort_cache.clear()
+        cohort_cache[key]=(hashes,prior);return prior
+    def relationship_start(tenant,persona_id,user_id):
+        return cohort_prior(tenant,persona_id)[0] if user_id else torch.zeros(REL_DIM)
+    def version_bias(tenant,persona_id,v):
+        """A version's learned habit bias (zeros for none, or no version)."""
+        if not v:return torch.zeros(len(HABIT_IDS))
+        row=store.one('SELECT hash FROM versions WHERE tenant=? AND persona=? AND id=?',(tenant,persona_id,v))
+        return store.get_habit_bias(row['hash'],len(HABIT_IDS)) if row else torch.zeros(len(HABIT_IDS))
     @app.get('/health/live')
     def live(): return wire(status='live')
     @app.get('/health/ready')
     def ready(): return wire(status='ready',engine_status=engine_status)
+    @app.get('/v1/whoami')
+    def whoami(p=Depends(principal)):
+        """The calling credential's identity and grants (never the token)."""
+        return wire(tenant_id=p.tenant,actor=p.actor,scopes=sorted(p.scopes),personas=list(p.personas),users=list(p.users))
     @app.get('/v1/capabilities')
     def capabilities(p=Depends(principal)):
         return wire(protocol_versions=[PROTOCOL],control_schema=SCHEMA,catalogue_hash=CATALOGUE_HASH,controls=ACTIONS,habits=list(HABIT_IDS),encoder=decoder.meta.get('encoder'),decoder_hash=decoder.hash,engine_status=engine_status,
             max_payload_bytes=65536,modes=['disabled','shadow','active','frozen'],initializations=['archetype','seed_preferences','snapshot','imported','neutral_prior'],
             archetypes={k:list(v) for k,v in ARCHETYPES.items()},archetype_habits={k:list(v) for k,v in ARCHETYPE_HABITS.items()},maturation_rates={k:dict(relationship_horizon=v[0],core_horizon=v[1]) for k,v in maturation.RATES.items()},
             features=['pairwise_learning','logged_bandit_learning','independent_evaluator','cas_promotion','rollback','lineage_revocation','core_export','subagent_snapshot','automatic_evolution','maturation','agent_reflection',
-                'temperament','individuality','session_state','habit_consolidation','life_events','relationship_accommodation','relationship_cooling','elastic_self','maturity_weighted_influence'],
+                'temperament','individuality','session_state','habit_consolidation','life_events','relationship_accommodation','relationship_cooling','elastic_self','maturity_weighted_influence','user_settings','habit_bias','cohort_prior','exploration','comparisons','explanations','timeline'],
+            preferences={k:list(v) for k,v in PREFERENCES.items()},
             session_state='ephemeral latent offset from consented in-session preferences; sampled at session end, never a version',automatic_promotion='persona_policy')
     def insert_persona(db,p,id,artifact,initialization,parent=None,archetype=None,seeds=(),evolution='manual',rate=None,agent_feedback=False,individuality=None):
         if db.execute('SELECT 1 FROM personas WHERE tenant=? AND id=?',(p.tenant,id)).fetchone():raise Fault('VERSION_CONFLICT','Persona already exists',409)
@@ -142,12 +183,12 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         chosen=[x for x in (req.archetype,req.seed_preferences,req.parent_persona_id) if x]
         if len(chosen)>1:raise Fault('INVALID_CONTEXT','Choose one of archetype, seed preferences or a snapshot parent')
         if not chosen:raise Fault('INVALID_CONTEXT','Choose a starting archetype ('+', '.join(ARCHETYPES)+'), seed preferences or a snapshot parent')
-        parent=None; archetype=req.archetype; individuality=None
+        parent=None; archetype=req.archetype; individuality=None; bias=None
         if req.parent_persona_id:
             # Subagent semantics: a new scoped identity holding an immutable copy of the
             # parent's approved core version. No mutable weights are shared.
             scope(p,'persona:admin',req.parent_persona_id); src=persona(p,req.parent_persona_id)
-            x=latent(p,req.parent_persona_id,src['active'],CORE_DIM); initialization='snapshot'; parent=f"{req.parent_persona_id}@{src['active']}"
+            x=latent(p,req.parent_persona_id,src['active'],CORE_DIM); bias=version_bias(p.tenant,req.parent_persona_id,src['active']); initialization='snapshot'; parent=f"{req.parent_persona_id}@{src['active']}"
             archetype=src['archetype']; seeds=json.loads(src['seeds'] or '[]'); individuality=json.loads(src['individuality'] or 'null')
         else:
             seeds=list(ARCHETYPES[archetype]) if archetype else req.seed_preferences
@@ -156,7 +197,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
             except ValueError as exc:raise Fault('INVALID_CONTEXT',str(exc))
             initialization='archetype' if archetype else 'seed_preferences'
         rate=req.maturation_rate.model_dump() if isinstance(req.maturation_rate,BaseModel) else req.maturation_rate or os.environ.get('OPENAPE_MATURATION_RATE')
-        h=store.put(x)
+        h=store.put(x,habit_bias=bias)
         with store.tx() as db:
             v=insert_persona(db,p,req.persona_id,h,initialization,parent,archetype,seeds,req.evolution,rate,req.agent_feedback,individuality)
             store.audit(db,p.tenant,req.persona_id,'created',{'actor':p.actor,'initialization':initialization,'archetype':archetype,'seed_preferences':req.seed_preferences,'parent':parent,
@@ -176,17 +217,20 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
             t=row['experience'] if row else 0; e=row['effective'] if row and row['effective'] is not None else t; life=json.loads(row['life'] or '{}') if row else {}
             m=maturation.maturity(e,horizon); boost=life.get('boost',1.0)
             return dict(experience=t,effective_experience=round(e,3),horizon=horizon,maturity=round(m,4),growth=round(maturation.growth(e,horizon),4),plasticity=round(dev.plasticity(m,boost),4),boost=boost)
-        growth=dict(core=level('',hz['core']))
-        if user_id:growth['relationship']=level(user_id,hz['relationship'])
+        growth=dict(core=level('',hz['core']));cohort=None
+        if user_id:
+            growth['relationship']=level(user_id,hz['relationship'])
+            has=store.one('SELECT 1 FROM relationships WHERE tenant=? AND persona=? AND user_id=?',(p.tenant,id,user_id))
+            cohort=dict(applies=not has and cohort_prior(p.tenant,id)[1]>=COHORT_MIN,minimum_contributors=COHORT_MIN)
         try:character=round(float((latent(p,id,r['active'],CORE_DIM)-temperament_latent(p.tenant,id)).norm()),4)
         except (Fault,ValueError,OSError,TypeError):character=None
         return wire(persona_id=id,active_version=r['active'],initialization=r['initialization'],archetype=r['archetype'],parent=r['parent'],evolution=r['evolution'],
             maturation_rate=maturation.public_rate(hz),agent_feedback=bool(r['agent_feedback']),growth=growth,temperament_version=temperament_version(p.tenant,id),
-            individuality=json.loads(r['individuality'] or 'null'),character_drift=character,character_radius=dev.CHARACTER_RADIUS,decoder_hash=decoder.hash,engine_status=engine_status)
+            individuality=json.loads(r['individuality'] or 'null'),cohort_prior=cohort,character_drift=character,character_radius=dev.CHARACTER_RADIUS,decoder_hash=decoder.hash,engine_status=engine_status)
     @app.get('/v1/personas/{id}/history')
     def history(id:str,p=Depends(principal)):
         scope(p,'persona:admin',id); persona(p,id)
-        return wire(versions=[dict(r) for r in store.all('SELECT id,hash,parent,scope,user_id,job,revoked FROM versions WHERE tenant=? AND persona=?',(p.tenant,id)) if r['user_id'] is None or p.allows(id,r['user_id'])],audit=[dict(r) for r in store.all('SELECT seq,action,data FROM audit WHERE tenant=? AND persona=?',(p.tenant,id))])
+        return wire(versions=[dict(r) for r in store.all('SELECT id,hash,parent,scope,user_id,job,revoked FROM versions WHERE tenant=? AND persona=? ORDER BY rowid',(p.tenant,id)) if r['user_id'] is None or p.allows(id,r['user_id'])],audit=[dict(r) for r in store.all('SELECT seq,action,data FROM audit WHERE tenant=? AND persona=? ORDER BY seq',(p.tenant,id))])
     @app.post('/v1/express',response_model=Decision)
     def express(req:Express,p=Depends(principal)):
         i=req.identity; scope(p,'persona:express',i.persona_id,i.user_id)
@@ -217,31 +261,52 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
                 db.execute('UPDATE sessions SET turns=turns+1 WHERE tenant=? AND persona=? AND user_id=? AND adapter=? AND id=?',(p.tenant,i.persona_id,user,req.host.adapter_id,req.session.id))
             # Session-position tags come from the engine's own session record, never the host.
             context=req.context.model_dump();context['tags']=[t for t in context['tags'] if t not in ENGINE_TAGS]
-            if not req.pinned_version:context['tags']+=(['first_turn'] if turns==0 else [])+(['long_session'] if turns>=LONG_SESSION else [])
+            if not req.pinned_version:
+                context['tags']+=(['first_turn'] if turns==0 else [])+(['long_session'] if turns>=LONG_SESSION else [])
+                context['tags']+=engine_tags(db,p.tenant,i.persona_id,i.user_id,req.host.adapter_id,req.session.id,turns)
             context['tags']=[t for t in VOCAB['tags'] if t in context['tags']]
             host=req.host.model_dump()
-            status=engine_status; diagnostics=None; session_state=None; habits=[]
+            settings=user_settings(db,p.tenant,i.persona_id,i.user_id);notes=[]
+            status=engine_status; diagnostics=None; session_state=None; habits=[]; habit_offset=torch.zeros(len(HABIT_IDS)); explored=False; session_delta=None
+            # Opt-in exploration: low-stakes user turns are logged as an epsilon-mixture policy, so
+            # ratings and comparisons on them carry a true propensity.
+            explore=(settings.get('exploration') and req.selection=='argmax' and req.mode=='active' and not req.pinned_version and context['turn_origin']=='user'
+                and context['stakes']=='low' and not {'urgent','sensitive'}&set(context['tags']))
+            draw=int.from_bytes(hashlib.sha256(f'{p.tenant}:{i.persona_id}:{user}:{req.session.id}:{req.request_id}'.encode()).digest()[:8],'big')
             try:
-                core=latent(p,i.persona_id,cv,CORE_DIM); relationship=latent(p,i.persona_id,rv,REL_DIM) if rv else torch.zeros(REL_DIM)
+                core=latent(p,i.persona_id,cv,CORE_DIM); relationship=latent(p,i.persona_id,rv,REL_DIM) if rv else relationship_start(p.tenant,i.persona_id,i.user_id)
                 if req.mode!='frozen' and not req.pinned_version:
                     # Ephemeral session state: an offset from this session's consented preferences.
-                    st=db.execute('SELECT delta FROM states WHERE tenant=? AND persona=? AND user_id=? AND adapter=? AND session=?',(p.tenant,i.persona_id,user,req.host.adapter_id,req.session.id)).fetchone()
+                    st=db.execute('SELECT delta,habits FROM states WHERE tenant=? AND persona=? AND user_id=? AND adapter=? AND session=?',(p.tenant,i.persona_id,user,req.host.adapter_id,req.session.id)).fetchone()
                     if st:
-                        offset=torch.tensor(json.loads(st['delta']));session_state=round(float(offset.norm()),4)
+                        offset=torch.tensor(json.loads(st['delta']));session_state=round(float(offset.norm()),4);session_delta=json.loads(st['delta'])
                         if user:relationship=relationship+offset
                         else:core=core+offset
+                        if st['habits']:habit_offset=torch.tensor(json.loads(st['habits']))
                 with torch.no_grad():
-                    traits,habit_logits=decoder.heads(core,relationship,context,host); logits=joint(traits); probs=torch.softmax(logits,0)
-                    action=int(torch.multinomial(probs,1,generator=torch.Generator().manual_seed(req.seed)).item()) if req.selection=='sample' else int(logits.argmax())
+                    traits,habit_logits=decoder.heads(core,relationship,context,host)
+                    # Learned habit preferences live beside the latent (engine.learning.habits).
+                    habit_logits=habit_logits+version_bias(p.tenant,i.persona_id,cv)+version_bias(p.tenant,i.persona_id,rv)+habit_offset
+                    traits,habit_logits,notes=apply_user_settings(traits,habit_logits,settings); logits=joint(traits); probs=torch.softmax(logits,0)
+                    best=int(logits.argmax())
+                    if req.selection=='sample':action=int(torch.multinomial(probs,1,generator=torch.Generator().manual_seed(req.seed)).item())
+                    elif explore and (draw>>11)/2**53<EXPLORE_RATE:action=int(torch.multinomial(probs,1,generator=torch.Generator().manual_seed(draw&0x7fffffff)).item())
+                    else:action=best
+                    explored=bool(explore) and action!=best
                     habits=select_habits(habit_logits,action,context)
                     if req.debug:diagnostics=decoder.diagnostics(core,relationship,context,host)
             except (ValueError,OSError,RuntimeError,KeyError,Fault):
                 # Corrupt/missing artifacts fail closed to the approved neutral configuration.
                 action=NEUTRAL_ACTION;probs=torch.zeros(ACTIONS);probs[action]=1;status='baseline_fallback';habits=[]
             propensity=float(probs[action]) if req.selection=='sample' and status!='baseline_fallback' else None
-            response=Decision(request_id=req.request_id,decision_id=uid(),persona_version=cv,relationship_version=rv,decoder_hash=decoder.hash,catalogue_hash=CATALOGUE_HASH,controls=Controls(**levels_of(action)),habits=habits,mode=req.mode,policy=Policy(eligible=True,mask_reason=mask_reason(context)),engine_status=status,
+            if explore and status!='baseline_fallback':propensity=EXPLORE_RATE*float(probs[action])+(1-EXPLORE_RATE)*(action==best)
+            if status=='baseline_fallback':explored=False
+            response=Decision(request_id=req.request_id,decision_id=uid(),persona_version=cv,relationship_version=rv,decoder_hash=decoder.hash,catalogue_hash=CATALOGUE_HASH,controls=Controls(**levels_of(action)),habits=habits,preferences={k:v for k,v in settings.get('preferences',{}).items() if v},exploration=explored,mode=req.mode,
+                policy=Policy(eligible=True,mask_reason=','.join(x for x in [mask_reason(context)]+notes if x) or None),engine_status=status,
                 propensity=propensity if req.debug else None,diagnostics=diagnostics).model_dump()
-            data=dict(response=response,context=context,host=host,session=req.session.model_dump(),fingerprint=fingerprint,action=action,habits=habits,selection=req.selection,propensity=propensity,session_state=session_state)
+            data=dict(response=response,context=context,host=host,session=req.session.model_dump(),fingerprint=fingerprint,action=action,habits=habits,selection='sample' if propensity is not None else 'argmax',propensity=propensity,session_state=session_state,
+                session_delta=session_delta,session_habits=[round(v,4) for v in habit_offset.tolist()] if bool(habit_offset.any()) else None,
+                settings=settings or None)
             db.execute('INSERT INTO requests VALUES(?,?,?,?,?,?)',(p.tenant,i.persona_id,p.actor,req.request_id,response['decision_id'],fingerprint))
             db.execute('INSERT INTO decisions VALUES(?,?,?,?,?,?)',(p.tenant,response['decision_id'],i.persona_id,i.user_id,p.actor,json.dumps(data)))
         return response
@@ -279,6 +344,75 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         learning=req.learning_consent and req.consent_scope not in ('record_only','session')
         if learning and not old:maybe_learn(p.tenant,d['persona'],req.consent_scope,d['user_id'] if req.consent_scope=='relationship' else None)
         return wire(feedback_id=req.feedback_id,deduplicated=bool(old),learning_recorded=learning,session_adapted=adapted)
+    @app.post('/v1/comparisons')
+    def compare(req:Comparison,p=Depends(principal)):
+        """Two styles for one served decision, in a blind order: the one served and the
+        persona's best different trait configuration in the same context and settings. The
+        user's answer is ordinary pairwise feedback (preferred = the chosen option)."""
+        scope(p,'feedback:write')
+        d=store.one('SELECT * FROM decisions WHERE tenant=? AND id=?',(p.tenant,req.decision_id))
+        if not d:raise Fault('INVALID_CONTEXT','Unknown decision')
+        scope(p,'feedback:write',d['persona'],d['user_id'])
+        if d['actor']!=p.actor and 'training:admin' not in p.scopes:raise Fault('FORBIDDEN_SCOPE','Decision actor mismatch',403)
+        data=json.loads(d['data']);resp=data['response']
+        if resp['mode']=='frozen' or resp['engine_status']=='baseline_fallback' or resp['decoder_hash']!=decoder.hash:raise Fault('INVALID_CONTEXT','Decision cannot be compared')
+        core=latent(p,d['persona'],resp['persona_version'],CORE_DIM)
+        rv=resp.get('relationship_version');rel=latent(p,d['persona'],rv,REL_DIM) if rv else relationship_start(p.tenant,d['persona'],d['user_id'])
+        with torch.no_grad():
+            traits,habit_logits=decoder.heads(core,rel,data['context'],data['host'])
+            habit_logits=habit_logits+version_bias(p.tenant,d['persona'],resp['persona_version'])+version_bias(p.tenant,d['persona'],rv)
+            traits,habit_logits,_=apply_user_settings(traits,habit_logits,data.get('settings') or {});logits=joint(traits)
+            logits[data['action']]=float('-inf');other=int(logits.argmax())
+        if not torch.isfinite(logits[other]):raise Fault('INVALID_CONTEXT','No other approved style fits this context')
+        served={'controls':resp['controls'],'habits':resp['habits']};alternative={'controls':levels_of(other),'habits':select_habits(habit_logits,other,data['context'])}
+        flip=hashlib.sha256(req.decision_id.encode()).digest()[0]&1
+        return wire(decision_id=req.decision_id,options=[alternative,served] if flip else [served,alternative],
+            question='Which style did you prefer?',answer='POST /v1/feedback kind=pairwise_preference, preferred=the chosen option, rejected=the other')
+    @app.get('/v1/decisions/{decision_id}/explanation')
+    def explain_decision(decision_id:str,p=Depends(principal)):
+        """Why this style: which layer (temperament, character, relationship, session)
+        shaped each trait and habit of one served decision, and what limited it."""
+        scope(p,'persona:express')
+        d=store.one('SELECT * FROM decisions WHERE tenant=? AND id=?',(p.tenant,decision_id))
+        if not d:raise Fault('INVALID_CONTEXT','Unknown decision',404)
+        scope(p,'persona:express',d['persona'],d['user_id'])
+        if d['actor']!=p.actor and 'training:admin' not in p.scopes:raise Fault('FORBIDDEN_SCOPE','Decision actor mismatch',403)
+        data=json.loads(d['data']);resp=data['response']
+        if resp['engine_status']=='baseline_fallback' or resp['decoder_hash']!=decoder.hash:raise Fault('INVALID_CONTEXT','Decision was not made by this decoder')
+        persona_id=d['persona'];rv=resp.get('relationship_version')
+        core=latent(p,persona_id,resp['persona_version'],CORE_DIM);rel=latent(p,persona_id,rv,REL_DIM) if rv else relationship_start(p.tenant,persona_id,d['user_id'])
+        layers=[('temperament',temperament_latent(p.tenant,persona_id),torch.zeros(REL_DIM)),('character',core,torch.zeros(REL_DIM))]
+        if d['user_id']:layers.append(('relationship',core,rel))
+        if data.get('session_delta'):
+            delta=torch.tensor(data['session_delta']);layers.append(('session',core,rel+delta) if d['user_id'] else ('session',core+delta,rel))
+        biases={'character':version_bias(p.tenant,persona_id,resp['persona_version']),'relationship':version_bias(p.tenant,persona_id,rv),
+            'session':torch.tensor(data['session_habits']) if data.get('session_habits') else None}
+        return wire(**explanation.explain(decoder,data,layers,biases,data.get('settings') or {}))
+    @app.get('/v1/personas/{id}/timeline')
+    def timeline(id:str,user_id:str|None=None,limit:int=200,p=Depends(principal)):
+        """Each version of the persona (and of this user's relationship) in order, with the
+        decoder's expected trait levels and habit probabilities in a fixed reference context."""
+        scope(p,'persona:express',id,user_id);r=persona(p,id)
+        every=store.all('SELECT * FROM versions WHERE tenant=? AND persona=? ORDER BY rowid',(p.tenant,id));hashes={v['id']:v['hash'] for v in every}
+        rows=[v for v in every if v['scope']=='core' or (user_id and v['user_id']==user_id)][-max(1,min(limit,500)):]
+        kinds={}
+        for row in store.all('SELECT id,data FROM jobs WHERE tenant=? AND persona=?',(p.tenant,id)):
+            job=json.loads(row['data']);kinds[row['id']]=job.get('kind') or ('feedback' if job.get('evidence_ids') is not None else None)
+        rel_row=store.one('SELECT active FROM relationships WHERE tenant=? AND persona=? AND user_id=?',(p.tenant,id,user_id)) if user_id else None
+        out=[];core_v=rel_v=None
+        for v in rows:
+            # A relationship version is shown with the core version it was built on.
+            if v['scope']=='core':core_v=v['id']
+            else:rel_v=v['id'];core_v=v['core_base'] or core_v
+            if core_v is None:continue
+            try:
+                core=store.get(hashes[core_v],CORE_DIM);rel=store.get(hashes[rel_v],REL_DIM) if rel_v else torch.zeros(REL_DIM)
+                bias=version_bias(p.tenant,id,core_v)+version_bias(p.tenant,id,rel_v)
+            except (ValueError,OSError,KeyError,RuntimeError):continue
+            out.append(dict(version=v['id'],scope=v['scope'],kind='created' if not v['job'] else kinds.get(v['job']) or 'operator',revoked=bool(v['revoked']),
+                active=v['id'] in (r['active'],rel_row['active'] if rel_row else None),**explanation.profile(decoder,core,rel,bias)))
+        counts=Counter(a['action'] for a in store.all('SELECT action FROM audit WHERE tenant=? AND persona=?',(p.tenant,id)))
+        return wire(persona_id=id,user_id=user_id,reference_context=explanation.REFERENCE_CONTEXT,versions=out,events=dict(counts),decoder_hash=decoder.hash,engine_status=engine_status)
     def invalidate(db,p,persona_id,feedback_id):
         """Lineage-based revocation: only candidates and versions derived from the
         revoked evidence (and their descendants) are invalidated."""
@@ -375,6 +509,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
             ids=sorted(e['feedback_id'] for e in examples)
             if ids==json.loads(state_row['feedback']):sample=(state_row['delta'],state_row['feedback'])
             elif examples:sample=(json.dumps([round(v,6) for v in dev.fit_state(decoder,*pinned_latents(db,tenant,persona_id,pin),'relationship' if user_id else 'core',examples).tolist()]),json.dumps(ids))
+            if sample and not any(json.loads(sample[0])):sample=None  # habit-only sessions leave no trait sample
         r=db.execute('SELECT evolution,maturation FROM personas WHERE tenant=? AND id=?',(tenant,persona_id)).fetchone(); hz=json.loads(r['maturation'] or 'null') or maturation.horizons(None); due=set()
         now=datetime.now(timezone.utc)
         for user,scope_name in (('','core'),)+(((user_id,'relationship'),) if user_id else ()):
@@ -387,6 +522,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
             if sample and (scope_name=='relationship')==bool(user_id):
                 db.execute('INSERT INTO samples(tenant,persona,user_id,session,delta,feedback) VALUES(?,?,?,?,?,?)',(tenant,persona_id,user,short_id(adapter+':'+session),*sample))
             for event in events:store.audit(db,tenant,persona_id,'life_event',{'scope':scope_name,'event':event,'boost':life['boost'],'experience':st['experience']+1})
+            if scope_name=='relationship' and user_settings(db,tenant,persona_id,user_id).get('frozen'):continue
             if r['evolution']=='automatic' and decoder.model and sleep_due(tenant,persona_id,user,scope_name,hz[scope_name]):due.add((persona_id,scope_name,user or None))
         return due
     def session_examples(tenant,persona_id,user_id,adapter,session,scopes):
@@ -406,17 +542,71 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         return out[::-1]
     def pinned_latents(db,tenant,persona_id,pin):
         def load(v,dim):return store.get(db.execute('SELECT hash FROM versions WHERE tenant=? AND persona=? AND id=?',(tenant,persona_id,v)).fetchone()['hash'],dim)
-        return load(pin['version'],CORE_DIM),(load(pin['rel_version'],REL_DIM) if pin['rel_version'] else torch.zeros(REL_DIM))
+        return load(pin['version'],CORE_DIM),(load(pin['rel_version'],REL_DIM) if pin['rel_version'] else relationship_start(tenant,persona_id,pin['user_id']))
+    def engine_tags(db,tenant,persona_id,user_id,adapter,session,turns):
+        """`returning`: the first turn after RETURNING_DAYS or more without an ended session
+        for this user (or the persona). `corrected`: people corrected the style earlier in
+        this session (consented preferences or reflections on its decisions)."""
+        tags=[]
+        if turns==0:
+            row=db.execute('SELECT life FROM maturation WHERE tenant=? AND persona=? AND user_id=?',(tenant,persona_id,user_id or '')).fetchone()
+            last=json.loads(row['life'] or '{}').get('last_seen') if row else None
+            if last and (datetime.now(timezone.utc)-datetime.fromisoformat(last)).total_seconds()>=RETURNING_DAYS*86400:tags.append('returning')
+        elif db.execute("""SELECT 1 FROM feedback f JOIN decisions d ON d.tenant=f.tenant AND d.id=json_extract(f.data,'$.decision_id')
+                WHERE f.tenant=? AND f.persona=? AND f.valid=1 AND json_extract(f.data,'$.kind')!='rating' AND json_extract(d.data,'$.session.id')=? AND json_extract(d.data,'$.host.adapter_id')=? LIMIT 1""",
+                (tenant,persona_id,session,adapter)).fetchone():tags.append('corrected')
+        return tags
+    def user_settings(db,tenant,persona_id,user_id):
+        """The linked user's settings for this persona ({} when none or no linked user)."""
+        if not user_id:return {}
+        row=db.execute('SELECT data FROM user_settings WHERE tenant=? AND persona=? AND user_id=?',(tenant,persona_id,user_id)).fetchone()
+        return json.loads(row['data']) if row else {}
+    def frozen(tenant,persona_id,user_id):
+        return bool(user_id) and bool(store_settings(tenant,persona_id,user_id).get('frozen'))
+    def store_settings(tenant,persona_id,user_id):
+        with store.lock:return user_settings(store.db,tenant,persona_id,user_id)
+    @app.get('/v1/personas/{id}/users/{user_id}/settings')
+    def get_settings(id:str,user_id:str,p=Depends(principal)):
+        scope(p,'persona:express',id,user_id);persona(p,id)
+        return wire(persona_id=id,user_id=user_id,**(Settings(protocol_version=PROTOCOL,**store_settings(p.tenant,id,user_id)).model_dump(exclude={'protocol_version'})))
+    @app.put('/v1/personas/{id}/users/{user_id}/settings')
+    def put_settings(id:str,user_id:str,req:Settings,p=Depends(principal)):
+        """Replace the linked user's settings. Only a credential allowed to act for this
+        user (scope settings:write) may change them; they apply from the next turn."""
+        scope(p,'settings:write',id,user_id);persona(p,id)
+        data=req.model_dump(exclude={'protocol_version'});data['pins']={t:v for t,v in data['pins'].items()}
+        if not pins_satisfiable(data['pins']):raise Fault('INVALID_CONTEXT','No approved style fits these pins')
+        if len(set(data['vetoes']))!=len(data['vetoes']):raise Fault('INVALID_CONTEXT','Duplicate habit veto')
+        now=datetime.now(timezone.utc).isoformat()
+        with store.tx() as db:
+            old=user_settings(db,p.tenant,id,user_id)
+            db.execute('INSERT OR REPLACE INTO user_settings VALUES(?,?,?,?,?)',(p.tenant,id,user_id,json.dumps(data),now))
+            if old.get('frozen') and not data['frozen']:
+                # Unfreezing re-anchors the relationship's maturation curve so it never jumps.
+                row=db.execute('SELECT maturation FROM personas WHERE tenant=? AND id=?',(p.tenant,id)).fetchone();hz=json.loads(row['maturation'] or 'null') or maturation.horizons(None)
+                m=db.execute('SELECT experience,effective FROM maturation WHERE tenant=? AND persona=? AND user_id=?',(p.tenant,id,user_id)).fetchone()
+                if m:
+                    e=m['effective'] if m['effective'] is not None else m['experience']
+                    db.execute('UPDATE maturation SET last_m=?,last_e=? WHERE tenant=? AND persona=? AND user_id=?',(maturation.growth(e,hz['relationship']),e,p.tenant,id,user_id))
+            if data['frozen']:db.execute('DELETE FROM states WHERE tenant=? AND persona=? AND user_id=?',(p.tenant,id,user_id))
+            store.audit(db,p.tenant,id,'user_settings_changed',{'actor':p.actor,'user_id':user_id,'frozen':data['frozen'],'pins':sorted(data['pins']),'vetoes':data['vetoes'],
+                'preferences':sorted(k for k,v in data['preferences'].items() if v),'cohort_contribution':data['cohort_contribution'],'exploration':data['exploration']})
+        return wire(persona_id=id,user_id=user_id,updated_at=now,**data)
     def adapt_session(db,tenant,persona_id,user_id,adapter,session):
         """Refit an open session's state from its consented in-session preferences. The
         state is applied at express and sampled at session end; it is never a version."""
         key=(tenant,persona_id,user_id or '',adapter,session)
+        if user_settings(db,tenant,persona_id,user_id).get('frozen'):
+            db.execute('DELETE FROM states WHERE tenant=? AND persona=? AND user_id=? AND adapter=? AND session=?',key);return False
         pin=db.execute('SELECT * FROM sessions WHERE tenant=? AND persona=? AND user_id=? AND adapter=? AND id=?',key).fetchone()
         examples=session_examples(tenant,persona_id,user_id,adapter,session,('session','relationship','core')) if pin and decoder.model and pin['decoder']==decoder.hash else []
         delta=dev.fit_state(decoder,*pinned_latents(db,tenant,persona_id,pin),'relationship' if user_id else 'core',examples) if examples else None
-        if delta is None or float(delta.norm())==0:
+        # Habit preferences in the session move a habit offset, not the latent.
+        bias=habit_learning.session_offset(examples)
+        if (delta is None or float(delta.norm())==0) and not bool(bias.any()):
             db.execute('DELETE FROM states WHERE tenant=? AND persona=? AND user_id=? AND adapter=? AND session=?',key);return False
-        db.execute('INSERT OR REPLACE INTO states VALUES(?,?,?,?,?,?,?,?)',(*key,json.dumps([round(v,6) for v in delta.tolist()]),json.dumps(sorted(e['feedback_id'] for e in examples)),len(examples)))
+        db.execute('INSERT OR REPLACE INTO states(tenant,persona,user_id,adapter,session,delta,feedback,updates,habits) VALUES(?,?,?,?,?,?,?,?,?)',(*key,json.dumps([round(v,6) for v in delta.tolist()]),
+            json.dumps(sorted(e['feedback_id'] for e in examples)),len(examples),json.dumps([round(v,4) for v in bias.tolist()]) if bool(bias.any()) else None))
         return True
     def maturity_of(tenant,persona_id,user_id=None):
         r=store.one('SELECT maturation FROM personas WHERE tenant=? AND id=?',(tenant,persona_id));hz=json.loads(r['maturation'] or 'null') if r else None
@@ -432,7 +622,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         if scope_name=='core':v=store.one('SELECT active FROM personas WHERE tenant=? AND id=?',(tenant,persona_id))['active']
         else:
             rr=store.one('SELECT active FROM relationships WHERE tenant=? AND persona=? AND user_id=?',(tenant,persona_id,user))
-            if not rr:return torch.zeros(REL_DIM)
+            if not rr:return relationship_start(tenant,persona_id,user)
             v=rr['active']
         return store.get(store.one('SELECT hash FROM versions WHERE tenant=? AND persona=? AND id=?',(tenant,persona_id,v))['hash'],CORE_DIM if scope_name=='core' else REL_DIM)
     def profile_of(r):
@@ -481,19 +671,22 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         r=store.one('SELECT * FROM personas WHERE tenant=? AND id=?',(tenant,persona_id))
         rr=store.one('SELECT active FROM relationships WHERE tenant=? AND persona=? AND user_id=?',(tenant,persona_id,user_id)) if user_id else None
         rv=rr['active'] if rr else None; p=system_principal(tenant,persona_id,AUTO_ACTOR)
-        return r,rv,latent(p,persona_id,r['active'],CORE_DIM),latent(p,persona_id,rv,REL_DIM) if rv else torch.zeros(REL_DIM)
+        return r,rv,latent(p,persona_id,r['active'],CORE_DIM),latent(p,persona_id,rv,REL_DIM) if rv else relationship_start(tenant,persona_id,user_id)
     def run_job(p,jid,scope_name,user_id,seed,base,relbase,core,rel,examples,auto=False):
         train,valid=group_split(examples)
         x,fit=fit_candidate(decoder,core,rel,train,scope_name,seed,policy_for(scope_name,auto).maximum_drift)
+        owner=store.one('SELECT persona FROM jobs WHERE tenant=? AND id=?',(p.tenant,jid))
+        if owner is None:return
         if auto and scope_name=='core':
             # Automatic character change stays near temperament (non-expansive, so drift never grows).
-            temp=temperament_latent(p.tenant,store.one('SELECT persona FROM jobs WHERE tenant=? AND id=?',(p.tenant,jid))['persona'])
+            temp=temperament_latent(p.tenant,owner['persona'])
             x=dev.within(x,temp,max(dev.CHARACTER_RADIUS,float((core-temp).norm())))
-        report=evaluate_candidate(decoder,core,rel,x,scope_name,train,valid,auto)
+        report=evaluator.candidate(core,rel,x,scope_name,train,valid,auto)
         ids=[e['feedback_id'] for e in examples]
-        h=store.put(x)
+        # Trait candidates carry the base version's habit bias; habit jobs change it.
+        h=store.put(x,habit_bias=version_bias(p.tenant,owner['persona'],base if scope_name=='core' else relbase))
         data=dict(scope=scope_name,user_id=user_id,base_version=base,base_relationship_version=relbase,artifact=h,fit=fit,report=report,eligible=report['eligible'],evidence_ids=ids,seed=seed,decoder_hash=decoder.hash)
-        if auto:data.update(auto=True,kind='feedback',examples_seen=len(examples))
+        if auto:data.update(auto=True,kind='feedback',examples_seen=trait_evidence(examples))
         with store.tx() as db:
             job_row=db.execute('SELECT persona FROM jobs WHERE tenant=? AND id=?',(p.tenant,jid)).fetchone()
             if not job_row or not db.execute('SELECT 1 FROM personas WHERE tenant=? AND id=?',(p.tenant,job_row['persona'])).fetchone():store.gc();return
@@ -512,11 +705,15 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
     def submit_auto(tenant,persona_id,kind,scope_name,user_id,work):
         """Queue one engine-initiated job; at most one per (persona, kind, scope, user)."""
         with store.tx() as db:
-            for row in db.execute("SELECT data FROM jobs WHERE tenant=? AND persona=? AND status='queued'",(tenant,persona_id)):
+            now=time.time()
+            for row in db.execute("SELECT id,data FROM jobs WHERE tenant=? AND persona=? AND status='queued'",(tenant,persona_id)).fetchall():
                 d=json.loads(row['data'])
-                if d.get('auto') and d.get('kind')==kind and d['scope']==scope_name and d.get('user_id')==user_id:return None
+                if not (d.get('auto') and d.get('kind')==kind and d['scope']==scope_name and d.get('user_id')==user_id):continue
+                # With several replicas a job is lost if its replica stops; it must not block this kind forever.
+                if now-d.get('queued_at',now)>JOB_STALE_SECONDS:db.execute('UPDATE jobs SET status=? WHERE tenant=? AND id=?',('abandoned',tenant,row['id']));continue
+                return None
             if not pending.acquire(blocking=False):return None
-            jid=uid();db.execute('INSERT INTO jobs VALUES(?,?,?,?,?)',(tenant,jid,persona_id,'queued',json.dumps({'scope':scope_name,'user_id':user_id,'auto':True,'kind':kind})))
+            jid=uid();db.execute('INSERT INTO jobs VALUES(?,?,?,?,?)',(tenant,jid,persona_id,'queued',json.dumps({'scope':scope_name,'user_id':user_id,'auto':True,'kind':kind,'queued_at':now})))
         def guarded():
             try:work(tenant,persona_id,scope_name,user_id,jid)
             except Exception as exc:
@@ -531,19 +728,49 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         """Automatic evolution from consented feedback: retry once enough new evidence exists."""
         r=store.one('SELECT evolution FROM personas WHERE tenant=? AND id=?',(tenant,persona_id))
         if not r or r['evolution']!='automatic' or decoder.model is None:return
-        count=len(collect_examples(tenant,persona_id,scope_name,user_id,auto=True)); last=0
+        if scope_name=='relationship' and frozen(tenant,persona_id,user_id):return
+        examples=collect_examples(tenant,persona_id,scope_name,user_id,auto=True); last=0
+        # Habit-only preferences never count towards a trait fit; they drive the habit job.
+        count=trait_evidence(examples)
         for row in store.all('SELECT data FROM jobs WHERE tenant=? AND persona=? ORDER BY rowid DESC',(tenant,persona_id)):
             d=json.loads(row['data'])
             if d.get('kind')=='feedback' and d.get('scope')==scope_name and d.get('user_id')==user_id:last=d.get('examples_seen') or 0;break
         if count-last>=AUTO_EVIDENCE_STEP[scope_name]:submit_auto(tenant,persona_id,'feedback',scope_name,user_id,learn)
+        if habit_learning.gate(active_bias(tenant,persona_id,scope_name,user_id),habit_learning.bias_from(examples)[0])['eligible']:
+            submit_auto(tenant,persona_id,'habit',scope_name,user_id,learn_habits)
+    def trait_evidence(examples):
+        return sum(1 for e in examples if e['kind']=='rating' or trait_pair(e) is not None)
+    def active_bias(tenant,persona_id,scope_name,user_id):
+        if scope_name=='core':return version_bias(tenant,persona_id,store.one('SELECT active FROM personas WHERE tenant=? AND id=?',(tenant,persona_id))['active'])
+        rr=store.one('SELECT active FROM relationships WHERE tenant=? AND persona=? AND user_id=?',(tenant,persona_id,user_id))
+        return version_bias(tenant,persona_id,rr['active'] if rr else None)
+    def learn_habits(tenant,persona_id,scope_name,user_id,jid):
+        """Promote the habit bias the scope's valid habit evidence supports, keeping the
+        latent unchanged (engine.learning.habits)."""
+        r,rv,core,rel=state(tenant,persona_id,user_id)
+        if r is None or r['evolution']!='automatic':return skip(tenant,jid,'evolution not automatic')
+        if scope_name=='relationship' and frozen(tenant,persona_id,user_id):return skip(tenant,jid,'relationship frozen by the user')
+        examples=collect_examples(tenant,persona_id,scope_name,user_id,auto=True)
+        old=version_bias(tenant,persona_id,r['active'] if scope_name=='core' else rv);new,ids=habit_learning.bias_from(examples);report=habit_learning.gate(old,new)
+        h=store.put(core if scope_name=='core' else rel,habit_bias=new)
+        data=dict(scope=scope_name,user_id=user_id,auto=True,kind='habit',base_version=r['active'],base_relationship_version=rv,artifact=h,report=report,eligible=report['eligible'],evidence_ids=ids,decoder_hash=decoder.hash)
+        with store.tx() as db:
+            if not db.execute('SELECT 1 FROM personas WHERE tenant=? AND id=?',(tenant,persona_id)).fetchone():store.gc();return
+            valid_ids={row['id'] for row in db.execute('SELECT id FROM feedback WHERE tenant=? AND persona=? AND valid=1',(tenant,persona_id))}
+            if not set(ids)<=valid_ids:data.update(eligible=False,invalidated_by='concurrent_revocation')
+            db.execute('UPDATE jobs SET status=?,data=? WHERE tenant=? AND id=?',('evaluated',json.dumps(data),tenant,jid))
+            store.audit(db,tenant,persona_id,'habits_learned',{'job':jid,'scope':scope_name,'eligible':data['eligible'],'checks':report['checks'],'moved':report['moved'],'evidence':len(ids)})
+            if data['eligible']:promote_automatically(db,system_principal(tenant,persona_id,AUTO_ACTOR),persona_id,jid,r['active'])
+        maybe_learn(tenant,persona_id,scope_name,user_id)  # a lost compare-and-swap or newer evidence
     def learn(tenant,persona_id,scope_name,user_id,jid):
         r,rv,core,rel=state(tenant,persona_id,user_id)
         if r is None or r['evolution']!='automatic':return skip(tenant,jid,'evolution not automatic')
+        if scope_name=='relationship' and frozen(tenant,persona_id,user_id):return skip(tenant,jid,'relationship frozen by the user')
         examples=collect_examples(tenant,persona_id,scope_name,user_id,auto=True)
         try:run_job(system_principal(tenant,persona_id,AUTO_ACTOR),jid,scope_name,user_id,42,r['active'],rv,core,rel,examples,auto=True)
         except Exception as exc:
             # Too little or unusable evidence is normal early on; wait for more.
-            with store.tx() as db:db.execute('UPDATE jobs SET status=?,data=? WHERE tenant=? AND id=?',('failed',json.dumps({'eligible':False,'auto':True,'kind':'feedback','scope':scope_name,'user_id':user_id,'examples_seen':len(examples),'reason':str(exc)[:300]}),tenant,jid))
+            with store.tx() as db:db.execute('UPDATE jobs SET status=?,data=? WHERE tenant=? AND id=?',('failed',json.dumps({'eligible':False,'auto':True,'kind':'feedback','scope':scope_name,'user_id':user_id,'examples_seen':trait_evidence(examples),'reason':str(exc)[:300]}),tenant,jid))
         maybe_learn(tenant,persona_id,scope_name,user_id)  # evidence that arrived while this job ran
     def mature(tenant,persona_id,scope_name,user_id,jid):
         """One sleep-like consolidation pass (engine.learning.maturation, .development):
@@ -551,6 +778,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         pull of the self anchor, composed into one evaluated version."""
         r,rv,core,rel=state(tenant,persona_id,user_id)
         if r is None or r['evolution']!='automatic':return skip(tenant,jid,'evolution not automatic')
+        if scope_name=='relationship' and frozen(tenant,persona_id,user_id):return skip(tenant,jid,'relationship frozen by the user')
         hz=json.loads(r['maturation'] or 'null') or maturation.horizons(None);horizon=hz[scope_name];key=user_id or ''
         st=store.one('SELECT * FROM maturation WHERE tenant=? AND persona=? AND user_id=?',(tenant,persona_id,key))
         life=json.loads(st['life'] or '{}');e=st['effective'] or 0;m=maturation.maturity(e,horizon)
@@ -593,13 +821,13 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
             if temp is not None:v=dev.within(v,temp,max(dev.CHARACTER_RADIUS,float((current-temp).norm())))
             return v*min(1.0,state_norm_limit(decoder,scope_name)/(float(v.norm())+1e-8))
         feedback=collect_examples(tenant,persona_id,scope_name,user_id)
-        candidate=bound(x+pull);report=evaluate_maturation(decoder,core,rel,candidate,scope_name,budget+float(pull.norm()),feedback)
+        candidate=bound(x+pull);report=evaluator.maturation(core,rel,candidate,scope_name,budget+float(pull.norm()),feedback)
         if float(pull.norm())>=1e-6:
             parts['elastic']=round(float(pull.norm()),4)
             if not report['checks']['feedback_preserved']:
-                candidate=bound(x);report=evaluate_maturation(decoder,core,rel,candidate,scope_name,budget,feedback);parts['elastic']='withheld: feedback wins'
+                candidate=bound(x);report=evaluator.maturation(core,rel,candidate,scope_name,budget,feedback);parts['elastic']='withheld: feedback wins'
         eligible=report['eligible'] and float((candidate-current).norm())>=1e-6
-        h_artifact=store.put(candidate);p=system_principal(tenant,persona_id,MATURATION_ACTOR)
+        h_artifact=store.put(candidate,habit_bias=version_bias(tenant,persona_id,r['active'] if scope_name=='core' else rv));p=system_principal(tenant,persona_id,MATURATION_ACTOR)
         data=dict(scope=scope_name,user_id=user_id,auto=True,kind='maturation',base_version=r['active'],base_relationship_version=rv,artifact=h_artifact,report=report,eligible=eligible,evidence_ids=evidence,
             experience=at,horizon=horizon,maturity=maturation.maturity(at,horizon),growth=g,previous_maturity=min(1.0,st['last_m']),components=parts,decoder_hash=decoder.hash)
         more=step is not None and maturation.due(e,horizon,g,at) is not None
@@ -625,10 +853,11 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
     def consolidate(req:Consolidate,p=Depends(principal)):
         scope(p,'training:admin',req.persona_id,req.user_id); r=persona(p,req.persona_id)
         if req.scope=='relationship' and not req.user_id:raise Fault('INVALID_CONTEXT','Linked user required')
+        if req.scope=='relationship' and frozen(p.tenant,req.persona_id,req.user_id):raise Fault('RELATIONSHIP_FROZEN','The user froze this relationship',409)
         examples=collect_examples(p.tenant,req.persona_id,req.scope,req.user_id)
         rr=store.one('SELECT active FROM relationships WHERE tenant=? AND persona=? AND user_id=?',(p.tenant,req.persona_id,req.user_id))
         rv=rr['active'] if rr else None
-        core=latent(p,req.persona_id,r['active'],CORE_DIM); rel=latent(p,req.persona_id,rv,REL_DIM) if rv else torch.zeros(REL_DIM)
+        core=latent(p,req.persona_id,r['active'],CORE_DIM); rel=latent(p,req.persona_id,rv,REL_DIM) if rv else relationship_start(p.tenant,req.persona_id,req.user_id)
         if not pending.acquire(blocking=False):raise Fault('RATE_LIMITED','Training queue full',429,True)
         jid=uid()
         with store.tx() as db:db.execute('INSERT INTO jobs VALUES(?,?,?,?,?)',(p.tenant,jid,req.persona_id,'queued',json.dumps({'scope':req.scope,'user_id':req.user_id})))
@@ -707,7 +936,10 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         if data['response']['mode']=='frozen' or data['response']['engine_status']=='baseline_fallback' or data['response']['decoder_hash']!=decoder.hash:raise Fault('INVALID_CONTEXT','Decision cannot be learned from')
         scope_name=req.scope or ('relationship' if d['user_id'] else 'core')
         if scope_name=='relationship' and not d['user_id']:raise Fault('INVALID_CONTEXT','Relationship reflection requires linked user')
+        if scope_name=='relationship' and frozen(p.tenant,d['persona'],d['user_id']):raise Fault('RELATIONSHIP_FROZEN','The user froze this relationship',409)
         if scope_name=='core' and d['user_id'] and 'training:admin' not in p.scopes:raise Fault('FORBIDDEN_SCOPE','Core reflections on a linked user\'s turn require training administrator',403)
+        if any(req.habits.get(h)=='less_often' for h in PEOPLE_ONLY_LESS):
+            raise Fault('FORBIDDEN_SCOPE','Only people can ask the persona to flag risks or uncertainty less often',403)
         served=(data['action'],tuple(data['habits']))
         moved=adjusted_choice(served,req.adjustments,data['context'],req.habits)
         if moved is None:raise Fault('INVALID_CONTEXT','No approved style moves that way in this context')
@@ -747,20 +979,24 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         scope(p,'persona:admin',id);r=persona(p,id)
         if req.include_relationships:raise Fault('FORBIDDEN_SCOPE','Relationship portability is not supported in this experimental release',403)
         data={'format':'openape-bundle/1','tenant_id':p.tenant,'decoder_hash':decoder.hash,'core':latent(p,id,r['active'],CORE_DIM).tolist(),'initialization':'imported'}
+        bias=version_bias(p.tenant,id,r['active'])
+        if bool(bias.any()):data['habit_bias']=[round(v,4) for v in bias.tolist()]
         return wire(bundle={'data':data,'sha256':hashlib.sha256(json.dumps(data,sort_keys=True,separators=(',',':')).encode()).hexdigest()})
     @app.post('/v1/personas/import')
     def import_persona(req:Import,p=Depends(principal)):
         scope(p,'persona:admin',req.persona_id)
         try:
             b=req.bundle;data=b['data'];h=hashlib.sha256(json.dumps(data,sort_keys=True,separators=(',',':')).encode()).hexdigest()
-            if set(b)!={'data','sha256'} or set(data)!={'format','tenant_id','decoder_hash','core','initialization'} or h!=b['sha256']:raise ValueError()
+            if set(b)!={'data','sha256'} or set(data)-{'habit_bias'}!={'format','tenant_id','decoder_hash','core','initialization'} or h!=b['sha256']:raise ValueError()
             if data['tenant_id']!=p.tenant:raise Fault('FORBIDDEN_SCOPE','Bundle tenant mismatch',403)
             if data['decoder_hash']!=decoder.hash:raise Fault('DECODER_INCOMPATIBLE','Bundle decoder mismatch',409)
             if data['format']!='openape-bundle/1':raise ValueError()
             x=torch.tensor(data['core'],dtype=torch.float32)
             if x.shape!=(CORE_DIM,) or not torch.isfinite(x).all() or x.norm()>decoder.meta.get('latent_norm_limit',20)+1e-4:raise ValueError()
+            bias=torch.tensor(data.get('habit_bias',[0.0]*len(HABIT_IDS)),dtype=torch.float32)
+            if bias.shape!=(len(HABIT_IDS),) or not torch.isfinite(bias).all() or float(bias.abs().max())>habit_learning.HABIT_MAX+1e-6:raise ValueError()
         except (KeyError,TypeError,ValueError,RuntimeError):raise Fault('INVALID_CONTEXT','Invalid bundle')
-        artifact=store.put(x)
+        artifact=store.put(x,habit_bias=bias)
         with store.tx() as db:
             v=insert_persona(db,p,req.persona_id,artifact,'imported',rate=os.environ.get('OPENAPE_MATURATION_RATE'));store.audit(db,p.tenant,req.persona_id,'imported',{'actor':p.actor,'bundle_sha256':b['sha256']})
         return wire(persona_id=req.persona_id,active_version=v)
@@ -771,7 +1007,7 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
         if '*' not in p.users:raise Fault('FORBIDDEN_SCOPE','Deleting a persona requires authority over all linked users',403)
         with store.tx() as db:
             counts={}
-            for table in ('versions','relationships','sessions','requests','decisions','feedback','observations','jobs','experience','maturation','states','samples'):
+            for table in ('versions','relationships','sessions','requests','decisions','feedback','observations','jobs','experience','maturation','states','samples','user_settings'):
                 counts[table]=db.execute(f'DELETE FROM {table} WHERE tenant=? AND persona=?',(p.tenant,id)).rowcount
             db.execute('DELETE FROM audit WHERE tenant=? AND persona=?',(p.tenant,id))
             db.execute('DELETE FROM personas WHERE tenant=? AND id=?',(p.tenant,id));store.gc()

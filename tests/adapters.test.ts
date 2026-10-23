@@ -61,9 +61,9 @@ test('OpenClaw derives context from tool metadata and never sends the message',a
  handlers.get('after_tool_call')!({toolName:'edit',params:{path:'zz-private'},result:'zz-private'},{sessionId:'s',toolName:'edit'});
  for(let i=0;i<2;i++)handlers.get('after_tool_call')!({toolName:'exec',params:{},error:'zz-private failure'},{sessionId:'s',toolName:'exec'});
  await handlers.get('before_prompt_build')!({currentUserMessage:'zz-private review this asap',currentUserMessageId:'u1'},ctx);
- assert.deepEqual(requests[0].context,{task_type:'debugging',channel:'chat',stakes:'high',turn_origin:'user',tags:['technical','expert','error_present']});
+ assert.deepEqual(requests[0].context,{task_type:'debugging',channel:'chat',stakes:'high',turn_origin:'user',tags:['technical','expert','error_present'],language:'none',repo_kind:'unknown'});
  await handlers.get('before_prompt_build')!({currentUserMessage:'zz-private review this asap',currentUserMessageId:'u2'},{sessionId:'s',trigger:'user'});
- assert.deepEqual(requests[1].context,{task_type:'general',channel:'terminal',stakes:'medium',turn_origin:'user',tags:['expert']});
+ assert.deepEqual(requests[1].context,{task_type:'general',channel:'terminal',stakes:'medium',turn_origin:'user',tags:['expert'],language:'none',repo_kind:'unknown'});
  assert(!JSON.stringify(requests).includes('zz-private'));
 });
 test('Pi classifies the prompt locally only when opted in',async()=>{

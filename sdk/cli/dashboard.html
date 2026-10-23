@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenAPE persona</title>
+<style>
+/* Layout: one column; trait trajectories first, then why the latest style was chosen. */
+:root { --bg: #f6f7f9; --panel: #ffffff; --fg: #1d2330; --muted: #5b6474; --line: #d9dde5; --accent: #2f6db5; --warn: #a15c00;
+  --sans: system-ui, -apple-system, "Segoe UI", sans-serif; --mono: ui-monospace, "SFMono-Regular", Menlo, monospace; }
+@media (prefers-color-scheme: dark) { :root { --bg: #12151b; --panel: #1a1f27; --fg: #e3e7ee; --muted: #9aa4b5; --line: #2c3340; --accent: #7fb0ec; --warn: #e3a756; color-scheme: dark; } }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 var(--sans); }
+main { max-width: 980px; margin: 0 auto; padding: 24px max(16px, env(safe-area-inset-left, 0px)) 48px; display: grid; gap: 20px; }
+h1 { font-size: 22px; margin: 0; text-wrap: balance; } h2 { font-size: 16px; margin: 0 0 8px; }
+.meta { color: var(--muted); font-size: 13px; }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; min-width: 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.trait { display: grid; gap: 4px; } .trait b { font-weight: 600; } .trait span { color: var(--muted); font: 12px var(--mono); }
+svg { width: 100%; height: 64px; } svg text { fill: var(--muted); font: 10px var(--mono); }
+ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.chip { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; font-size: 12px; color: var(--muted); }
+.limit { color: var(--warn); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; } td, th { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.scroll { overflow-x: auto; }
+</style>
+</head>
+<body>
+<main>
+<header><h1 id="title">Persona</h1><div class="meta" id="meta"></div></header>
+<section><h2>How each trait has moved</h2><p class="meta">Expected level (0 to 4) in a reference context, one point per version, oldest first.</p><div class="grid" id="traits"></div></section>
+<section id="why" hidden><h2>Why this style</h2><ul id="summary"></ul><div class="scroll"><table id="detail"></table></div><h2 style="margin-top:12px">Habits</h2><ul id="habits"></ul></section>
+<section><h2>Events</h2><div id="events"></div></section>
+</main>
+<script id="data" type="application/json">__DATA__</script>
+<script>
+const data = JSON.parse(document.getElementById('data').textContent);
+const T = ['directness','warmth','verbosity','humour','formality','explanation_depth','assertiveness'];
+const label = t => t.replace('_', ' ').replace(/^./, c => c.toUpperCase());
+const el = (tag, attrs = {}, text) => { const e = document.createElementNS(tag === 'svg' || tag === 'polyline' || tag === 'line' || tag === 'circle' || tag === 'text' ? 'http://www.w3.org/2000/svg' : 'http://www.w3.org/1999/xhtml', tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (text != null) e.textContent = text; return e; };
+const tl = data.timeline, versions = tl.versions.filter(v => !v.revoked);
+document.getElementById('title').textContent = `Persona ${tl.persona_id}` + (tl.user_id ? ` with ${tl.user_id}` : '');
+document.getElementById('meta').textContent = `${versions.length} versions · decoder ${tl.decoder_hash.slice(7, 19)} · ${tl.engine_status}`;
+for (const t of T) {
+  const box = el('div', {class: 'trait'}); const ys = versions.map(v => v.traits[t]);
+  const last = ys[ys.length - 1]; box.append(el('b', {}, label(t)), el('span', {}, `now ${last.toFixed(2)} · first ${ys[0].toFixed(2)}`));
+  const w = 200, h = 64, x = i => ys.length < 2 ? w / 2 : 8 + i * (w - 16) / (ys.length - 1), y = v => 8 + (4 - v) * (h - 16) / 4;
+  const s = el('svg', {viewBox: `0 0 ${w} ${h}`, role: 'img', 'aria-label': `${label(t)} over versions`});
+  for (const g of [0, 2, 4]) s.append(el('line', {x1: 0, x2: w, y1: y(g), y2: y(g), stroke: 'var(--line)'}));
+  s.append(el('polyline', {points: ys.map((v, i) => `${x(i)},${y(v)}`).join(' '), fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2}));
+  s.append(el('circle', {cx: x(ys.length - 1), cy: y(last), r: 3, fill: 'var(--accent)'}));
+  box.append(s); document.getElementById('traits').append(box);
+}
+if (data.explanation) {
+  const e = data.explanation; document.getElementById('why').hidden = false;
+  for (const s of e.summary) document.getElementById('summary').append(el('li', {}, s));
+  const table = document.getElementById('detail'); const head = el('tr'); for (const h of ['Trait', 'Level', ...e.layers, 'Limits']) head.append(el('th', {}, h)); table.append(head);
+  for (const t of T) { const x = e.traits[t], r = el('tr'); r.append(el('td', {}, label(t)), el('td', {}, String(x.level)));
+    for (const l of e.layers) r.append(el('td', {}, x.expected[l].toFixed(2)));
+    r.append(el('td', {class: 'limit'}, x.limits.map(l => `${l.kind === 'context' ? 'context' : 'your pin'} ${l.levels.join('-')}`).join(', '))); table.append(r); }
+  for (const [id, h] of Object.entries(e.habits)) document.getElementById('habits').append(el('li', {}, h.why));
+}
+for (const [k, v] of Object.entries(tl.events)) document.getElementById('events').append(el('span', {class: 'chip'}, `${k.replaceAll('_', ' ')} ${v}`), ' ');
+</script>
+</body>
+</html>

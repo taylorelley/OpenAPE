@@ -59,7 +59,7 @@ def load(path):
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 def key(r):
-    return (r['gen_model'], r['placement'], r['prompt_id'], r['condition_id'])
+    return (r['gen_model'], r['placement'], bool(r.get('example')), r['prompt_id'], r['condition_id'])
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -77,7 +77,9 @@ def main(argv=None):
     ap.add_argument('--judge-key-env', help='env var holding the openai-compatible judge key (default: --key-env)')
     ap.add_argument('--judge-response-format', choices=['json_schema', 'json_object', 'none'], default='json_schema',
         help='openai-compatible judge output: strict JSON schema, JSON mode, or instructions only (always validated)')
-    ap.add_argument('--placement', choices=['turn', 'system'], default='turn', help='style text after the task in the user turn (as Claude Code and Hermes inject it) or in the system prompt')
+    ap.add_argument('--placement', choices=['turn', 'prefix', 'system'], default='turn',
+        help='style text after the task in the user turn (as Claude Code and Hermes inject it), before the task, or in the system prompt')
+    ap.add_argument('--example', action='store_true', help='append the reviewed tone example to the style text (OPENAPE_STYLE_EXAMPLE=1)')
     ap.add_argument('--per-task', type=int, default=4, help='prompts per task type (4 = all 36)')
     ap.add_argument('--kinds', default='trait,habit,static', help='condition kinds to include besides baseline and neutral')
     ap.add_argument('--rejudge', type=float, default=0.1, help='fraction of replies judged twice, for judge consistency')
@@ -91,9 +93,9 @@ def main(argv=None):
     run_dir = Path(a.run_dir); records_path = run_dir / 'records.jsonl'
     if a.report_only: return write_report(load(records_path), a, run_dir)
     prompts = select_prompts(design.load_prompts(), a.per_task, a.seed)
-    rows = design.plan(prompts, set(a.kinds.split(',')))
+    rows = design.plan(prompts, set(a.kinds.split(',')), a.example)
     done = {key(r) for r in load(records_path) if r.get('judge') or (r.get('gen') and r['gen'].get('stop_reason') == 'refusal')}
-    todo = [(p, c) for p, c in rows if (a.model, a.placement, p['id'], c['id']) not in done]
+    todo = [(p, c) for p, c in rows if (a.model, a.placement, a.example, p['id'], c['id']) not in done]
     rng = random.Random(a.seed); rejudge = {(p['id'], c['id']) for p, c in todo if rng.random() < a.rejudge}
     est = estimate(len(todo), len(todo) + len(rejudge), a.model if a.provider == 'anthropic' else None, a.judge_model if a.judge_provider == 'anthropic' else None)
     summary = dict(prompts=len(prompts), conditions=len({c['id'] for _, c in rows}), planned=len(rows), already_done=len(rows) - len(todo), to_run=len(todo), rejudged=len(rejudge), **est)
@@ -114,7 +116,7 @@ def main(argv=None):
     judge_effort = effort_for(a.judge_effort, a.judge_provider, 'high')
     run_dir.mkdir(parents=True, exist_ok=True); lock = threading.Lock()
     def work(p, c):
-        r = dict(gen_model=a.model, provider=a.provider, judge_provider='mock' if a.provider == 'mock' else a.judge_provider, placement=a.placement, prompt_id=p['id'], task_type=p['task_type'], condition_id=c['id'], kind=c['kind'],
+        r = dict(gen_model=a.model, provider=a.provider, judge_provider='mock' if a.provider == 'mock' else a.judge_provider, placement=a.placement, example=a.example, prompt_id=p['id'], task_type=p['task_type'], condition_id=c['id'], kind=c['kind'],
             trait=c.get('trait'), level=c.get('level'), habit=c.get('habit'), control_id=c.get('control_id'), controls=c['controls'], habits=c['habits'],
             style_text=c['text'], at=datetime.now(timezone.utc).isoformat())
         try:
@@ -140,7 +142,7 @@ def write_report(records, a, run_dir):
     records = list(latest.values())
     if not records: print('no records'); return 1
     report = dict(kind='live-model style evaluation; judged by a model, not by people', catalogue_hash=CATALOGUE_HASH, generated_at=datetime.now(timezone.utc).isoformat(),
-        run_dir=str(run_dir), placements=sorted({r['placement'] for r in records}), providers=sorted({r['provider'] for r in records}),
+        run_dir=str(run_dir), placements=sorted({r['placement'] for r in records}), arms=sorted({analysis.arm(r) for r in records}), providers=sorted({r['provider'] for r in records}),
         judge_providers=sorted({r.get('judge_provider', 'anthropic') for r in records if r.get('judge')}),
         judge_models=sorted({r['judge']['served_model'] for r in records if r.get('judge')}), prompts=len({r['prompt_id'] for r in records}),
         thresholds=dict(distinguishability=analysis.DISTINGUISH_MIN, spearman=analysis.SPEARMAN_MIN, habit_lift=analysis.HABIT_LIFT_MIN,
@@ -149,7 +151,8 @@ def write_report(records, a, run_dir):
         limitations=['A model judges style; no human raters. Judge consistency is reported, judge validity against people is not.',
             'Fixed single-turn prompts; no multi-turn sessions, tools or host harness.',
             'Some habits are conditional ("when useful", "when ambiguous"); low adherence can be correct behaviour on prompts that do not call for them.',
-            'Probes vary one trait from the neutral configuration; interactions between traits are not measured.'])
+            'Probes vary one trait from the neutral configuration; interactions between traits are not measured.',
+            'Arms (placement, tone example) are compared on the same prompts and judge; differences are within this model and judge only.'])
     out = Path(a.report_dir); out.mkdir(parents=True, exist_ok=True)
     mock = any(r['provider'] == 'mock' for r in records)
     stem = 'live-eval-mock' if mock else 'live-eval'
@@ -172,6 +175,10 @@ def markdown(r):
         lines += ['', f'Task quality, styled minus no style: {q["styled_minus_baseline"]}. Static persona minus no style: {q["static_minus_baseline"]}. '
             f'Refusal rate: {q["refusal_rate"]}.', '', f'Judge consistency: {m["judge_consistency"]}.', '', '### To revise', '']
         lines += [f'* {f["issue"]}' for f in m['flags']] or ['* nothing below the thresholds']
+        lines.append('')
+    if r.get('arm_comparison'):
+        lines += ['## Placement and tone-example arms', '', '| Run | mean Spearman | mean adjacent distinguishability | mean habit lift | quality vs no style |', '|---|---|---|---|---|']
+        lines += [f'| {k} | {v["mean_spearman"]} | {v["mean_distinguishability"]} | {v["mean_habit_lift"]} | {v["quality_delta"]} |' for k, v in r['arm_comparison'].items()]
         lines.append('')
     if r.get('cross_model_spearman'): lines += ['## Cross-model agreement (Spearman of judged trait levels)', '', *[f'* {k}: {v}' for k, v in r['cross_model_spearman'].items()], '']
     lines += ['## Limitations', '', *[f'* {x}' for x in r['limitations']], '']

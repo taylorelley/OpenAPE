@@ -32,9 +32,11 @@ VOCAB = {
     'channel': ('terminal', 'chat', 'voice', 'background'),
     'stakes': ('low', 'medium', 'high'),
     'turn_origin': ('user', 'system', 'tool', 'subagent'),
-    'tags': ('technical', 'review', 'sensitive', 'urgent', 'beginner', 'expert', 'error_present', 'first_turn', 'long_session'),
+    'tags': ('technical', 'review', 'sensitive', 'urgent', 'beginner', 'expert', 'error_present', 'first_turn', 'long_session', 'returning', 'corrected'),
+    'language': ('none', 'python', 'typescript', 'javascript', 'go', 'rust', 'java', 'c_cpp', 'csharp', 'ruby', 'php', 'shell', 'sql', 'markup', 'config', 'other'),
+    'repo_kind': ('unknown', 'software', 'infrastructure', 'documentation', 'data_science'),
 }
-ENGINE_TAGS = ('first_turn', 'long_session')  # set by the engine from the session, never by hosts
+ENGINE_TAGS = ('first_turn', 'long_session', 'returning', 'corrected')  # set by the engine, never by hosts
 PROVIDERS = ('openai', 'anthropic', 'google', 'qwen', 'other')
 ADAPTER_BUCKETS = 8
 _ROWS = torch.arange(N_TRAITS)
@@ -107,6 +109,40 @@ def habit_mask(context):
     if context.get('channel') == 'voice': off.add('structured')
     for h in off: m[HABIT_IDS.index(h)] = False
     return m
+
+def pin_mask(pins):
+    """(7, 5) levels allowed by user pins ({trait: {'min', 'max'}}); unpinned traits allow all."""
+    m = torch.ones(N_TRAITS, LEVELS, dtype=torch.bool)
+    for t, pin in (pins or {}).items():
+        row = torch.zeros(LEVELS, dtype=torch.bool); row[pin['min']:pin['max'] + 1] = True; m[TRAITS.index(t)] = row
+    return m
+
+def pins_satisfiable(pins):
+    return bool(pin_mask(pins)[_ROWS, APPROVED_LEVELS].all(1).any())
+
+def apply_user_settings(trait_logp, habit_logits, settings):
+    """Restrict context-masked heads to the user's pins and vetoes. Context masks always
+    win: a pinned trait whose allowed levels the context forbids keeps the context's
+    levels, and if no approved configuration fits the pins at all they are ignored.
+    Returns (trait_logp, habit_logits, notes)."""
+    notes = []
+    if not settings: return trait_logp, habit_logits, notes
+    pm = pin_mask(settings.get('pins'))
+    if not pm.all():
+        allowed = torch.isfinite(trait_logp)
+        combined = allowed & pm
+        rows = combined.any(1)
+        if not rows.all(): notes.append('pin_overridden_by_context')
+        combined[~rows] = allowed[~rows]
+        pinned = masked_logp(trait_logp, combined)
+        if torch.isfinite(joint(pinned)).any(): trait_logp = pinned; notes.append('user_pins')
+        else: notes.append('pins_unsatisfiable')
+    vetoes = settings.get('vetoes') or []
+    if vetoes:
+        habit_logits = habit_logits.clone()
+        for h in vetoes: habit_logits[HABIT_IDS.index(h)] = -20.0
+        notes.append('user_vetoes')
+    return trait_logp, habit_logits, notes
 
 def mask_reason(context):
     tags = context.get('tags', []); reasons = []

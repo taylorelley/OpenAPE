@@ -6,6 +6,11 @@ other; every combination of the 5^7 that passes them is an approved configuratio
 (APPROVED, enumerated once). Signature habits are a fixed list of reviewed sentences
 with static eligibility on the trait levels; at most MAX_HABITS apply per turn.
 
+User preferences are enumerated slots (address, spelling, units, format, dates) that
+the linked user sets explicitly; each value renders one reviewed sentence. Tone
+examples are short reviewed sample replies keyed to warmth and formality bands; a
+host may opt in to append the one matching the chosen levels.
+
 Nothing here grants permissions or changes what the agent does: every sentence is a
 style preference, and assertiveness never changes factual certainty. Changing any
 text, rule or habit requires a new control schema and decoder; CATALOGUE_HASH binds
@@ -61,7 +66,39 @@ HABITS = (
     {'id': 'flag_uncertainty', 'text': 'Say plainly when you are unsure.', 'requires': {}, 'excludes': ()},
 )
 HABIT_IDS = tuple(h['id'] for h in HABITS)
-MAX_STYLE_CHARS = 900  # ~150 tokens; the worst case rendering is well below it.
+# Relationship preferences: the linked user's own explicit choices, never inferred.
+PREFERENCES = {
+    'address': {'informal': 'Address the user informally.', 'formal': 'Address the user formally.'},
+    'spelling': {'american': 'Use American English spelling.', 'british': 'Use British English spelling.',
+        'canadian': 'Use Canadian English spelling.', 'australian': 'Use Australian English spelling.'},
+    'units': {'metric': 'Use metric units.', 'imperial': 'Use imperial units.'},
+    'format': {'code_first': 'When code answers the question, lead with the code.', 'prose_first': 'Explain in prose before showing code.',
+        'bullets': 'Prefer bullet points to paragraphs.', 'paragraphs': 'Prefer paragraphs to bullet points.'},
+    'dates': {'iso': 'Write dates as YYYY-MM-DD.', 'day_first': 'Write dates day first, for example 23 October.', 'month_first': 'Write dates month first, for example October 23.'},
+}
+# Tone examples keyed by warmth band then formality band (0: levels 0-1, 1: level 2, 2: levels 3-4).
+EXAMPLE_PREFIX = 'Tone example (match the tone, not the content):'
+EXAMPLES = {
+    '00': 'Run `git reset --soft HEAD~1`. The commit is gone; your changes stay staged.',
+    '01': 'Use `git reset --soft HEAD~1`. This removes the last commit and keeps its changes staged.',
+    '02': 'Execute `git reset --soft HEAD~1`. The most recent commit is removed and its changes remain staged.',
+    '10': 'Just run `git reset --soft HEAD~1`. The commit goes away and your changes stay staged.',
+    '11': 'You can run `git reset --soft HEAD~1`. That removes the last commit and keeps your changes staged, so nothing is lost.',
+    '12': 'You may run `git reset --soft HEAD~1`. This removes the most recent commit while keeping its changes staged, so no work is lost.',
+    '20': 'Easy fix, and it happens to everyone! Run `git reset --soft HEAD~1` and the commit is gone, with all your changes still staged.',
+    '21': 'That is an easy one to fix, and a very common slip. Run `git reset --soft HEAD~1`: the commit is removed and your changes stay staged, so nothing is lost.',
+    '22': 'That is straightforward to correct, and a common occurrence. Please run `git reset --soft HEAD~1`; the most recent commit will be removed while your changes remain staged.',
+}
+MAX_STYLE_CHARS = 1400  # ~230 tokens; the worst case rendering is well below it.
+
+def band(level):
+    return 0 if level <= 1 else 1 if level == 2 else 2
+
+def example_for(levels):
+    return EXAMPLES[f"{band(levels['warmth'])}{band(levels['formality'])}"]
+
+def preferences_valid(prefs):
+    return isinstance(prefs, dict) and all(isinstance(k, str) and k in PREFERENCES and isinstance(v, str) and v in PREFERENCES[k] for k, v in prefs.items())
 
 def coherent(levels):
     """True if a {trait: level} mapping is a complete, in-range, coherent configuration."""
@@ -81,6 +118,7 @@ def habits_valid(ids, levels):
 APPROVED = [dict(zip(TRAITS, row)) for row in itertools.product(range(LEVELS), repeat=len(TRAITS)) if coherent(dict(zip(TRAITS, row)))]
 SPEC = {'schema': SCHEMA, 'traits': list(TRAITS), 'levels': LEVELS, 'prefix': PREFIX, 'templates': {t: list(v) for t, v in TEMPLATES.items()}, 'neutral': NEUTRAL,
     'rules': [[a, list(la), b, list(lb)] for a, la, b, lb in RULES], 'max_habits': MAX_HABITS, 'max_style_chars': MAX_STYLE_CHARS,
-    'habits': [{'id': h['id'], 'text': h['text'], 'requires': {t: list(r) for t, r in h['requires'].items()}, 'excludes': list(h['excludes'])} for h in HABITS]}
+    'habits': [{'id': h['id'], 'text': h['text'], 'requires': {t: list(r) for t, r in h['requires'].items()}, 'excludes': list(h['excludes'])} for h in HABITS],
+    'preferences': {k: dict(v) for k, v in PREFERENCES.items()}, 'example_prefix': EXAMPLE_PREFIX, 'examples': dict(EXAMPLES)}
 CATALOGUE_HASH = 'sha256:' + hashlib.sha256(json.dumps(SPEC, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 assert coherent(NEUTRAL) and len(set(HABIT_IDS)) == len(HABIT_IDS)

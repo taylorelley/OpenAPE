@@ -120,15 +120,33 @@ def flags(traits, habits, quality):
         if w['mean_delta'] is not None and w['mean_delta'] < QUALITY_DROP_MAX: out.append(dict(kind='quality', condition=w['condition'], issue=f'condition {w["condition"]}: task quality changes by {w["mean_delta"]} against no style'))
     return out
 
+def arm(r):
+    """Placement of the style text and whether the tone example was appended."""
+    return r.get('placement', 'turn') + ('+example' if r.get('example') else '')
+
+def run_label(r, arms):
+    return r['gen_model'] if arms == 1 else f"{r['gen_model']} [{arm(r)}]"
+
+def summary(m):
+    """One line per run for comparing arms: means over traits and habits."""
+    sp = [x['spearman'] for x in m['traits'].values() if x['spearman'] is not None]
+    di = [a['distinguishability'] for x in m['traits'].values() for a in x['adjacent'].values() if a['distinguishability'] is not None]
+    lift = [x['lift'] for x in m['habits'].values() if x['lift'] is not None]; q = m['quality']['styled_minus_baseline']
+    return dict(mean_spearman=_r(np.mean(sp)) if sp else None, mean_distinguishability=_r(np.mean(di)) if di else None,
+        mean_habit_lift=_r(np.mean(lift)) if lift else None, quality_delta=q['mean'] if q else None)
+
 def analyse(records):
-    models = sorted({r['gen_model'] for r in records})
+    arms = len({arm(r) for r in records})
+    models = sorted({run_label(r, arms) for r in records})
     report = dict(models={})
     for m in models:
-        mine = [r for r in records if r['gen_model'] == m]; ok = judged(mine)
+        mine = [r for r in records if run_label(r, arms) == m]; ok = judged(mine)
         traits, habits, quality = trait_metrics(ok), habit_metrics(ok), quality_metrics(mine, ok)
         report['models'][m] = dict(records=len(mine), judged=len(ok), errors=sum(1 for r in mine if r.get('error')), traits=traits, habits=habits,
             quality=quality, judge_consistency=consistency(ok), flags=flags(traits, habits, quality))
-    if len(models) > 1:
+    if arms > 1: report['arm_comparison'] = {m: summary(x) for m, x in report['models'].items()}
+    if arms == 1 and len({r['gen_model'] for r in records}) > 1:
+        models = sorted({r['gen_model'] for r in records})
         # Cross-provider agreement: do models agree on what each style probe does?
         by = defaultdict(dict)
         for r in judged(records):

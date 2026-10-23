@@ -164,6 +164,18 @@
       "title": "Habits",
       "type": "array"
     },
+    "preferences": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Preferences",
+      "type": "object"
+    },
+    "exploration": {
+      "default": false,
+      "title": "Exploration",
+      "type": "boolean"
+    },
     "mode": {
       "enum": [
         "shadow",

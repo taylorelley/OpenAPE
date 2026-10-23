@@ -7,16 +7,19 @@ transcript, CLAUDE.md or AGENTS.md. Only UserPromptSubmit emits
 observation carrying IDs and status only. UserPromptSubmit also records the latest
 active decision ID for the persona_feedback MCP tool (mcp_server.py).
 
-Turn context comes from metadata: the tool names (and failure count) of the previous
-turn, recorded by PostToolUse/PostToolUseFailure; plan mode; and the user's declared
-context (`.openape.json` in the project, overridden by OPENAPE_CONTEXT). Prompt text is
-read only with OPENAPE_CONTEXT_TEXT=local, matched in memory against fixed rules, and
-never sent, logged or stored; only the derived enum labels leave this process.
+Turn context comes from metadata: the tool names, failure count and edited files'
+extensions (never paths or contents) of the previous turn, recorded by
+PostToolUse/PostToolUseFailure; repository-marker file names in the working directory;
+plan mode; and the user's declared context (`.openape.json` in the project, overridden
+by OPENAPE_CONTEXT). Prompt text is read only with OPENAPE_CONTEXT_TEXT=local and
+classified in memory by the on-host context classifier; it is never sent, logged or
+stored; only the derived enum labels leave this process.
 """
 import hashlib
 import json
 import os
 import re
+import stat
 import sys
 import time
 import uuid
@@ -36,14 +39,29 @@ def config():
     if not token or not persona: return None
     return dict(token=token, persona=persona, url=os.environ.get('OPENAPE_URL', 'http://127.0.0.1:8765'), tenant=os.environ.get('OPENAPE_TENANT', 'local'),
         user=os.environ.get('OPENAPE_LINKED_USER'), mode=os.environ.get('OPENAPE_MODE', 'shadow'), host_version=safe_id(os.environ.get('OPENAPE_HOST_VERSION'), 'unverified'),
-        context_text=os.environ.get('OPENAPE_CONTEXT_TEXT') == 'local')
+        context_text=os.environ.get('OPENAPE_CONTEXT_TEXT') == 'local', example=os.environ.get('OPENAPE_STYLE_EXAMPLE') == '1')
 
-def declared_context(cwd):
-    """Project `.openape.json` (enum values only), then OPENAPE_CONTEXT on top."""
-    declared = {}
-    try: declared = upap_lite.parse_declared((Path(cwd) / '.openape.json').read_text()) if cwd else {}
-    except (OSError, ValueError): pass
-    return {**declared, **upap_lite.parse_declared(os.environ.get('OPENAPE_CONTEXT') or '{}')}
+PROJECT_FILE_MAX = 65536
+
+def project_context(cwd):
+    """The repository's `.openape.json`, which anyone who controls the repository can
+    write: a regular file only (no symlink, FIFO or device), at most 64 KB, read without
+    blocking. derive_context keeps only enum values it may set (never lower stakes,
+    never channel or turn origin)."""
+    if not cwd: return {}
+    try:
+        fd = os.open(Path(cwd) / '.openape.json', os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_NONBLOCK', 0))
+    except (OSError, TypeError, ValueError): return {}
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode): return {}
+        raw = os.read(fd, PROJECT_FILE_MAX + 1)
+        return {} if len(raw) > PROJECT_FILE_MAX else upap_lite.parse_declared(raw.decode('utf-8', 'replace'))
+    except OSError: return {}
+    finally: os.close(fd)
+
+def declared_context():
+    """The user's own declaration (OPENAPE_CONTEXT): trusted, ranks above everything."""
+    return upap_lite.parse_declared(os.environ.get('OPENAPE_CONTEXT') or '{}')
 
 def state_root():
     root = Path(os.environ.get('CLAUDE_PLUGIN_DATA') or Path.home() / '.openape' / 'claude-code-state')
@@ -87,20 +105,24 @@ def main():
         tools = state.setdefault('tools', [])
         tool = safe_id(data.get('tool_name'), 'unknown')[:64]
         if tool not in tools and len(tools) < 32: tools.append(tool)
+        inputs = data.get('tool_input') if isinstance(data.get('tool_input'), dict) else {}
+        ext = upap_lite.extension_of(inputs.get('file_path') or inputs.get('notebook_path') or inputs.get('path'))
+        if ext and len(state.setdefault('extensions', [])) < 64: state['extensions'].append(ext)
         if name == 'PostToolUseFailure': state['failures'] = state.get('failures', 0) + 1
         save(path, state)
     elif name == 'UserPromptSubmit':
         prompt_id = data.get('prompt_id') or str(uuid.uuid4())
         if state.get('prompt_id') == prompt_id: return  # never inject twice for one prompt
-        signals = dict(tools=state.pop('tools', []), failures=state.pop('failures', 0), plan_mode=data.get('permission_mode') == 'plan')
+        signals = dict(tools=state.pop('tools', []), failures=state.pop('failures', 0), plan_mode=data.get('permission_mode') == 'plan',
+            extensions=state.pop('extensions', []), repo_files=upap_lite.repo_files(data.get('cwd')) if data.get('cwd') else [])
         text = data.get('prompt') if cfg['context_text'] else None
-        context = upap_lite.derive_context(signals, declared_context(data.get('cwd')), text)
+        context = upap_lite.derive_context(signals, declared_context(), text, project=project_context(data.get('cwd')))
         request = dict(request_id=stable(f'{key}:{prompt_id}'), identity=dict(tenant_id=cfg['tenant'], persona_id=cfg['persona']),
             session=dict(id=key, turn_id=stable(prompt_id)),
             host=dict(adapter_id=ADAPTER, adapter_version=VERSION, host_version=cfg['host_version'], provider_family='anthropic', model_id=state.get('model', 'host-selected')),
             context=context)
         if cfg['user']: request['identity']['user_id'] = cfg['user']
-        result = upap_lite.express(cfg['url'], cfg['token'], request, cfg['mode'])
+        result = upap_lite.express(cfg['url'], cfg['token'], request, cfg['mode'], example=cfg['example'])
         state.update(prompt_id=prompt_id, decision_id=(result['decision'] or {}).get('decision_id'), applied=bool(result['text'])); save(path, state)
         if result['text'] and state['decision_id']: save(latest_path(cfg['persona']), {'decision_id': state['decision_id'], 'at': time.time()})
         if result['text']:
