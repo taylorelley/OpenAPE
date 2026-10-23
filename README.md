@@ -174,7 +174,7 @@ choices, see the [architecture ADRs](#design-and-evidence).
 
 | Path | Contents |
 |---|---|
-| `engine/` | FastAPI service: `api`, `neural` (decoder + encoder), `learning` (trainer), `evaluation` (independent evaluator), `storage` (SQLite + artifacts), `security` |
+| `engine/` | FastAPI service: `api`, `neural` (decoder + encoder), `learning` (trainer, habits), `evaluation` (independent evaluator, run in its own process), `storage` (SQLite or PostgreSQL + artifacts), `explain.py`, `security` |
 | `protocol/` | UPAP/2 spec, schemas, OpenAPI, conformance fixtures, style catalogue |
 | `sdk/` | Python client (`client.py`, stdlib `lite.py`), TypeScript client, `openape` CLI |
 | `adapters/` | Host integrations for Claude Code, Hermes, OpenClaw, Pi, OpenCogni |
@@ -240,21 +240,46 @@ Python and TypeScript SDKs apply identically:
   search tools `research`. Two or more failed tool calls raise stakes to `high`.
 * **Host state:** plan mode (Claude Code) means `research`; messaging platforms
   (Hermes, OpenClaw channels) mean channel `chat`.
+* **Files and repository:** extensions of files the agent touched give the language,
+  and top-level marker names (`main.tf`, `mkdocs.yml`, `*.ipynb`, …) give the repository
+  kind. Paths and contents are never sent.
 * **Your declaration:** `OPENAPE_CONTEXT='{"task_type":"coding","tags":["expert"]}'`
-  (Claude Code also reads `.openape.json` in the project; the variable wins).
-  This is the only source of `beginner`/`expert` unless text classification is on,
-  and it overrides everything derived.
-* **Opt-in text classification:** with `OPENAPE_CONTEXT_TEXT=local` the adapter
-  matches the user's message against fixed keyword rules on the host (for example
-  "review this PR" → `code_review`, "asap" → `urgent`, "I'm new to" →
-  `beginner`). The text is never sent, logged or stored; only the derived labels
-  leave the host. Off by default.
+  overrides everything derived. Claude Code also reads a project `.openape.json`. It
+  treats that file as untrusted repository content: the file can name the task,
+  language, repo kind and tags and raise stakes, never lower them, and it ranks below
+  every host signal.
+* **Opt-in text classification:** with `OPENAPE_CONTEXT_TEXT=local` a small hashed
+  feature classifier on the host labels the user's message (task, and `urgent`,
+  `sensitive`, `beginner`, `expert`, `error_present`). The text is never sent, logged
+  or stored; only the labels leave the host. Off by default.
+* **Tone example:** `OPENAPE_STYLE_EXAMPLE=1` appends one reviewed sample reply that
+  matches the chosen warmth and formality.
 
 OpenCogni keeps its fixed planner context (background, system-initiated).
 
 `openape adapter doctor HOST --persona ID` checks a setup. Hermes users with an
 existing SOUL.md can run `openape adapter migrate-soul` (dry run; `--apply --persona
 ID` backs it up first). Details and limits: [compatibility](docs/adapters/compatibility.md).
+
+## Your relationship, your controls
+
+A linked user (a credential with `settings:write` for that user) can set:
+
+* preferences (spelling, units, address, answer format, date style);
+* pins on trait levels (for example `humour=0-0`);
+* vetoes on habits;
+* a freeze on the relationship;
+* consent to the cohort prior and to occasional exploration.
+
+```sh
+openape settings set ape alice --prefer spelling=british --pin humour=0-1 --veto light_aside --explore on
+openape compare DECISION_ID        # which style did you prefer? (blind A/B, recorded as your feedback)
+openape dashboard ape --user alice --decision DECISION_ID --out ape.html
+```
+
+`GET /v1/decisions/{id}/explanation` says which layer (temperament, character,
+relationship, session) set each trait, and what limited it.
+`GET /v1/personas/{id}/timeline` shows how the persona moved, version by version.
 
 ## Verify
 
@@ -267,6 +292,9 @@ python -m scripts.performance
 ```
 
 Host smokes install pinned hosts under `.host-test/` and never call a provider.
+`scripts/live_tool_smoke.py` runs a host against a real model (your key) to check
+that the agent calls `persona_feedback`. Set `OPENAPE_TEST_DATABASE_URL` to run the
+suite on PostgreSQL.
 
 ## Use from a custom harness
 
@@ -290,7 +318,8 @@ not an automatic native hook.
 
 `openape init | serve | token add | persona create/list/inspect/history/delete/archetypes/evolution |
 express | preview | feedback | observe | learn | job | promote | rollback | export |
-import | adapter install/uninstall/doctor/migrate-soul | bridge | migrate --reset`. Write commands take
+import | adapter install/uninstall/doctor/migrate-soul | bridge | migrate --reset |
+settings get/set | compare | rate | dashboard`. Write commands take
 `--file request.json` (or stdin). The engine promotes automatically only for personas
 with `evolution: automatic`; `learn`/`promote` remain for manual personas. Feedback
 is record-only unless `learning_consent: true` with an authorised scope.
@@ -304,11 +333,15 @@ nothing).
 
 Docker: `openape init`, then `docker compose up --build` (loopback port, unprivileged,
 read-only root, data volume; add `-f compose.limits.yaml` for limits). Remote
-deployments need TLS at a trusted reverse proxy. Shared SQLite replicas are unsupported.
+deployments need TLS at a trusted reverse proxy. For several replicas use
+PostgreSQL. Set `OPENAPE_DATABASE_URL` (install the `postgres` extra) or use
+`compose.replicas.yaml`. Writes serialize through one advisory lock, and
+artifacts live in the database. Shared SQLite replicas are unsupported.
+Training candidates are judged by an evaluator in its own process.
 
 ## Design and evidence
 
-* ADRs: [0001 architecture](docs/adr/0001-architecture.md), [0002 decoder-v2, evaluator, lineage](docs/adr/0002-decoder-v2-evaluator-lineage.md), [0003 archetypes and automatic evolution](docs/adr/0003-automatic-evolution.md), [0004 human-like development](docs/adr/0004-human-like-development.md), [0005 expressive controls](docs/adr/0005-expressive-controls.md)
+* ADRs: [0001 architecture](docs/adr/0001-architecture.md), [0002 decoder-v2, evaluator, lineage](docs/adr/0002-decoder-v2-evaluator-lineage.md), [0003 archetypes and automatic evolution](docs/adr/0003-automatic-evolution.md), [0004 human-like development](docs/adr/0004-human-like-development.md), [0005 expressive controls](docs/adr/0005-expressive-controls.md), [0006 relationship controls, habit learning, replicas](docs/adr/0006-relationship-learning-and-production.md)
 * [Protocol](protocol/upap/v2/specification.md), JSON Schemas, OpenAPI, conformance fixtures
 * [Model card](models/decoder-v3/MODEL_CARD.md) · [benchmarks](benchmarks/README.md)
 * [Release status](docs/reports/release-status.md) · [review of 0.1.0 against the brief](docs/reports/v0.2-review.md) · [open issues](docs/reports/open-issues.md)

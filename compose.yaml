@@ -1,6 +1,6 @@
 services:
   openape:
-    image: openape:0.2.0
+    image: openape:0.3.0
     build: .
     ports: ["127.0.0.1:8765:8765"]
     environment:

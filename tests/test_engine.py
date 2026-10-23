@@ -72,6 +72,7 @@ def test_protocol_bounds_replays_and_no_implicit_reward(api):
     event['status']='failed';assert post(api,'/v1/observations',req).status_code==409
     assert api.app.state.store.one('SELECT count(*) AS n FROM feedback')['n']==0
 
+@pytest.mark.skipif(bool(PG_URL),reason='SQLite only: corrupts an artifact file; PostgreSQL keeps artifacts in a table')
 def test_export_import_corruption_delete(api):
     create(api);decision(api)
     bundle=post(api,'/v1/personas/ape/export',{}).json()['bundle'];assert 'relationship' not in json.dumps(bundle)
@@ -164,6 +165,7 @@ def test_mentor_shows_signature_habits(api):
     d=decision(api)
     assert d['controls']['warmth']>=3 and d['controls']['explanation_depth']>=3 and set(d['habits'])&{'concrete_examples','next_step','acknowledge_progress'}
 
+@pytest.mark.skipif(bool(PG_URL),reason='SQLite only: the reset migration rewrites an SQLite data directory')
 def test_reset_migration_recreates_personas(tmp_path):
     import sqlite3
     from engine.api.app import create_app,LegacyStore,DEFAULT_DECODER

@@ -1,14 +1,13 @@
 {
-  "image": "openape:0.1.0",
+  "image": "openape:0.3.0",
   "health": "PASS",
   "auth": "PASS",
   "create": "PASS",
   "neural_express": "PASS",
-  "decoder_hash": "sha256:934d9e8665386fb4819d8102cdb579e34884f5ea22c24c2757c9316feca3c30a",
-  "persona_id": "docker-smoke-a44773ac",
-  "evidence": "Actual Docker HTTP service; no LLM/model-provider call",
-  "restart_persistence": "PASS",
-  "uid": 10001,
-  "read_only_rootfs": true,
-  "image_id": "sha256:c239362ff31ebeda9e52d0601c71c921f4192f22197bce388a6bf763520525b1"
+  "isolated_evaluator": "PASS",
+  "evaluator_pid": 20,
+  "candidate_eligible": false,
+  "decoder_hash": "sha256:7b514e003ab3dd7b3cac8dfd18333e4ab559ebd40dd4d28c9cf080252abe7609",
+  "persona_id": "docker-smoke-ff051de9",
+  "evidence": "Actual Docker HTTP service (compose hardening: read-only root, no capabilities); no LLM/model-provider call"
 }

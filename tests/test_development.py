@@ -139,19 +139,25 @@ def test_relationship_accommodates_to_the_user(api):
     assert dev.accommodation_profile({'expert':1.0},1.0)['verbosity'][0]==1 and dev.accommodation_profile({'beginner':1.0},1.0)['explanation_depth'][0]==3
     assert dev.accommodation_profile({'beginner':1.0},0.0)['explanation_depth'][1]==0  # nothing before the relationship has grown
 
+def set_life(api,anchor=None,**fields):
+    """Edit alice's relationship life record in place (portable across store backends)."""
+    with store(api).tx() as tx:
+        row=tx.execute("SELECT life,anchor FROM maturation WHERE persona='c' AND user_id='alice'").fetchone();life={**json.loads(row['life'] or '{}'),**fields}
+        tx.execute("UPDATE maturation SET life=?,anchor=? WHERE persona='c' AND user_id='alice'",(json.dumps(life),anchor if anchor is not None else row['anchor']))
+
 def test_relationship_cools_after_absence_and_anchor_pulls_back(api):
     make(api,'c',archetype='concierge',individuality=0,maturation_rate='fast')
     for i in range(14):session(api,'c',f'c{i}');close(api,'c',f'c{i}')
     warm=relationship(api,'c','alice');assert float(warm.norm())>0.1
     ago=(datetime.now(timezone.utc)-timedelta(days=90)).isoformat()
-    with store(api).tx() as tx:tx.execute("UPDATE maturation SET life=json_set(life,'$.last_seen',?) WHERE persona='c' AND user_id='alice'",(ago,))
+    set_life(api,last_seen=ago)
     session(api,'c','back');close(api,'c','back')
     assert audit(api,'c','life_event')[-1]['event']=='long_absence'
     cooled=[m for m in audit(api,'c','matured') if 'cooling' in m['components']]
     assert cooled and cooled[0]['eligible'] and float(relationship(api,'c','alice').norm())<float(warm.norm())
     # Learned change the self anchor has not absorbed fades a little at each pass.
     current=relationship(api,'c','alice')
-    with store(api).tx() as tx:tx.execute("UPDATE maturation SET anchor=?,life=json_set(life,'$.last_sleep',0) WHERE persona='c' AND user_id='alice'",(json.dumps([0.0]*32),))
+    set_life(api,last_sleep=0,anchor=json.dumps([0.0]*32))
     session(api,'c','pull');close(api,'c','pull')
     pulled=[m for m in audit(api,'c','matured') if m['scope']=='relationship'][-1];assert isinstance(pulled['components']['elastic'],float) and pulled['eligible']
     assert abs(float(relationship(api,'c','alice').norm())/float(current.norm())-(1-dev.ELASTIC))<0.05

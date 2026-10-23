@@ -1,6 +1,6 @@
 {
   "host": "OpenCogni planner.http",
-  "host_commit": "57777cab2fd53897efa5ee48594d39645d25b4b2",
+  "host_commit": "a4ce3fd6a69086253c81a67bf1e146e4f26b257d",
   "base_commit": "833f4e6bb77c35f87c139e4944f80424f2ff8a30",
   "boundary_change": "adapters/opencogni/upstream/0001-planner-http-presentation-style.patch",
   "model": "synthetic chat endpoint; no provider call",

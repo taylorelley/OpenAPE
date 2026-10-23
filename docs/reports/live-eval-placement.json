@@ -1,0 +1,1814 @@
+{
+  "kind": "live-model style evaluation; judged by a model, not by people",
+  "catalogue_hash": "sha256:a9decc190a7c16f7ca487d8c8b00b2cf5f67a3fcb25dc6fc162de20f2f107d15",
+  "generated_at": "2026-10-23T09:43:06.469819+00:00",
+  "run_dir": "benchmarks/live/runs/placement (not committed)",
+  "placements": [
+    "prefix",
+    "system",
+    "turn"
+  ],
+  "arms": [
+    "prefix",
+    "system",
+    "turn",
+    "turn+example"
+  ],
+  "providers": [
+    "openai-compatible"
+  ],
+  "judge_providers": [
+    "openai-compatible"
+  ],
+  "judge_models": [
+    "deepseek/deepseek-v4-flash-0731"
+  ],
+  "prompts": 9,
+  "thresholds": {
+    "distinguishability": 0.6,
+    "spearman": 0.5,
+    "habit_lift": 0.3,
+    "quality_delta": -0.5,
+    "leakage": 0.75
+  },
+  "models": {
+    "z-ai/glm-5.3-flash [prefix]": {
+      "records": 270,
+      "judged": 270,
+      "errors": 0,
+      "traits": {
+        "directness": {
+          "spearman": 0.5774,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 3.1111,
+            "1": 3.3333,
+            "2": 3.8889,
+            "3": 3.7778,
+            "4": 3.8889
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.6111,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.7778,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.4444,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.5556,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.412
+        },
+        "warmth": {
+          "spearman": 0.5974,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 1.3333,
+            "1": 1.3333,
+            "2": 1.6667,
+            "3": 2.3333,
+            "4": 2.8889
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.4444,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.6667,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.8333,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.7222,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.3889
+        },
+        "verbosity": {
+          "spearman": 0.5444,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 2.8889,
+            "1": 3.0,
+            "2": 3.6667,
+            "3": 3.5556,
+            "4": 3.7778
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.5556,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.8333,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.4444,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.6111,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.3611
+        },
+        "humour": {
+          "spearman": 0.6401,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 0.0,
+            "1": 0.0,
+            "2": 0.6667,
+            "3": 0.3333,
+            "4": 2.3333
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.5,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.6667,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.3889,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.8889,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.5463
+        },
+        "formality": {
+          "spearman": 0.252,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 2.0,
+            "1": 2.0,
+            "2": 2.0,
+            "3": 2.2222,
+            "4": 2.1111
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.5,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.5,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.6111,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.4444,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.4306
+        },
+        "explanation_depth": {
+          "spearman": 0.7021,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 1.7778,
+            "1": 2.7778,
+            "2": 3.1111,
+            "3": 3.4444,
+            "4": 3.7778
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.8889,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.6667,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.6667,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.6667,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.3796
+        },
+        "assertiveness": {
+          "spearman": 0.7264,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 0.7778,
+            "1": 1.7778,
+            "2": 3.0,
+            "3": 3.2222,
+            "4": 3.5556
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.7778,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.7778,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.5556,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.6111,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.3519
+        }
+      },
+      "habits": {
+        "summary_first": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "risks_first": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "next_step": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "confirm_goal": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "clarify_once": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "acknowledge_constraints": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "concrete_examples": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "analogies": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "structured": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "plain_words": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "precise_terms": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "tradeoffs": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "acknowledge_progress": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "light_aside": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "recap_end": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "flag_uncertainty": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        }
+      },
+      "quality": {
+        "styled_minus_baseline": {
+          "mean": -0.0268,
+          "ci95": [
+            -0.0729,
+            0.0
+          ],
+          "n": 261,
+          "clusters": 9
+        },
+        "static_minus_baseline": null,
+        "refusal_rate": {
+          "styled": 0.0,
+          "baseline": 0.0
+        },
+        "worst_conditions": [
+          {
+            "condition": "c0220222",
+            "mean_delta": -0.2222
+          },
+          {
+            "condition": "c2210222",
+            "mean_delta": -0.1111
+          },
+          {
+            "condition": "c3220222",
+            "mean_delta": -0.1111
+          },
+          {
+            "condition": "c2020222",
+            "mean_delta": -0.1111
+          },
+          {
+            "condition": "c2220220",
+            "mean_delta": -0.1111
+          }
+        ]
+      },
+      "judge_consistency": null,
+      "flags": [
+        {
+          "kind": "levels",
+          "trait": "directness",
+          "levels": "2-3",
+          "issue": "directness levels 2-3 are hard to tell apart (distinguishability 0.4444)"
+        },
+        {
+          "kind": "levels",
+          "trait": "directness",
+          "levels": "3-4",
+          "issue": "directness levels 3-4 are hard to tell apart (distinguishability 0.5556)"
+        },
+        {
+          "kind": "levels",
+          "trait": "warmth",
+          "levels": "0-1",
+          "issue": "warmth levels 0-1 are hard to tell apart (distinguishability 0.4444)"
+        },
+        {
+          "kind": "levels",
+          "trait": "verbosity",
+          "levels": "0-1",
+          "issue": "verbosity levels 0-1 are hard to tell apart (distinguishability 0.5556)"
+        },
+        {
+          "kind": "levels",
+          "trait": "verbosity",
+          "levels": "2-3",
+          "issue": "verbosity levels 2-3 are hard to tell apart (distinguishability 0.4444)"
+        },
+        {
+          "kind": "levels",
+          "trait": "humour",
+          "levels": "0-1",
+          "issue": "humour levels 0-1 are hard to tell apart (distinguishability 0.5)"
+        },
+        {
+          "kind": "levels",
+          "trait": "humour",
+          "levels": "2-3",
+          "issue": "humour levels 2-3 are hard to tell apart (distinguishability 0.3889)"
+        },
+        {
+          "kind": "trait",
+          "trait": "formality",
+          "issue": "formality: requested and judged levels barely correlate (Spearman 0.252)"
+        },
+        {
+          "kind": "levels",
+          "trait": "formality",
+          "levels": "0-1",
+          "issue": "formality levels 0-1 are hard to tell apart (distinguishability 0.5)"
+        },
+        {
+          "kind": "levels",
+          "trait": "formality",
+          "levels": "1-2",
+          "issue": "formality levels 1-2 are hard to tell apart (distinguishability 0.5)"
+        },
+        {
+          "kind": "levels",
+          "trait": "formality",
+          "levels": "3-4",
+          "issue": "formality levels 3-4 are hard to tell apart (distinguishability 0.4444)"
+        },
+        {
+          "kind": "levels",
+          "trait": "assertiveness",
+          "levels": "2-3",
+          "issue": "assertiveness levels 2-3 are hard to tell apart (distinguishability 0.5556)"
+        }
+      ]
+    },
+    "z-ai/glm-5.3-flash [system]": {
+      "records": 270,
+      "judged": 270,
+      "errors": 0,
+      "traits": {
+        "directness": {
+          "spearman": 0.4022,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 3.2222,
+            "1": 3.5556,
+            "2": 3.5556,
+            "3": 3.7778,
+            "4": 3.8889
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.6111,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.5,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.6111,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.5556,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.3935
+        },
+        "warmth": {
+          "spearman": 0.6695,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 1.3333,
+            "1": 1.4444,
+            "2": 1.7778,
+            "3": 2.5556,
+            "4": 2.7778
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.5556,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.6111,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.8333,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.6111,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.3611
+        },
+        "verbosity": {
+          "spearman": 0.5533,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 2.6667,
+            "1": 3.1111,
+            "2": 3.6667,
+            "3": 3.4444,
+            "4": 3.7778
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.7222,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.7778,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.3889,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.6667,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.3519
+        },
+        "humour": {
+          "spearman": 0.5887,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 0.0,
+            "1": 0.0,
+            "2": 0.7778,
+            "3": 0.4444,
+            "4": 2.0
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.5,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.6667,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.4444,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.8889,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.5185
+        },
+        "formality": {
+          "spearman": 0.3873,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 2.0,
+            "1": 1.8889,
+            "2": 2.0,
+            "3": 2.1111,
+            "4": 2.3333
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.4444,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.5556,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.5556,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.6111,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.412
+        },
+        "explanation_depth": {
+          "spearman": 0.2961,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 2.2222,
+            "1": 2.7778,
+            "2": 3.0,
+            "3": 3.0,
+            "4": 3.1111
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.7222,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.6111,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.5,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.5556,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.3426
+        },
+        "assertiveness": {
+          "spearman": 0.3735,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 1.8889,
+            "1": 2.6667,
+            "2": 2.7778,
+            "3": 2.7778,
+            "4": 3.1111
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.7222,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.5556,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.5,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.6111,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.2731
+        }
+      },
+      "habits": {
+        "summary_first": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "risks_first": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "next_step": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "confirm_goal": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "clarify_once": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "acknowledge_constraints": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "concrete_examples": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "analogies": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "structured": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "plain_words": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "precise_terms": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "tradeoffs": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "acknowledge_progress": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "light_aside": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "recap_end": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "flag_uncertainty": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        }
+      },
+      "quality": {
+        "styled_minus_baseline": {
+          "mean": -0.0115,
+          "ci95": [
+            -0.0345,
+            0.0
+          ],
+          "n": 261,
+          "clusters": 9
+        },
+        "static_minus_baseline": null,
+        "refusal_rate": {
+          "styled": 0.0,
+          "baseline": 0.0
+        },
+        "worst_conditions": [
+          {
+            "condition": "c2230222",
+            "mean_delta": -0.1111
+          },
+          {
+            "condition": "c2220222",
+            "mean_delta": -0.1111
+          },
+          {
+            "condition": "c2020222",
+            "mean_delta": -0.1111
+          },
+          {
+            "condition": "c0220222",
+            "mean_delta": 0.0
+          },
+          {
+            "condition": "c2220122",
+            "mean_delta": 0.0
+          }
+        ]
+      },
+      "judge_consistency": null,
+      "flags": [
+        {
+          "kind": "trait",
+          "trait": "directness",
+          "issue": "directness: requested and judged levels barely correlate (Spearman 0.4022)"
+        },
+        {
+          "kind": "levels",
+          "trait": "directness",
+          "levels": "1-2",
+          "issue": "directness levels 1-2 are hard to tell apart (distinguishability 0.5)"
+        },
+        {
+          "kind": "levels",
+          "trait": "directness",
+          "levels": "3-4",
+          "issue": "directness levels 3-4 are hard to tell apart (distinguishability 0.5556)"
+        },
+        {
+          "kind": "levels",
+          "trait": "warmth",
+          "levels": "0-1",
+          "issue": "warmth levels 0-1 are hard to tell apart (distinguishability 0.5556)"
+        },
+        {
+          "kind": "levels",
+          "trait": "verbosity",
+          "levels": "2-3",
+          "issue": "verbosity levels 2-3 are hard to tell apart (distinguishability 0.3889)"
+        },
+        {
+          "kind": "levels",
+          "trait": "humour",
+          "levels": "0-1",
+          "issue": "humour levels 0-1 are hard to tell apart (distinguishability 0.5)"
+        },
+        {
+          "kind": "levels",
+          "trait": "humour",
+          "levels": "2-3",
+          "issue": "humour levels 2-3 are hard to tell apart (distinguishability 0.4444)"
+        },
+        {
+          "kind": "trait",
+          "trait": "formality",
+          "issue": "formality: requested and judged levels barely correlate (Spearman 0.3873)"
+        },
+        {
+          "kind": "levels",
+          "trait": "formality",
+          "levels": "0-1",
+          "issue": "formality levels 0-1 are hard to tell apart (distinguishability 0.4444)"
+        },
+        {
+          "kind": "levels",
+          "trait": "formality",
+          "levels": "1-2",
+          "issue": "formality levels 1-2 are hard to tell apart (distinguishability 0.5556)"
+        },
+        {
+          "kind": "levels",
+          "trait": "formality",
+          "levels": "2-3",
+          "issue": "formality levels 2-3 are hard to tell apart (distinguishability 0.5556)"
+        },
+        {
+          "kind": "trait",
+          "trait": "explanation_depth",
+          "issue": "explanation_depth: requested and judged levels barely correlate (Spearman 0.2961)"
+        },
+        {
+          "kind": "levels",
+          "trait": "explanation_depth",
+          "levels": "2-3",
+          "issue": "explanation_depth levels 2-3 are hard to tell apart (distinguishability 0.5)"
+        },
+        {
+          "kind": "levels",
+          "trait": "explanation_depth",
+          "levels": "3-4",
+          "issue": "explanation_depth levels 3-4 are hard to tell apart (distinguishability 0.5556)"
+        },
+        {
+          "kind": "trait",
+          "trait": "assertiveness",
+          "issue": "assertiveness: requested and judged levels barely correlate (Spearman 0.3735)"
+        },
+        {
+          "kind": "levels",
+          "trait": "assertiveness",
+          "levels": "1-2",
+          "issue": "assertiveness levels 1-2 are hard to tell apart (distinguishability 0.5556)"
+        },
+        {
+          "kind": "levels",
+          "trait": "assertiveness",
+          "levels": "2-3",
+          "issue": "assertiveness levels 2-3 are hard to tell apart (distinguishability 0.5)"
+        }
+      ]
+    },
+    "z-ai/glm-5.3-flash [turn+example]": {
+      "records": 270,
+      "judged": 270,
+      "errors": 0,
+      "traits": {
+        "directness": {
+          "spearman": 0.4183,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 2.8889,
+            "1": 3.5556,
+            "2": 3.3333,
+            "3": 3.7778,
+            "4": 3.7778
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.8333,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.3889,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.6667,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.5,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.3194
+        },
+        "warmth": {
+          "spearman": 0.6658,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 1.3333,
+            "1": 1.4444,
+            "2": 1.8889,
+            "3": 2.7778,
+            "4": 3.0
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.5556,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.7222,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.8333,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.5556,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.2963
+        },
+        "verbosity": {
+          "spearman": 0.5484,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 2.6667,
+            "1": 3.1111,
+            "2": 3.4444,
+            "3": 3.6667,
+            "4": 3.6667
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.7222,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.6667,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.6111,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.5,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.375
+        },
+        "humour": {
+          "spearman": 0.6078,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 0.0,
+            "1": 0.0,
+            "2": 1.1111,
+            "3": 0.4444,
+            "4": 2.0
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.5,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.7778,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.3333,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.8889,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.4074
+        },
+        "formality": {
+          "spearman": 0.5427,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 1.5556,
+            "1": 1.6667,
+            "2": 2.0,
+            "3": 2.2222,
+            "4": 2.3333
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.5,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.6667,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.6111,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.5556,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.4815
+        },
+        "explanation_depth": {
+          "spearman": 0.5473,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 2.3333,
+            "1": 2.4444,
+            "2": 3.0,
+            "3": 3.4444,
+            "4": 3.5556
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.5556,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.7222,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.7222,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.5556,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.338
+        },
+        "assertiveness": {
+          "spearman": 0.4419,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 1.3333,
+            "1": 2.7778,
+            "2": 2.5556,
+            "3": 3.0,
+            "4": 3.0
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.8333,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.3889,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.7222,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.5,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.2778
+        }
+      },
+      "habits": {
+        "summary_first": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "risks_first": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "next_step": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "confirm_goal": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "clarify_once": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "acknowledge_constraints": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "concrete_examples": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "analogies": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "structured": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "plain_words": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "precise_terms": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "tradeoffs": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "acknowledge_progress": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "light_aside": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "recap_end": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "flag_uncertainty": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        }
+      },
+      "quality": {
+        "styled_minus_baseline": {
+          "mean": -0.0115,
+          "ci95": [
+            -0.0345,
+            0.0
+          ],
+          "n": 261,
+          "clusters": 9
+        },
+        "static_minus_baseline": null,
+        "refusal_rate": {
+          "styled": 0.0,
+          "baseline": 0.0
+        },
+        "worst_conditions": [
+          {
+            "condition": "c2320222",
+            "mean_delta": -0.1111
+          },
+          {
+            "condition": "c2220222",
+            "mean_delta": -0.1111
+          },
+          {
+            "condition": "c2240222",
+            "mean_delta": -0.1111
+          },
+          {
+            "condition": "c2223222",
+            "mean_delta": 0.0
+          },
+          {
+            "condition": "c2220212",
+            "mean_delta": 0.0
+          }
+        ]
+      },
+      "judge_consistency": null,
+      "flags": [
+        {
+          "kind": "trait",
+          "trait": "directness",
+          "issue": "directness: requested and judged levels barely correlate (Spearman 0.4183)"
+        },
+        {
+          "kind": "levels",
+          "trait": "directness",
+          "levels": "1-2",
+          "issue": "directness levels 1-2 are hard to tell apart (distinguishability 0.3889)"
+        },
+        {
+          "kind": "levels",
+          "trait": "directness",
+          "levels": "3-4",
+          "issue": "directness levels 3-4 are hard to tell apart (distinguishability 0.5)"
+        },
+        {
+          "kind": "levels",
+          "trait": "warmth",
+          "levels": "0-1",
+          "issue": "warmth levels 0-1 are hard to tell apart (distinguishability 0.5556)"
+        },
+        {
+          "kind": "levels",
+          "trait": "warmth",
+          "levels": "3-4",
+          "issue": "warmth levels 3-4 are hard to tell apart (distinguishability 0.5556)"
+        },
+        {
+          "kind": "levels",
+          "trait": "verbosity",
+          "levels": "3-4",
+          "issue": "verbosity levels 3-4 are hard to tell apart (distinguishability 0.5)"
+        },
+        {
+          "kind": "levels",
+          "trait": "humour",
+          "levels": "0-1",
+          "issue": "humour levels 0-1 are hard to tell apart (distinguishability 0.5)"
+        },
+        {
+          "kind": "levels",
+          "trait": "humour",
+          "levels": "2-3",
+          "issue": "humour levels 2-3 are hard to tell apart (distinguishability 0.3333)"
+        },
+        {
+          "kind": "levels",
+          "trait": "formality",
+          "levels": "0-1",
+          "issue": "formality levels 0-1 are hard to tell apart (distinguishability 0.5)"
+        },
+        {
+          "kind": "levels",
+          "trait": "formality",
+          "levels": "3-4",
+          "issue": "formality levels 3-4 are hard to tell apart (distinguishability 0.5556)"
+        },
+        {
+          "kind": "levels",
+          "trait": "explanation_depth",
+          "levels": "0-1",
+          "issue": "explanation_depth levels 0-1 are hard to tell apart (distinguishability 0.5556)"
+        },
+        {
+          "kind": "levels",
+          "trait": "explanation_depth",
+          "levels": "3-4",
+          "issue": "explanation_depth levels 3-4 are hard to tell apart (distinguishability 0.5556)"
+        },
+        {
+          "kind": "trait",
+          "trait": "assertiveness",
+          "issue": "assertiveness: requested and judged levels barely correlate (Spearman 0.4419)"
+        },
+        {
+          "kind": "levels",
+          "trait": "assertiveness",
+          "levels": "1-2",
+          "issue": "assertiveness levels 1-2 are hard to tell apart (distinguishability 0.3889)"
+        },
+        {
+          "kind": "levels",
+          "trait": "assertiveness",
+          "levels": "3-4",
+          "issue": "assertiveness levels 3-4 are hard to tell apart (distinguishability 0.5)"
+        }
+      ]
+    },
+    "z-ai/glm-5.3-flash [turn]": {
+      "records": 270,
+      "judged": 270,
+      "errors": 0,
+      "traits": {
+        "directness": {
+          "spearman": 0.6462,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 2.6667,
+            "1": 2.8889,
+            "2": 3.2222,
+            "3": 3.8889,
+            "4": 3.8889
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.5556,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.6111,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.7222,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.5,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.3981
+        },
+        "warmth": {
+          "spearman": 0.6711,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 1.0,
+            "1": 1.7778,
+            "2": 1.5556,
+            "3": 2.4444,
+            "4": 3.1111
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.8889,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.3889,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.8333,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.7222,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.3009
+        },
+        "verbosity": {
+          "spearman": 0.6328,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 2.7778,
+            "1": 3.0,
+            "2": 3.6667,
+            "3": 3.6667,
+            "4": 3.8889
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.6111,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.7778,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.5,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.6111,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.3935
+        },
+        "humour": {
+          "spearman": 0.7615,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 0.0,
+            "1": 0.0,
+            "2": 1.0,
+            "3": 1.1111,
+            "4": 2.7778
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.5,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.7222,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.5,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.8889,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.5648
+        },
+        "formality": {
+          "spearman": 0.4121,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 2.0,
+            "1": 1.6667,
+            "2": 2.1111,
+            "3": 2.4444,
+            "4": 2.4444
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.3333,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.6667,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.6111,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.5,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.3935
+        },
+        "explanation_depth": {
+          "spearman": 0.8141,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 1.6667,
+            "1": 2.5556,
+            "2": 3.1111,
+            "3": 3.5556,
+            "4": 3.8889
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.8889,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.7222,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.7222,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.6667,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.3519
+        },
+        "assertiveness": {
+          "spearman": 0.4571,
+          "probes": 45,
+          "mean_judged_by_level": {
+            "0": 1.3333,
+            "1": 2.5556,
+            "2": 2.8889,
+            "3": 3.2222,
+            "4": 3.0
+          },
+          "adjacent": {
+            "0-1": {
+              "distinguishability": 0.7778,
+              "prompts": 9
+            },
+            "1-2": {
+              "distinguishability": 0.6667,
+              "prompts": 9
+            },
+            "2-3": {
+              "distinguishability": 0.6667,
+              "prompts": 9
+            },
+            "3-4": {
+              "distinguishability": 0.4444,
+              "prompts": 9
+            }
+          },
+          "leakage": 0.3333
+        }
+      },
+      "habits": {
+        "summary_first": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "risks_first": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "next_step": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "confirm_goal": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "clarify_once": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "acknowledge_constraints": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "concrete_examples": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "analogies": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "structured": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "plain_words": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "precise_terms": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "tradeoffs": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "acknowledge_progress": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "light_aside": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "recap_end": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        },
+        "flag_uncertainty": {
+          "prompts": 0,
+          "adherence": null,
+          "control_rate": null,
+          "lift": null
+        }
+      },
+      "quality": {
+        "styled_minus_baseline": {
+          "mean": -0.0268,
+          "ci95": [
+            -0.0651,
+            0.0
+          ],
+          "n": 261,
+          "clusters": 9
+        },
+        "static_minus_baseline": null,
+        "refusal_rate": {
+          "styled": 0.0,
+          "baseline": 0.0
+        },
+        "worst_conditions": [
+          {
+            "condition": "c2240222",
+            "mean_delta": -0.2222
+          },
+          {
+            "condition": "c2220222",
+            "mean_delta": -0.1111
+          },
+          {
+            "condition": "c2120222",
+            "mean_delta": -0.1111
+          },
+          {
+            "condition": "c2224222",
+            "mean_delta": -0.1111
+          },
+          {
+            "condition": "c2222222",
+            "mean_delta": -0.1111
+          }
+        ]
+      },
+      "judge_consistency": null,
+      "flags": [
+        {
+          "kind": "levels",
+          "trait": "directness",
+          "levels": "0-1",
+          "issue": "directness levels 0-1 are hard to tell apart (distinguishability 0.5556)"
+        },
+        {
+          "kind": "levels",
+          "trait": "directness",
+          "levels": "3-4",
+          "issue": "directness levels 3-4 are hard to tell apart (distinguishability 0.5)"
+        },
+        {
+          "kind": "levels",
+          "trait": "warmth",
+          "levels": "1-2",
+          "issue": "warmth levels 1-2 are hard to tell apart (distinguishability 0.3889)"
+        },
+        {
+          "kind": "levels",
+          "trait": "verbosity",
+          "levels": "2-3",
+          "issue": "verbosity levels 2-3 are hard to tell apart (distinguishability 0.5)"
+        },
+        {
+          "kind": "levels",
+          "trait": "humour",
+          "levels": "0-1",
+          "issue": "humour levels 0-1 are hard to tell apart (distinguishability 0.5)"
+        },
+        {
+          "kind": "levels",
+          "trait": "humour",
+          "levels": "2-3",
+          "issue": "humour levels 2-3 are hard to tell apart (distinguishability 0.5)"
+        },
+        {
+          "kind": "trait",
+          "trait": "formality",
+          "issue": "formality: requested and judged levels barely correlate (Spearman 0.4121)"
+        },
+        {
+          "kind": "levels",
+          "trait": "formality",
+          "levels": "0-1",
+          "issue": "formality levels 0-1 are hard to tell apart (distinguishability 0.3333)"
+        },
+        {
+          "kind": "levels",
+          "trait": "formality",
+          "levels": "3-4",
+          "issue": "formality levels 3-4 are hard to tell apart (distinguishability 0.5)"
+        },
+        {
+          "kind": "trait",
+          "trait": "assertiveness",
+          "issue": "assertiveness: requested and judged levels barely correlate (Spearman 0.4571)"
+        },
+        {
+          "kind": "levels",
+          "trait": "assertiveness",
+          "levels": "3-4",
+          "issue": "assertiveness levels 3-4 are hard to tell apart (distinguishability 0.4444)"
+        }
+      ]
+    }
+  },
+  "arm_comparison": {
+    "z-ai/glm-5.3-flash [prefix]": {
+      "mean_spearman": 0.5771,
+      "mean_distinguishability": 0.629,
+      "mean_habit_lift": null,
+      "quality_delta": -0.0268
+    },
+    "z-ai/glm-5.3-flash [system]": {
+      "mean_spearman": 0.4672,
+      "mean_distinguishability": 0.6032,
+      "mean_habit_lift": null,
+      "quality_delta": -0.0115
+    },
+    "z-ai/glm-5.3-flash [turn+example]": {
+      "mean_spearman": 0.5389,
+      "mean_distinguishability": 0.621,
+      "mean_habit_lift": null,
+      "quality_delta": -0.0115
+    },
+    "z-ai/glm-5.3-flash [turn]": {
+      "mean_spearman": 0.6278,
+      "mean_distinguishability": 0.6429,
+      "mean_habit_lift": null,
+      "quality_delta": -0.0268
+    }
+  },
+  "limitations": [
+    "A model judges style; no human raters. Judge consistency is reported, judge validity against people is not.",
+    "Fixed single-turn prompts; no multi-turn sessions, tools or host harness.",
+    "Some habits are conditional (\"when useful\", \"when ambiguous\"); low adherence can be correct behaviour on prompts that do not call for them.",
+    "Probes vary one trait from the neutral configuration; interactions between traits are not measured.",
+    "Arms (placement, tone example) are compared on the same prompts and judge; differences are within this model and judge only."
+  ]
+}

@@ -16,10 +16,11 @@ allowed personas and allowed linked user IDs. No username inference or implicit
 user linking. Missing or invalid authentication returns 401; forbidden scopes 403.
 600 requests per authenticated actor per minute; 64 KiB body, 100 events/batch.
 
-Reads: health/live, health/ready; authenticated capabilities, persona list,
-metadata/history, consolidation status. Writes: persona creation/import/export,
-express, observations, feedback, reflections, consolidations, promotion, rollback,
-evolution settings, deletion.
+Reads: health/live, health/ready; authenticated whoami, capabilities, persona list,
+metadata/history, timeline, decision explanations, user settings, consolidation
+status. Writes: persona creation/import/export, express, observations, feedback,
+reflections, comparisons, consolidations, promotion, rollback, evolution settings,
+user settings, deletion.
 Path and exact request schemas are in OpenAPI. Metadata and raw transcript fields
 are deliberately absent in this profile. Observations never imply reward.
 
@@ -180,3 +181,53 @@ reliability is a credential class only; explicit relationship export unsupported
 session state is a latent offset, not the decoder's (untrained) session input, and
 is not checkpointed. Cross-major migration is a reset (`openape migrate --reset`), not
 a state conversion. See docs/reports/open-issues.md.
+
+## Relationship settings, comparisons and explanations (ADR 0006)
+
+`GET`/`PUT /v1/personas/{id}/users/{user_id}/settings` read and replace a linked
+user's settings. `GET` needs `persona:express`; `PUT` needs `settings:write`, and the
+credential must be allowed for that persona and user. The body (`schema/settings.json`)
+holds:
+
+* `preferences`: enumerated slots `address`, `spelling`, `units`, `format`, `dates`,
+  each value rendering one reviewed catalogue sentence after the habits.
+* `pins`: `{trait: {min, max}}` allowed levels. Context masks always win
+  (`mask_reason` notes `pin_overridden_by_context`), and pins no approved
+  configuration satisfies are refused with INVALID_CONTEXT.
+* `vetoes`: habit ids never selected.
+* `frozen`: no relationship learning, maturation or session state;
+  consolidations and reflections in that scope fail with RELATIONSHIP_FROZEN.
+* `cohort_contribution`: the relationship may count toward the persona's cohort
+  prior. A relationship without a version starts from the mean of at least 5
+  contributors, shrunk by n/(n+5).
+* `exploration`: on eligible low-stakes user turns, 15% are sampled from the
+  persona's distribution. Every such turn is logged with its ε-mixture propensity,
+  and the decision says `exploration: true` when the served style differs from the
+  first choice.
+
+There is no free text. Decisions carry the user's `preferences` (rendered by the
+SDKs) and `exploration`.
+
+`POST /v1/comparisons` (`feedback:write`; same actor or training:admin) returns two
+options for a served decision in a blind order: the served choice and the persona's
+best different trait configuration in the same context and settings. The user's
+answer is ordinary pairwise feedback.
+
+`GET /v1/decisions/{id}/explanation` (`persona:express`; same actor or
+training:admin) attributes the decision. Per trait it gives the decoder's expected
+level after each layer (temperament, character, relationship, session), the layer
+that moved it most and its limits (context, pins). Per habit it gives the decoder
+probability, the learned bias per layer and its state. Its sentences come from fixed
+templates and are for people, never for a model's context.
+
+`GET /v1/personas/{id}/timeline?user_id=` lists versions with expected trait levels
+and habit probabilities in a fixed reference context. `GET /v1/whoami` returns the
+credential's tenant, actor, scopes and allowlists, never the token.
+
+Habit learning: a habit preference (the habit part of a pairwise preference) moves a
+per-version habit bias, never the latent. The bias is
+`clip(4·Σ weight·±1, ±4)` over the scope's valid habit evidence. A person's request
+counts at least fully. Agent reflections alone are capped at ±2 and may not move
+`flag_uncertainty` or `risks_first` down. An automatic `habit` job promotes it with
+lineage. Exports carry the core version's bias.
+

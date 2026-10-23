@@ -1,5 +1,65 @@
 # Changelog
 
+## Unreleased: relationship controls, separate habit learning, multi-replica (ADR 0006)
+
+### Learning
+* Habits learn beside the latent. A per-version habit bias comes from consented habit
+  evidence and is promoted by a new automatic `habit` job with lineage, so revocation
+  reverts it. A session habit offset applies in-session requests at once.
+* Trait learning (candidates, session states, evaluator) is trait-only. Session
+  states keep unmentioned traits and habits where they were (KL anchor).
+* A person's habit request counts in full. An agent's reflections alone move a habit
+  at most halfway and may not weaken `flag_uncertainty` or `risks_first`.
+* Cohort prior: a new relationship starts from the shrunk mean of at least five
+  opted-in relationships.
+* Opt-in exploration logs an ε-mixture policy with true propensities.
+  `POST /v1/comparisons` asks "which style did you prefer?". New CLI commands:
+  `openape compare` and `openape rate`.
+* Decoder retrained. Held-out fitted trait agreement is 0.742 (was 0.655).
+  Episodic meta-training is available (`--episodic-steps`) but off: it showed no gain.
+
+### Relationship controls
+* `GET/PUT /v1/personas/{id}/users/{user}/settings` (scope `settings:write`):
+  * enumerated preferences (address, spelling, units, format, dates), each one
+    reviewed sentence;
+  * trait pins (context safety masks win);
+  * habit vetoes;
+  * freeze;
+  * cohort and exploration consent.
+
+  Decisions carry `preferences` and `exploration`. CLI: `openape settings`.
+
+### Context
+* Adapters send file languages and repository kind (marker names only). The engine
+  tags `returning` and `corrected`.
+* The opt-in text classifier is a hashed-feature linear model with Python and
+  TypeScript parity. It replaces the keyword rules (held-out task accuracy 0.60 vs
+  0.33).
+* Reviewed tone examples, opt-in via `OPENAPE_STYLE_EXAMPLE=1`.
+* Security: a repository's `.openape.json` is untrusted. It is read as a regular file
+  of at most 64 KB, without following links or blocking, and can only add task,
+  language, repo kind and tags or raise stakes.
+
+### Visibility
+* `GET /v1/decisions/{id}/explanation` (why this style, by layer) and
+  `GET /v1/personas/{id}/timeline`.
+* `openape dashboard` writes a self-contained page; `scripts/demo_dashboard.py`.
+* `GET /v1/whoami`.
+
+### Production
+* PostgreSQL backend (`OPENAPE_DATABASE_URL`, `postgres` extra) for several replicas,
+  with `compose.replicas.yaml`. The full suite runs on both backends
+  (`OPENAPE_TEST_DATABASE_URL`).
+* Candidate and maturation evaluation run in a spawned evaluator process.
+* Docker image 0.3.0 re-verified (hardened compose, isolated evaluator, two replicas
+  on PostgreSQL).
+* Live tool-calling smokes (`scripts/live_tool_smoke.py`, Hermes and OpenClaw) on a
+  real model.
+* The live harness adds `prefix` placement, `--example` and per-arm comparison, and
+  survives a torn record line.
+* The OpenCogni boundary change was raised upstream as a PR (taylorelley/opencogni#8);
+  its cap is now 1400 chars.
+
 ## Unreleased — live-model style evaluation harness
 
 * `benchmarks/live`: 36 fixed CC0 prompts × baseline, static persona, neutral, 28

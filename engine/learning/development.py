@@ -109,14 +109,21 @@ def fit_state(decoder, core, rel, scope, examples, steps=20):
     weights = torch.tensor([e.get('weight', 1.0) for e, _ in usable]); weights = weights / weights.sum()
     feats = torch.stack([features(e['context'], e['host']) for e, _ in usable]); lm = torch.stack([level_mask(e['context']) for e, _ in usable])
     la, lb = (torch.stack([APPROVED_LEVELS[p[k][0]] for _, p in usable]) for k in (0, 1))
+    # Traits the preference does not mention stay where they were: a KL anchor to their
+    # current distributions, so "shorter" does not also make the persona more formal.
+    # Habits are anchored too; they move through the session's habit offset instead.
+    with torch.no_grad(): t0, h0 = decoder.batch(core, rel, feats, lm)
+    p0, keep = t0.exp(), (la == lb).float()
     x = torch.zeros_like(base).requires_grad_(True)
     optimizer = torch.optim.Adam([x], lr=0.15)
     for _ in range(steps):
         optimizer.zero_grad()
         c, r = (core + x, rel) if scope == 'core' else (core, rel + x)
-        t, _ = decoder.batch(c, r, feats, lm)
+        t, h = decoder.batch(c, r, feats, lm)
         trait_score = lambda levels: t.gather(-1, levels.unsqueeze(-1)).squeeze(-1).sum(-1)
-        loss = -(weights * F.logsigmoid(trait_score(la) - trait_score(lb))).sum() + 0.01 * x.square().sum()
+        kl = torch.where(p0 > 0, p0 * (t0 - t), torch.zeros_like(t)).sum(-1)
+        habit_kl = F.binary_cross_entropy_with_logits(h, torch.sigmoid(h0), reduction='none').sum(-1)
+        loss = -(weights * F.logsigmoid(trait_score(la) - trait_score(lb))).sum() + (weights * ((keep * kl).sum(-1) + habit_kl)).sum() + 0.01 * x.square().sum()
         loss.backward(); optimizer.step()
         with torch.no_grad(): x.mul_(min(1.0, STATE_BUDGET / (float(x.norm()) + 1e-8)))
     return x.detach()

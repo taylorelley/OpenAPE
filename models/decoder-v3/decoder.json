@@ -38,7 +38,7 @@
       "trait_agreement_fitted": 0.7347,
       "habit_f1_neutral": 0.6456,
       "habit_f1_fitted": 0.477,
-      "habit_f1_fitted_with_bias": 0.5174
+      "habit_f1_fitted_with_bias": 0.5477
     },
     "validation": {
       "personas": 96,
@@ -50,7 +50,7 @@
       "trait_agreement_fitted": 0.7421,
       "habit_f1_neutral": 0.6345,
       "habit_f1_fitted": 0.4081,
-      "habit_f1_fitted_with_bias": 0.6245
+      "habit_f1_fitted_with_bias": 0.6556
     }
   },
   "seed_initialization_trait_agreement": {

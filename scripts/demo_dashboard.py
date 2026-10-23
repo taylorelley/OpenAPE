@@ -1,8 +1,9 @@
 """A demo persona's life in a throwaway engine, for the dashboard.
 
 A mentor persona works with one linked user over a number of sessions. The user sets
-preferences and a humour pin, prefers shorter answers a few times, and the agent
-reflects that the user wants risks flagged first. Sessions end, so the persona matures.
+preferences and a humour pin, prefers shorter answers a few times and once swaps a habit
+for "flag risks first"; the agent reflects now and then that the user wants more direct
+answers. Sessions end, so the persona matures.
 Writes the timeline, the explanation of the last decision and a few totals as JSON.
 
     python -m scripts.demo_dashboard --out demo.json [--html demo.html]
@@ -16,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from fastapi.testclient import TestClient
 from engine.api.app import create_app
-from protocol.catalogue import NEUTRAL
+from protocol.catalogue import HABIT_IDS
 
 TOKEN = 'demo-owner-token-not-a-secret-000000'
 CREDS = [dict(token=TOKEN, tenant='local', actor='owner', personas=['*'], users=['*'],
@@ -44,8 +45,12 @@ def run(sessions=14):
                     shorter = {'controls': {**d['controls'], 'verbosity': d['controls']['verbosity'] - 1, 'explanation_depth': min(d['controls']['explanation_depth'], 3)}, 'habits': [h for h in d['habits'] if h not in ('confirm_goal', 'recap_end')]}
                     post('/v1/feedback', dict(feedback_id=f'{sid}-short', decision_id=d['decision_id'], source='explicit_user', kind='pairwise_preference', actor_id='owner',
                         consent_scope='relationship', learning_consent=True, preferred=shorter, rejected=served, evidence_group=sid))
-                if turn == 1 and s % 4 == 1 and 'risks_first' not in d['habits']:
-                    post('/v1/reflections', dict(reflection_id=f'{sid}-risks', decision_id=d['decision_id'], adjustments={}, habits={'risks_first': 'more_often'}, reason='observed_preference'))
+                if turn == 1 and s % 4 == 1:
+                    post('/v1/reflections', dict(reflection_id=f'{sid}-direct', decision_id=d['decision_id'], adjustments={'directness': 'more'}, reason='observed_preference'))
+                if turn == 2 and s == 2 and 'risks_first' not in d['habits']:  # the user swaps one habit for another
+                    swap = {'controls': d['controls'], 'habits': sorted([h for h in d['habits'] if h != 'acknowledge_progress'][:2] + ['risks_first'], key=HABIT_IDS.index)}
+                    post('/v1/feedback', dict(feedback_id=f'{sid}-risks', decision_id=d['decision_id'], source='explicit_user', kind='pairwise_preference', actor_id='owner',
+                        consent_scope='relationship', learning_consent=True, preferred=swap, rejected=served, evidence_group=sid))
             post('/v1/observations', dict(adapter_id='upap.claude-code', events=[dict(event_id=f'{sid}-end', occurred_at=datetime.now(timezone.utc).isoformat(), persona_id='sage',
                 user_id='alice', session_id=sid, type='session.ended')]))
             api.app.state.drain()

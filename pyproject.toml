@@ -13,6 +13,8 @@ test = ["pytest>=8,<10"]
 # Live-model evaluation harness (benchmarks/live): Claude via the official anthropic SDK,
 # other providers and gateways via the official openai SDK (any OpenAI-compatible endpoint).
 live = ["anthropic>=1.17,<2", "openai>=3.37,<4"]
+# Several replicas on one PostgreSQL database (OPENAPE_DATABASE_URL).
+postgres = ["psycopg[binary]>=3.2,<4"]
 [project.scripts]
 openape = "sdk.cli.main:main"
 [tool.setuptools.packages.find]

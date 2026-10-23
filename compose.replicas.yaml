@@ -1,0 +1,41 @@
+# Two engine replicas on one PostgreSQL database. Writes serialize through one advisory
+# lock; artifacts live in the database. Put a load balancer of your choice in front of
+# the replicas (session affinity is not needed). Credentials: `openape init` as for
+# compose.yaml; set POSTGRES_PASSWORD in the environment (never commit it).
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: openape
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: openape
+    volumes: ["openape-pg:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "openape"]
+      interval: 2s
+      retries: 30
+    restart: unless-stopped
+  replica-a: &replica
+    image: openape:0.3.0
+    build: .
+    depends_on:
+      postgres: {condition: service_healthy}
+    ports: ["127.0.0.1:8765:8765"]
+    environment:
+      OPENAPE_CREDENTIALS_FILE: /run/secrets/credentials
+      OPENAPE_DATABASE_URL: postgresql://openape:${POSTGRES_PASSWORD}@postgres:5432/openape
+    secrets: [credentials]
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777", "/data:size=16m,uid=10001"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    init: true
+    restart: unless-stopped
+  replica-b:
+    <<: *replica
+    ports: ["127.0.0.1:8766:8765"]
+secrets:
+  credentials:
+    file: ./.openape/docker-credentials.json
+volumes:
+  openape-pg:

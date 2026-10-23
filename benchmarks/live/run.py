@@ -55,8 +55,13 @@ def estimate(n_gen, n_judge, gen_model, judge_model):
         note=f'rough: assumes ~{GEN_IN}/{GEN_OUT} tokens per generation and ~{JUDGE_IN}/{JUDGE_OUT} per judgement (in/out incl. thinking); unknown models are not priced')
 
 def load(path):
+    """Records so far. A line torn by an interrupted run is skipped, so that record is redone."""
     if not path.exists(): return []
-    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    out = []
+    for line in path.read_text().splitlines():
+        try: out.append(json.loads(line))
+        except ValueError: continue
+    return out
 
 def key(r):
     return (r['gen_model'], r['placement'], bool(r.get('example')), r['prompt_id'], r['condition_id'])

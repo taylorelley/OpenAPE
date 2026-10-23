@@ -85,3 +85,15 @@ def test_agent_reflections_have_bounded_habit_influence(tmp_path):
         for h in ('flag_uncertainty', 'risks_first'):
             r = post(api, '/v1/reflections', reflection(f'x{h}', d['decision_id'], adjustments={}, habits={h: 'less_often'}))
             assert r.status_code == 403 and 'Only people' in r.text
+
+def test_session_preference_moves_only_what_was_asked(tmp_path):
+    """A session preference for shorter answers lowers verbosity this session without
+    dragging the other style traits or dropping the persona's habits."""
+    with TestClient(host_app(tmp_path), headers={'Authorization': 'Bearer ' + TOKEN}) as api:
+        make(api, 'ape', archetype='mentor', individuality=0, evolution='manual');api.headers['Authorization'] = 'Bearer ' + HOST_TOKEN
+        a = post(api, '/v1/express', expression(request_id='m0', session='ms')).json()
+        assert post(api, '/v1/reflections', reflection('m0', a['decision_id'], adjustments={'verbosity': 'less'})).json()['session_adapted']
+        b = post(api, '/v1/express', expression(request_id='m1', session='ms')).json()
+        assert b['controls']['verbosity'] < a['controls']['verbosity'] and set(b['habits']) == set(a['habits'])
+        for t in ('directness', 'warmth', 'formality', 'explanation_depth', 'assertiveness'):assert b['controls'][t] == a['controls'][t], t
+        assert abs(b['controls']['humour'] - a['controls']['humour']) <= 1
