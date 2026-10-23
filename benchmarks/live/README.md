@@ -47,17 +47,48 @@ Spearman < 0.5, habit lift < 0.3, quality drop > 0.5, and leakage > 0.75.
 ## Run it
 
 ```sh
-pip install -e '.[live]'                                  # anthropic SDK (Claude)
+pip install -e '.[live]'                                  # anthropic and openai SDKs
 python -m benchmarks.live.run                             # dry run: plan + cost estimate
 python -m benchmarks.live.run --per-task 1 --execute      # pilot: 9 prompts, ~423 replies
 python -m benchmarks.live.run --execute                   # full: 36 prompts, 1688 replies
-python -m benchmarks.live.run --provider openai-compatible --model MODEL \
-    --base-url https://… --key-env OTHER_PROVIDER_KEY --execute   # another provider family
 python -m benchmarks.live.run --report-only               # recompute docs/reports/live-eval.*
 ```
 
-Credentials resolve as the Anthropic SDK does: `ANTHROPIC_API_KEY`,
-`ANTHROPIC_AUTH_TOKEN` or an `ant auth login` profile. The model under test and the
+Claude credentials resolve as the Anthropic SDK does: `ANTHROPIC_API_KEY`,
+`ANTHROPIC_AUTH_TOKEN` or an `ant auth login` profile.
+
+### OpenAI-compatible endpoints
+
+Any endpoint that speaks the OpenAI Chat Completions API works through the official
+`openai` SDK, both as the model under test and as the judge. Examples are OpenAI
+itself, a gateway or router, or a local server such as vLLM or Ollama. The key comes
+from `OPENAI_API_KEY` (or the variable named by `--key-env`), and the base URL from
+`--base-url` or `OPENAI_BASE_URL`.
+
+```sh
+# Another provider family as the model under test, judged by Claude:
+python -m benchmarks.live.run --provider openai-compatible --model MODEL --base-url https://… --execute
+
+# Only an OpenAI-compatible endpoint (model under test and judge):
+python -m benchmarks.live.run --provider openai-compatible --model MODEL \
+    --judge-provider openai-compatible --judge-model JUDGE_MODEL --base-url https://… --execute
+
+# Separate endpoints or keys for the judge:
+    ... --judge-base-url https://… --judge-key-env JUDGE_KEY
+```
+
+The judge asks for strict `json_schema` output. If an endpoint doesn't support it, use
+`--judge-response-format json_object` (JSON mode, with the schema in the prompt) or
+`none` (instructions only). Every judgement is checked against the schema either way,
+and a malformed one is recorded as an error and retried on the next run.
+
+* **Effort:** `--effort` and `--judge-effort` default to `auto`, which means `medium`
+  and `high` on Claude and nothing on OpenAI-compatible models. A value such as
+  `--effort low` is sent there as `reasoning_effort`, so use it only with models that
+  accept it.
+* **Refusals:** a Chat Completions refusal (`message.refusal`, or `finish_reason`
+  `content_filter`) counts as a refusal.
+* **Cost:** the dry run prices Claude models only. The model under test and the
 judge both default to `claude-opus-5-5`, at effort `medium` for generation and `high`
 for judging. Change them with `--model`, `--effort`, `--judge-model` and
 `--judge-effort`.

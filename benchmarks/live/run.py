@@ -16,7 +16,10 @@ one run directory and one report.
     python -m benchmarks.live.run --per-task 1 --execute         # small pilot
     python -m benchmarks.live.run --execute                      # full run
     python -m benchmarks.live.run --provider openai-compatible --model MODEL \\
-        --base-url URL --key-env PROVIDER_API_KEY --execute     # second provider family
+        --base-url URL --execute                                # second provider family (OPENAI_API_KEY)
+    python -m benchmarks.live.run --provider openai-compatible --model MODEL \\
+        --judge-provider openai-compatible --judge-model JUDGE --base-url URL --execute
+                                                                # only an OpenAI-compatible endpoint
     python -m benchmarks.live.run --report-only       # recompute the report
 """
 import argparse
@@ -62,11 +65,18 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--provider', choices=['anthropic', 'openai-compatible', 'mock'], default='anthropic')
     ap.add_argument('--model', default=DEFAULT_MODEL, help='model under test')
-    ap.add_argument('--effort', default='medium', help="generation effort for Claude models; 'none' omits it")
+    ap.add_argument('--effort', default='auto', help="generation effort: Claude output_config.effort, or reasoning_effort on openai-compatible; "
+        "'auto' = medium for Claude and omitted for openai-compatible; 'none' omits it")
+    ap.add_argument('--judge-provider', choices=['anthropic', 'openai-compatible'], default='anthropic')
     ap.add_argument('--judge-model', default=DEFAULT_MODEL)
-    ap.add_argument('--judge-effort', default='high', help="'none' omits it")
-    ap.add_argument('--no-judge-fallback', action='store_true', help='do not let a declined judgement fall back to another model')
-    ap.add_argument('--base-url', help='openai-compatible base URL'); ap.add_argument('--key-env', help='env var holding the openai-compatible key')
+    ap.add_argument('--judge-effort', default='auto', help="'auto' = high for Claude and omitted for openai-compatible; 'none' omits it")
+    ap.add_argument('--no-judge-fallback', action='store_true', help='do not let a declined Claude judgement fall back to another model')
+    ap.add_argument('--base-url', help='openai-compatible base URL (default: OPENAI_BASE_URL, else the OpenAI API)')
+    ap.add_argument('--key-env', default='OPENAI_API_KEY', help='env var holding the openai-compatible key')
+    ap.add_argument('--judge-base-url', help='openai-compatible judge base URL (default: --base-url)')
+    ap.add_argument('--judge-key-env', help='env var holding the openai-compatible judge key (default: --key-env)')
+    ap.add_argument('--judge-response-format', choices=['json_schema', 'json_object', 'none'], default='json_schema',
+        help='openai-compatible judge output: strict JSON schema, JSON mode, or instructions only (always validated)')
     ap.add_argument('--placement', choices=['turn', 'system'], default='turn', help='style text after the task in the user turn (as Claude Code and Hermes inject it) or in the system prompt')
     ap.add_argument('--per-task', type=int, default=4, help='prompts per task type (4 = all 36)')
     ap.add_argument('--kinds', default='trait,habit,static', help='condition kinds to include besides baseline and neutral')
@@ -85,22 +95,26 @@ def main(argv=None):
     done = {key(r) for r in load(records_path) if r.get('judge') or (r.get('gen') and r['gen'].get('stop_reason') == 'refusal')}
     todo = [(p, c) for p, c in rows if (a.model, a.placement, p['id'], c['id']) not in done]
     rng = random.Random(a.seed); rejudge = {(p['id'], c['id']) for p, c in todo if rng.random() < a.rejudge}
-    est = estimate(len(todo), len(todo) + len(rejudge), a.model if a.provider == 'anthropic' else None, a.judge_model)
+    est = estimate(len(todo), len(todo) + len(rejudge), a.model if a.provider == 'anthropic' else None, a.judge_model if a.judge_provider == 'anthropic' else None)
     summary = dict(prompts=len(prompts), conditions=len({c['id'] for _, c in rows}), planned=len(rows), already_done=len(rows) - len(todo), to_run=len(todo), rejudged=len(rejudge), **est)
     print(json.dumps(summary, indent=2))
     if not a.execute:
         print('Dry run: nothing was called. Add --execute to run.' if a.provider != 'mock' else 'Dry run. Add --execute to run the mock pipeline.'); return 0
+    def effort_for(value, provider, claude_default):
+        if value == 'none': return None
+        if value == 'auto': return claude_default if provider == 'anthropic' else None
+        return value
     if a.provider == 'anthropic': gen = AnthropicProvider()
-    elif a.provider == 'openai-compatible':
-        if not a.base_url or not a.key_env: ap.error('--base-url and --key-env are required for openai-compatible')
-        gen = OpenAICompatibleProvider(a.base_url, a.key_env)
+    elif a.provider == 'openai-compatible': gen = OpenAICompatibleProvider(a.base_url, a.key_env)
     else: gen = MockProvider()
-    judge = gen if a.provider == 'mock' else AnthropicProvider()
-    effort = None if a.effort == 'none' or a.provider != 'anthropic' else a.effort
-    judge_effort = None if a.judge_effort == 'none' else a.judge_effort
+    if a.provider == 'mock': judge = gen
+    elif a.judge_provider == 'anthropic': judge = AnthropicProvider()
+    else: judge = OpenAICompatibleProvider(a.judge_base_url or a.base_url, a.judge_key_env or a.key_env, a.judge_response_format)
+    effort = effort_for(a.effort, a.provider, 'medium')
+    judge_effort = effort_for(a.judge_effort, a.judge_provider, 'high')
     run_dir.mkdir(parents=True, exist_ok=True); lock = threading.Lock()
     def work(p, c):
-        r = dict(gen_model=a.model, provider=a.provider, placement=a.placement, prompt_id=p['id'], task_type=p['task_type'], condition_id=c['id'], kind=c['kind'],
+        r = dict(gen_model=a.model, provider=a.provider, judge_provider='mock' if a.provider == 'mock' else a.judge_provider, placement=a.placement, prompt_id=p['id'], task_type=p['task_type'], condition_id=c['id'], kind=c['kind'],
             trait=c.get('trait'), level=c.get('level'), habit=c.get('habit'), control_id=c.get('control_id'), controls=c['controls'], habits=c['habits'],
             style_text=c['text'], at=datetime.now(timezone.utc).isoformat())
         try:
@@ -127,6 +141,7 @@ def write_report(records, a, run_dir):
     if not records: print('no records'); return 1
     report = dict(kind='live-model style evaluation; judged by a model, not by people', catalogue_hash=CATALOGUE_HASH, generated_at=datetime.now(timezone.utc).isoformat(),
         run_dir=str(run_dir), placements=sorted({r['placement'] for r in records}), providers=sorted({r['provider'] for r in records}),
+        judge_providers=sorted({r.get('judge_provider', 'anthropic') for r in records if r.get('judge')}),
         judge_models=sorted({r['judge']['served_model'] for r in records if r.get('judge')}), prompts=len({r['prompt_id'] for r in records}),
         thresholds=dict(distinguishability=analysis.DISTINGUISH_MIN, spearman=analysis.SPEARMAN_MIN, habit_lift=analysis.HABIT_LIFT_MIN,
             quality_delta=analysis.QUALITY_DROP_MAX, leakage=analysis.LEAKAGE_MAX),

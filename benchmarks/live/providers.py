@@ -4,16 +4,17 @@
   `pip install -e '.[live]'`). Credentials resolve as the SDK does (ANTHROPIC_API_KEY,
   ANTHROPIC_AUTH_TOKEN or an `ant auth login` profile). The SDK retries 429, 5xx and
   connection errors itself.
-* `openai-compatible`: a non-Claude model behind an OpenAI-compatible
-  `/chat/completions` endpoint, for the cross-provider check (generation only).
+* `openai-compatible`: any OpenAI-compatible Chat Completions endpoint through the
+  official `openai` SDK, as the model under test (another provider family, or a
+  gateway) and optionally as the judge.
 * `mock`: deterministic and offline, for tests and dry runs. Its replies encode the
   requested levels so the pipeline and metrics can be checked end to end.
 
-The judge is always a Claude model. The model under test never gets a refusal
+The judge defaults to Claude. The model under test never gets a refusal
 fallback: a silent switch to another model would invalidate the measurement, and
 refusals are an outcome the evaluation measures. The judge uses the server-side
-`fallbacks: "default"` (pass --no-judge-fallback to turn it off) and records which
-model actually judged.
+`fallbacks: "default"` when it is Claude (pass --no-judge-fallback to turn it off),
+and every judgement records which model actually judged.
 """
 import json
 import os
@@ -52,25 +53,52 @@ class AnthropicProvider:
         return dict(J.parse(text), served_model=r.model, input_tokens=r.usage.input_tokens, output_tokens=r.usage.output_tokens)
 
 class OpenAICompatibleProvider:
-    """Generation only, for a non-Claude provider family. Base URL and key come from the
-    environment variables named on the command line."""
+    """Any OpenAI-compatible Chat Completions endpoint, through the official `openai` SDK
+    (optional dependency: `pip install -e '.[live]'`). Serves as the model under test
+    (another provider family, or a gateway) and, with --judge-provider, as the judge.
+
+    The base URL and key default to the SDK's own environment variables (OPENAI_BASE_URL,
+    OPENAI_API_KEY). The SDK retries 408/409/429/5xx and connection errors. The judge asks
+    for `json_schema` output; for endpoints without it, use `json_object` (JSON mode,
+    with the schema in the prompt) or `none` (instructions only). Every judgement is
+    validated against the schema either way."""
     name = 'openai-compatible'
-    def __init__(self, base_url, key_env, timeout=600.0):
-        import httpx
-        key = os.environ.get(key_env)
-        if not key: raise SystemExit(f'{key_env} is not set')
-        self.http = httpx.Client(base_url=base_url.rstrip('/'), headers={'Authorization': 'Bearer ' + key}, timeout=timeout)
+    def __init__(self, base_url=None, key_env='OPENAI_API_KEY', response_format='json_schema', max_retries=4, timeout=600.0):
+        import openai  # optional dependency: pip install -e '.[live]'
+        key = os.environ.get(key_env or 'OPENAI_API_KEY')
+        if not key: raise SystemExit(f'{key_env or "OPENAI_API_KEY"} is not set')
+        self.client = openai.OpenAI(api_key=key, base_url=base_url or os.environ.get('OPENAI_BASE_URL') or None, max_retries=max_retries, timeout=timeout)
+        self.response_format = response_format
+    def _create(self, model, messages, effort, **extra):
+        kwargs = dict(model=model, messages=messages, **extra)
+        if effort: kwargs['reasoning_effort'] = effort
+        r = self.client.chat.completions.create(**kwargs)
+        choice = r.choices[0]; usage = r.usage
+        return r, choice, dict(served_model=r.model or model, input_tokens=getattr(usage, 'prompt_tokens', 0) or 0, output_tokens=getattr(usage, 'completion_tokens', 0) or 0)
     def generate(self, model, prompt, style, placement='turn', effort=None):
         messages = ([{'role': 'system', 'content': style}] if style and placement == 'system' else []) + \
             [{'role': 'user', 'content': prompt + ('\n\n' + style if style and placement != 'system' else '')}]
-        for attempt in range(4):
-            r = self.http.post('/chat/completions', json={'model': model, 'messages': messages})
-            if r.status_code in (429, 500, 502, 503, 504) and attempt < 3:
-                import time; time.sleep(2 ** attempt * 2); continue
-            r.raise_for_status(); break
-        data = r.json(); choice = data['choices'][0]; usage = data.get('usage') or {}
-        return dict(text=choice['message'].get('content') or '', stop_reason=choice.get('finish_reason'), served_model=data.get('model', model),
-            input_tokens=usage.get('prompt_tokens', 0), output_tokens=usage.get('completion_tokens', 0))
+        _, choice, meta = self._create(model, messages, effort)
+        # A Chat Completions refusal arrives as message.refusal (or finish_reason content_filter).
+        refused = bool(getattr(choice.message, 'refusal', None)) or choice.finish_reason == 'content_filter'
+        return dict(text=choice.message.content or '', stop_reason='refusal' if refused else choice.finish_reason, **meta)
+    def judge(self, model, task, reply, effort=None, fallback=True):
+        system = J.SYSTEM
+        if self.response_format == 'json_schema':
+            extra = {'response_format': {'type': 'json_schema', 'json_schema': {'name': 'style_judgement', 'strict': True, 'schema': J.SCHEMA}}}
+        else:
+            system += '\n\nReply with only a JSON object matching this schema:\n' + json.dumps(J.SCHEMA)
+            extra = {'response_format': {'type': 'json_object'}} if self.response_format == 'json_object' else {}
+        _, choice, meta = self._create(model, [{'role': 'system', 'content': system}, {'role': 'user', 'content': J.message(task, reply)}], effort, **extra)
+        if getattr(choice.message, 'refusal', None) or choice.finish_reason == 'content_filter': raise Refused(choice.message.refusal or 'content_filter')
+        if choice.finish_reason == 'length': raise ValueError('judge output truncated')
+        return dict(J.parse(_json_text(choice.message.content or '')), **meta)
+
+def _json_text(text):
+    """The JSON object in a reply, tolerating a Markdown code fence around it."""
+    text = text.strip()
+    if text.startswith('```'): text = text.split('\n', 1)[1].rsplit('```', 1)[0]
+    return text
 
 class MockProvider:
     """Offline stand-in. The reply states the levels and habits that the style text asked

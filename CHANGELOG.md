@@ -12,8 +12,12 @@
 * Reports trait fidelity, adjacent-level distinguishability, leakage, habit lift,
   quality and refusal parity, cross-model agreement, and flags templates to revise
   (`docs/reports/live-eval.*`).
-* Dry run with cost estimate by default; resumable; second provider families through
-  an OpenAI-compatible endpoint. Offline tests with a mock provider and a fake SDK client.
+* Dry run with cost estimate by default; resumable. Any OpenAI-compatible endpoint, through
+  the official `openai` SDK (also in the `live` extra), can be the model under test or the
+  judge (`--judge-provider`, `--judge-base-url`, `--judge-key-env`,
+  `--judge-response-format json_schema|json_object|none`).
+* Offline tests: a mock provider that injects known defects, fake clients, and both
+  official SDKs against a local stub server to check the HTTP requests they send.
 
 ## 0.3.0 — expressive controls, decoder-v3, upap/2 (see docs/adr/0005-expressive-controls.md)
 

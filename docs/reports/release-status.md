@@ -16,7 +16,7 @@ or merged upstream).
 
 | Check | Result | Level | Evidence |
 |---|---|---|---|
-| Python suites | 120 passed, 3 strict xfail (open gates) | implemented, unit/integration | `python-tests.txt` |
+| Python suites | 123 passed, 3 strict xfail (open gates) | implemented, unit/integration | `python-tests.txt` |
 | Node SDK + adapter fixtures | 58 passed | verified with mocks | `node-tests.txt` |
 | Golden conformance (Python + TS render identical text, validate the same 22 decisions and derive the same 25 contexts) | PASS | protocol | `protocol/upap/v2/conformance.json` |
 | Catalogue: every one of 5^7 configurations classified identically by catalogue and SDK; worst-case text 594 ≤ 900 chars | PASS | protocol | `tests/test_conformance.py` |
