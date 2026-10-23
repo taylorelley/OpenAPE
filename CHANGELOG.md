@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased — live-model style evaluation harness
+
+* `benchmarks/live`: 36 fixed CC0 prompts × baseline, static persona, neutral, 28
+  trait-level probes and 16 habit probes with matched controls; style text rendered by
+  the SDK; engine context masks respected.
+* A blind Claude judge (official `anthropic` SDK, optional `live` extra) rates traits,
+  habits, task quality and refusals under a JSON schema; 10% are judged twice for
+  consistency. The judge uses `fallbacks: "default"`; the model under test never
+  falls back.
+* Reports trait fidelity, adjacent-level distinguishability, leakage, habit lift,
+  quality and refusal parity, cross-model agreement, and flags templates to revise
+  (`docs/reports/live-eval.*`).
+* Dry run with cost estimate by default; resumable; second provider families through
+  an OpenAI-compatible endpoint. Offline tests with a mock provider and a fake SDK client.
+
 ## 0.3.0 — expressive controls, decoder-v3, upap/2 (see docs/adr/0005-expressive-controls.md)
 
 Breaking: a clean break from upap/1 and behaviour-controls/1.

@@ -16,7 +16,7 @@ or merged upstream).
 
 | Check | Result | Level | Evidence |
 |---|---|---|---|
-| Python suites | 114 passed, 3 strict xfail (open gates) | implemented, unit/integration | `python-tests.txt` |
+| Python suites | 120 passed, 3 strict xfail (open gates) | implemented, unit/integration | `python-tests.txt` |
 | Node SDK + adapter fixtures | 58 passed | verified with mocks | `node-tests.txt` |
 | Golden conformance (Python + TS render identical text, validate the same 22 decisions and derive the same 25 contexts) | PASS | protocol | `protocol/upap/v2/conformance.json` |
 | Catalogue: every one of 5^7 configurations classified identically by catalogue and SDK; worst-case text 594 ≤ 900 chars | PASS | protocol | `tests/test_conformance.py` |
@@ -32,6 +32,7 @@ or merged upstream).
 | OpenCogni real `planner.http` + patch | not re-run for 0.3.0 (needs a patched OpenCogni checkout) | — | ISSUE-001 |
 | Simulated-user A/B/C/D (384 sealed interactions) | D−B regret −0.90 [−1.48, −0.37]; D−B fully satisfied +0.06 [−0.03, 0.15] **n.s.** | simulated, not human | `benchmarks/reports/simulated.json` |
 | Development trajectories (8 personas × 48 sessions) | visible style changes move 1.65 traits on average | simulated, fixed priors | `benchmarks/reports/development.json` |
+| Live-model style evaluation harness | built; offline tests pass; not run (no provider key) | harness only | `benchmarks/live`, `tests/test_live_harness.py` |
 | Live LLM families | none tested | — | ISSUE-001 |
 | Independent ≥200-interaction human study | not run | — | ISSUE-002 |
 | Docker image | verified for 0.1.0 only; no daemon available since | — | `docker-smoke.json`, ISSUE-004 |
@@ -79,7 +80,7 @@ python -m scripts.performance
 
 ## Next release work
 
-See [open-issues.md](open-issues.md) and ADR 0005: a live-model harness that checks
-whether each trait level and habit changes model replies (and revises templates that
-do not), live-model runs across three provider families, an independent blinded A/B/C/D study, OpenCogni upstream review plus
+See [open-issues.md](open-issues.md) and ADR 0005: run the live-model harness
+(`benchmarks/live`, built and tested offline) to check whether each trait level and
+habit changes model replies, and revise templates that do not; live-model runs across three provider families, an independent blinded A/B/C/D study, OpenCogni upstream review plus
 integration suites, Docker re-verification, OS-isolated evaluator, and audits.

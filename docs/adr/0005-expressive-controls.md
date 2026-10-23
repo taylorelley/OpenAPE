@@ -85,8 +85,9 @@ feedback only.
   it, fitting from 16 preferences overshoots and does worse than the neutral latent
   (model card). Habits learn slowly from few preferences.
 * All evidence remains synthetic. Whether five levels and 16 habits produce
-  distinguishable live-model behaviour is unmeasured. A live-model evaluation harness
-  (rendered controls → model → blind judge, measuring per-level distinguishability,
-  habit adherence and task-quality parity) is the next step and the gate for revising
-  any template that a model does not distinguish.
+  distinguishable live-model behaviour is unmeasured. The live-model harness in
+  `benchmarks/live` (rendered controls → model → blind judge, measuring per-level
+  distinguishability, habit adherence and task-quality parity) is built and tested
+  offline. Running it is the gate for revising any template that a model does not
+  distinguish.
 * Learned state from 0.2 is lost at upgrade, by design.

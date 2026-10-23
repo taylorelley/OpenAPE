@@ -86,6 +86,15 @@ change moved 1.65 traits and 2.3 levels on average (largest 8 levels).
 **This is not human or live-model evidence.** It is a regression record for fixed
 priors.
 
+## 1c. Live-model style evaluation (needs a provider API key)
+
+[`live/`](live/README.md) checks whether each trait level and habit changes what real
+models write. A blind Claude judge rates replies to 36 fixed prompts under probes of
+every level and habit, and the report flags levels models don't distinguish, habits
+they ignore, and any loss of task quality against no style. It also compares against a
+hand-written persona prompt. Dry run by default, with a cost estimate (a pilot is about
+$24); offline tests in `tests/test_live_harness.py`. **Not run yet: no live results.**
+
 ## 2. Independent outcome evaluation (the release-gate benchmark)
 
 `evaluate.py` accepts independent blinded outcome labels in JSONL:
