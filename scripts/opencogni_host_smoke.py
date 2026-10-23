@@ -30,7 +30,8 @@ def main():
         c=report['checks']
         r,reqs=run();msgs=reqs[-1]['body']['messages'] if reqs else []
         c['plan_validated']=r.returncode==0
-        c['style_separate_lower_priority_message']=[m['role'] for m in msgs]==['system','system','user'] and count_marker(msgs[1])==1 and count_marker(msgs[0])==0
+        # The style is delimited user-role data, never a system message (upstream review).
+        c['style_is_delimited_data_not_system']=[m['role'] for m in msgs]==['system','user','user'] and count_marker(msgs[1])==1 and count_marker(msgs[0])==0 and '<presentation_style>' in msgs[1]['content']
         records=json.loads(r.stdout.strip().splitlines()[-1])['records'] if r.returncode==0 else []
         c['decision_and_versions_logged']=bool(records) and records[-1]['status']=='applied' and records[-1]['decisionId'] is not None and records[-1]['decoderHash'].startswith('sha256:')
         engine.stop()

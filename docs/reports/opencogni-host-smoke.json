@@ -1,12 +1,12 @@
 {
   "host": "OpenCogni planner.http",
-  "host_commit": "a4ce3fd6a69086253c81a67bf1e146e4f26b257d",
+  "host_commit": "5b680adeafa2b4b1268659bec7f69e2c2ae5c1f1",
   "base_commit": "833f4e6bb77c35f87c139e4944f80424f2ff8a30",
   "boundary_change": "adapters/opencogni/upstream/0001-planner-http-presentation-style.patch",
   "model": "synthetic chat endpoint; no provider call",
   "checks": {
     "plan_validated": true,
-    "style_separate_lower_priority_message": true,
+    "style_is_delimited_data_not_system": true,
     "decision_and_versions_logged": true,
     "engine_outage_fail_open": true
   },

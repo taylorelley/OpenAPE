@@ -33,7 +33,7 @@ x86_64 only. OpenCogni boundary change: under review upstream (taylorelley/openc
 | Live tool calls, Hermes 0.19.0 + z-ai/glm-5.3-flash | the model called `persona_feedback`; a refusal led it to a valid move; recorded | live model, one model | `live-tool-smoke.json` |
 | Live tool calls, OpenClaw 2026.10.5 + z-ai/glm-5.3-flash | the model found and called `persona_feedback` with the requested moves; next turn verbosity 3 → 1 via session state | live model, one model | `live-tool-smoke-openclaw.json` |
 | Style placement study (9 prompts × 30 conditions × 4 arms, judge deepseek-v4-flash) | after the task (current) best: mean Spearman 0.63 vs prefix 0.58, tone example 0.54, system prompt 0.47; quality −0.01 to −0.03 | live model, one model and judge | `live-eval-placement.md` |
-| OpenCogni `planner.http` with the boundary change (cap 1400) | PASS 4/4; OpenCogni typecheck, lint, 74 unit tests + 3 contract tests pass | actual host, synthetic model | `opencogni-host-smoke.json`, PR #8 |
+| OpenCogni `planner.http` with the boundary change (style as delimited user-role data, cap 1400) | PASS 4/4; OpenCogni typecheck, lint and 76 unit tests (5 contract tests) pass; both review findings fixed | actual host, synthetic model | `opencogni-host-smoke.json`, PR #8 |
 | Claude Code 2.1.308, Hermes 0.19.0, OpenClaw 2026.10.5, Pi 1.3.0 synthetic host smokes | PASS (0.3.0) | actual hosts, synthetic model | `*-host-smoke.json` |
 | Simulated-user A/B/C/D (384 sealed interactions) | D−B regret −0.90 [−1.48, −0.37]; fully satisfied +0.06 [−0.03, 0.15] **n.s.** | simulated, not human | `benchmarks/reports/simulated.json` |
 | Live LLM families | one (GLM via OpenRouter) | — | ISSUE-001 |
