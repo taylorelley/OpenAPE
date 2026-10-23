@@ -1,10 +1,10 @@
 # Four-condition evaluation
 
-Conditions: **A** static markdown persona, **B** fixed approved controls (style-00),
-**C** trained decoder with a frozen persona, **D** the same decoder after authorised
-experience-driven persona learning. `baselines.py` renders each condition for a host
-runner; use separate pinned persona/session IDs for C and D (`mode: frozen` with
-`pinned_version`).
+Conditions: **A** static markdown persona, **B** fixed approved controls (the
+neutral configuration), **C** trained decoder with a frozen persona, **D** the same
+decoder after authorised experience-driven persona learning. `baselines.py` renders
+each condition for a host runner; use separate pinned persona/session IDs for C and D
+(`mode: frozen` with `pinned_version`).
 
 ## 1. Simulated-user engineering benchmark (runs offline)
 
@@ -12,26 +12,30 @@ runner; use separate pinned persona/session IDs for C and D (`mode: frozen` with
 python -m benchmarks.simulated    # ~1.5 min; writes reports/simulated.json
 ```
 
-24 simulated users with hidden random per-level trait utilities (a generator
-different from decoder training, sealed seed 20261022, 10% answer noise). Each gives
-24 explicit pairwise answers through the real API across two consolidation rounds
-(independent evaluator, manual CAS promotion). Then 16 sealed contexts per user
-(384 interactions) are scored for every condition. A is approximated by its closest
-catalogue row because simulated users cannot read text.
+24 simulated users with hidden random utilities over all five levels of 2-3 traits (a
+generator different from decoder training, sealed seed 20261022, 10% answer noise).
+Each gives 24 explicit pairwise answers through the real API across two consolidation
+rounds (independent evaluator, manual CAS promotion). Then 16 sealed contexts per user
+(384 interactions) are scored for every condition. A is approximated by the
+configuration closest to its wording (concise neutral), because simulated users cannot
+read text. Habits are not simulated.
+
+"Preference satisfied" is strict: the chosen configuration must reach the user's best
+allowed level on every trait they care about. Regret is the utility gap to the best
+allowed configuration. Neither is comparable with the 0.2 numbers, which ranked 24 rows.
 
 Current result (`reports/simulated.json`; 20 promotions, 28 evaluator rejections):
 
-| Condition | preference satisfied (top-4) | mean regret |
+| Condition | preference fully satisfied | mean regret |
 |---|---|---|
-| A static markdown (approx.) | 0.013 | 1.69 |
-| B fixed controls | 0.344 | 1.31 |
-| C frozen neural persona | 0.143 | 1.68 |
-| D learning-enabled | 0.430 | 0.82 |
+| A static markdown (approx.) | 0.000 | 2.23 |
+| B fixed controls | 0.042 | 2.23 |
+| C frozen neural persona | 0.018 | 2.31 |
+| D learning-enabled | 0.099 | 1.33 |
 
-Paired user-clustered bootstrap (95% CI): D−C satisfied +0.29 [0.14, 0.42];
-D−B satisfied +0.09 [−0.11, 0.29] (**not significant**), D−B regret −0.49
-[−1.02, −0.02]; C−B satisfied −0.20 [−0.37, −0.03] (the neutral neural persona's
-context rules fit these simulated users worse than the neutral default).
+Paired user-clustered bootstrap (95% CI): D−B regret −0.90 [−1.48, −0.37];
+D−C regret −0.98 [−1.44, −0.56]; D−C satisfied +0.08 [0.03, 0.16]; D−B satisfied
++0.06 [−0.03, 0.15] (**not significant**); C−B regret +0.07 [−0.14, 0.26].
 
 **This is not human or live-model evidence.** The simulated users share the
 catalogue's trait vocabulary, task correctness/safety are not simulated, and the
@@ -40,43 +44,56 @@ sample is small. `measured_behavioral_benefit` stays `false`.
 ## 1b. Developmental trajectory benchmark (runs offline)
 
 ```sh
-python -m benchmarks.development    # ~1.5 min; writes reports/development.json
+python -m benchmarks.development    # ~2.5 min; writes reports/development.json
 ```
 
 8 automatic personas (4 archetypes × 2 individuals, default individuality) live 48
 sessions through the real API. Each serves a two-task role that switches at
 session 32, after development completes. Each has a linked simulated user who
-sometimes states a consented preference for one hidden catalogue row. Trait levels
-are decoder diagnostics over six fixed contexts, checked every 8 sessions. It
-compares trajectories with patterns from personality psychology
+sometimes states a consented preference for one hidden approved configuration. Trait
+levels (0-4) are decoder diagnostics over six fixed contexts, checked every 8
+sessions. After every session the style a persona actually shows in one fixed context
+is recorded, to measure how smoothly expression changes. It compares trajectories
+with patterns from personality psychology
 ([ADR 0004](../docs/adr/0004-human-like-development.md)).
 
 Current result (`reports/development.json`):
 
 | Period (sessions) | 0-8 | 8-16 | 16-24 | 24-32 | 32-40 | 40-48 |
 |---|---|---|---|---|---|---|
-| rank-order stability | 0.96 | 0.88 | 0.87 | 0.98 | 0.99 | 0.99 |
-| mean-level change | 0.03 | 0.19 | 0.21 | 0.04 | 0.02 | 0.02 |
+| rank-order stability | 0.82 | 0.82 | 0.83 | 0.85 | 0.91 | 0.97 |
+| mean-level change (levels, 0-4 scale) | 0.19 | 0.25 | 0.33 | 0.31 | 0.25 | 0.09 |
+
+Expression smoothness: the shown style changed after 92 of 384 sessions; a visible
+change moved 1.65 traits and 2.3 levels on average (largest 8 levels).
 
 * What matches people:
-  * Change concentrates in the developmental period and then becomes small.
-  * Rank order is least stable while personas develop and stabilises after.
-  * Same-archetype personas end closer to each other (0.49) than to other
-    archetypes (0.77), but are not identical.
+  * Rank order becomes more stable as personas mature.
+  * Change is largest during development and becomes small at the end.
+  * Same-archetype personas end closer to each other (0.91) than to other
+    archetypes (1.12), but are not identical.
+  * Expression mostly changes one or two traits at a time, not as whole-style swaps.
 * What does not match:
-  * Stability stays well above the ~0.7 human plateau. The personas start as
-    distinct archetypes and the sample is 8.
-  * The role change at session 32 is detected (14 `role_change` events: core and
-    relationship scopes for 7 of 8 personas). Its effect on traits is not
-    visible, because adult steps are small.
-  * The first period changes little: the familiarity target grows with maturity,
-    so early steps have budget but little to move toward.
-* Activity: the evaluated consolidation passes contained 286 curve steps, 42
-  habit steps and 75 anchor pulls; there were 15 correction bursts and 15
-  ruptures.
+  * Mean-level change peaks in the middle rather than at the start: early steps
+    have budget but the familiarity target is still small.
+  * Stability stays above the ~0.7 human plateau. The personas start as distinct
+    archetypes and the sample is 8.
+  * The role change at session 32 is detected (16 `role_change` events) but its
+    effect is not separable from ongoing feedback.
+* Activity: the evaluated consolidation passes contained 310 curve steps, 50 habit
+  steps and 94 anchor pulls; there were 27 correction bursts and 27 ruptures.
 
 **This is not human or live-model evidence.** It is a regression record for fixed
 priors.
+
+## 1c. Live-model style evaluation (needs a provider API key)
+
+[`live/`](live/README.md) checks whether each trait level and habit changes what real
+models write. A blind Claude judge rates replies to 36 fixed prompts under probes of
+every level and habit, and the report flags levels models don't distinguish, habits
+they ignore, and any loss of task quality against no style. It also compares against a
+hand-written persona prompt. Dry run by default, with a cost estimate (a pilot is about
+$24); offline tests in `tests/test_live_harness.py`. **Not run yet: no live results.**
 
 ## 2. Independent outcome evaluation (the release-gate benchmark)
 

@@ -1,7 +1,7 @@
 {
   "adapter_id": "upap.hermes",
-  "protocol_version": "upap/1",
-  "adapter_version": "0.2.0",
+  "protocol_version": "upap/2",
+  "adapter_version": "0.3.0",
   "verified_with_actual_model": false,
   "default_mode": "shadow",
   "user_linking": "explicit configuration only",
@@ -21,6 +21,11 @@
     "post_llm_call",
     "on_session_end"
   ],
+  "context_hooks": [
+    "post_tool_call",
+    "pre_llm_call"
+  ],
+  "context_signals": "previous-turn tool names and error count (post_tool_call; never arguments or results), platform channel, declared context (OPENAPE_CONTEXT); user message only with OPENAPE_CONTEXT_TEXT=local, classified locally and never sent",
   "verified_capabilities": [
     "real_cli_lifecycle_synthetic_model",
     "current_user_message_injection",
@@ -37,5 +42,8 @@
   "release_status": "host_lifecycle_verified_synthetic_model",
   "agent_tools": [
     "persona_feedback (ctx.register_tool, toolset openape; active mode only)"
+  ],
+  "unverified": [
+    "derived turn context against a real Hermes run (post_tool_call signals)"
   ]
 }

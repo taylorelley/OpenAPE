@@ -1,0 +1,48 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "protocol_version": {
+      "const": "upap/2",
+      "title": "Protocol Version",
+      "type": "string"
+    },
+    "persona_id": {
+      "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+      "title": "Persona Id",
+      "type": "string"
+    },
+    "scope": {
+      "default": "relationship",
+      "enum": [
+        "core",
+        "relationship"
+      ],
+      "title": "Scope",
+      "type": "string"
+    },
+    "user_id": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "User Id"
+    },
+    "seed": {
+      "default": 42,
+      "title": "Seed",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "protocol_version",
+    "persona_id"
+  ],
+  "title": "Consolidate",
+  "type": "object"
+}

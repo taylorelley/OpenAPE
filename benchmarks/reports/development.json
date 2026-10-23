@@ -17,75 +17,82 @@
     "40-48"
   ],
   "rank_order_stability": [
-    0.9626,
-    0.8844,
-    0.8707,
-    0.983,
-    0.9864,
-    0.9898
+    0.8231,
+    0.8163,
+    0.8299,
+    0.8469,
+    0.9116,
+    0.9694
   ],
   "mean_level_change": [
-    0.0315,
-    0.1858,
-    0.2101,
-    0.044,
-    0.0206,
-    0.0223
+    0.1883,
+    0.2451,
+    0.3329,
+    0.3083,
+    0.2541,
+    0.092
   ],
   "individuality": {
-    "same_archetype_distance": 0.4909,
-    "different_archetype_distance": 0.7732
+    "same_archetype_distance": 0.9131,
+    "different_archetype_distance": 1.1203
   },
   "life_events": {
-    "correction_burst": 15,
-    "rupture": 15,
-    "role_change": 14
+    "role_change": 16,
+    "correction_burst": 27,
+    "rupture": 27
   },
   "consolidation_components": {
-    "curve": 286,
-    "habit": 42,
-    "elastic": 75
+    "curve": 310,
+    "habit": 50,
+    "elastic": 94
+  },
+  "expression_smoothness": {
+    "observations": 384,
+    "visible_changes": 92,
+    "traits_changed_per_visible_change": 1.6522,
+    "levels_moved_per_visible_change": 2.2935,
+    "largest_single_change_levels": 8
   },
   "final_growth": {
     "mentor-0": {
       "core": 1.0,
       "relationship": 1.0,
-      "character_drift": 0.5336
+      "character_drift": 0.46
     },
     "mentor-1": {
       "core": 1.0,
       "relationship": 1.0,
-      "character_drift": 0.6043
+      "character_drift": 0.5496
     },
     "pragmatic_engineer-0": {
       "core": 1.0,
       "relationship": 1.0,
-      "character_drift": 0.5224
+      "character_drift": 0.5919
     },
     "pragmatic_engineer-1": {
       "core": 1.0,
       "relationship": 1.0,
-      "character_drift": 0.5781
+      "character_drift": 0.5924
     },
     "analyst-0": {
       "core": 1.0,
       "relationship": 1.0,
-      "character_drift": 0.401
+      "character_drift": 0.5816
     },
     "analyst-1": {
       "core": 1.0,
       "relationship": 1.0,
-      "character_drift": 0.4368
+      "character_drift": 0.5162
     },
     "collaborator-0": {
       "core": 1.0,
       "relationship": 1.0,
-      "character_drift": 0.5677
+      "character_drift": 0.5252
     },
     "collaborator-1": {
       "core": 1.0,
       "relationship": 1.0,
-      "character_drift": 0.6135
+      "character_drift": 0.5584
     }
   },
   "human_reference": "rank-order stability rises with age and plateaus near 0.7 (Roberts & DelVecchio 2000); mean-level change is largest in young adulthood and small later (Roberts, Walton & Viechtbauer 2006)",

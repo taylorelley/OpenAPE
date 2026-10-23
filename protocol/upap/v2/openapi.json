@@ -1,0 +1,2510 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OpenAPE \u2014 Agent Personality Engine",
+    "version": "0.3.0"
+  },
+  "paths": {
+    "/health/live": {
+      "get": {
+        "summary": "Live",
+        "operationId": "live_health_live_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "summary": "Ready",
+        "operationId": "ready_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/whoami": {
+      "get": {
+        "summary": "Whoami",
+        "description": "The calling credential's identity and grants (never the token).",
+        "operationId": "whoami_v1_whoami_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/capabilities": {
+      "get": {
+        "summary": "Capabilities",
+        "operationId": "capabilities_v1_capabilities_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas": {
+      "get": {
+        "summary": "List Personas",
+        "operationId": "list_personas_v1_personas_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create",
+        "operationId": "create_v1_personas_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Create"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/{id}": {
+      "get": {
+        "summary": "Inspect",
+        "operationId": "inspect_v1_personas__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete",
+        "operationId": "delete_v1_personas__id__delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/{id}/history": {
+      "get": {
+        "summary": "History",
+        "operationId": "history_v1_personas__id__history_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/express": {
+      "post": {
+        "summary": "Express",
+        "operationId": "express_v1_express_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Express"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Decision"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/feedback": {
+      "post": {
+        "summary": "Feedback",
+        "operationId": "feedback_v1_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Feedback"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/comparisons": {
+      "post": {
+        "summary": "Compare",
+        "description": "Two styles for one served decision, in a blind order: the one served and the\npersona's best different trait configuration in the same context and settings. The\nuser's answer is ordinary pairwise feedback (preferred = the chosen option).",
+        "operationId": "compare_v1_comparisons_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Comparison"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/decisions/{decision_id}/explanation": {
+      "get": {
+        "summary": "Explain Decision",
+        "description": "Why this style: which layer (temperament, character, relationship, session)\nshaped each trait and habit of one served decision, and what limited it.",
+        "operationId": "explain_decision_v1_decisions__decision_id__explanation_get",
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Decision Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/{id}/timeline": {
+      "get": {
+        "summary": "Timeline",
+        "description": "Each version of the persona (and of this user's relationship) in order, with the\ndecoder's expected trait levels and habit probabilities in a fixed reference context.",
+        "operationId": "timeline_v1_personas__id__timeline_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 200,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/observations": {
+      "post": {
+        "summary": "Observations",
+        "operationId": "observations_v1_observations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Observations"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/{id}/users/{user_id}/settings": {
+      "get": {
+        "summary": "Get Settings",
+        "operationId": "get_settings_v1_personas__id__users__user_id__settings_get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Put Settings",
+        "description": "Replace the linked user's settings. Only a credential allowed to act for this\nuser (scope settings:write) may change them; they apply from the next turn.",
+        "operationId": "put_settings_v1_personas__id__users__user_id__settings_put",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Settings"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/consolidations": {
+      "post": {
+        "summary": "Consolidate",
+        "operationId": "consolidate_v1_consolidations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Consolidate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/consolidations/{id}": {
+      "get": {
+        "summary": "Job",
+        "operationId": "job_v1_consolidations__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/{id}/promotions": {
+      "post": {
+        "summary": "Promote",
+        "operationId": "promote_v1_personas__id__promotions_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Promote"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/{id}/evolution": {
+      "post": {
+        "summary": "Evolution",
+        "operationId": "evolution_v1_personas__id__evolution_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Evolution"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reflections": {
+      "post": {
+        "summary": "Reflect",
+        "description": "Agent-initiated style feedback: bounded trait moves only, never text.",
+        "operationId": "reflect_v1_reflections_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Reflection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/{id}/rollbacks": {
+      "post": {
+        "summary": "Rollback",
+        "operationId": "rollback_v1_personas__id__rollbacks_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Rollback"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/{id}/export": {
+      "post": {
+        "summary": "Export",
+        "operationId": "export_v1_personas__id__export_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Export"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/personas/import": {
+      "post": {
+        "summary": "Import Persona",
+        "operationId": "import_persona_v1_personas_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Import"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Choice": {
+        "properties": {
+          "controls": {
+            "$ref": "#/components/schemas/Controls"
+          },
+          "habits": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "summary_first",
+                "risks_first",
+                "next_step",
+                "confirm_goal",
+                "clarify_once",
+                "acknowledge_constraints",
+                "concrete_examples",
+                "analogies",
+                "structured",
+                "plain_words",
+                "precise_terms",
+                "tradeoffs",
+                "acknowledge_progress",
+                "light_aside",
+                "recap_end",
+                "flag_uncertainty"
+              ]
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Habits"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "controls"
+        ],
+        "title": "Choice",
+        "description": "One rendered style: an approved trait configuration and its habits (catalogue order)."
+      },
+      "Comparison": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/2",
+            "title": "Protocol Version"
+          },
+          "decision_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Decision Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "decision_id"
+        ],
+        "title": "Comparison"
+      },
+      "Consolidate": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/2",
+            "title": "Protocol Version"
+          },
+          "persona_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Persona Id"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "core",
+              "relationship"
+            ],
+            "title": "Scope",
+            "default": "relationship"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed",
+            "default": 42
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "persona_id"
+        ],
+        "title": "Consolidate"
+      },
+      "Context": {
+        "properties": {
+          "task_type": {
+            "type": "string",
+            "enum": [
+              "general",
+              "code_review",
+              "coding",
+              "support",
+              "creative",
+              "research",
+              "debugging",
+              "planning",
+              "writing"
+            ],
+            "title": "Task Type",
+            "default": "general"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "terminal",
+              "chat",
+              "voice",
+              "background"
+            ],
+            "title": "Channel",
+            "default": "terminal"
+          },
+          "stakes": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Stakes",
+            "default": "low"
+          },
+          "turn_origin": {
+            "type": "string",
+            "enum": [
+              "user",
+              "system",
+              "tool",
+              "subagent"
+            ],
+            "title": "Turn Origin",
+            "default": "user"
+          },
+          "tags": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "technical",
+                "review",
+                "sensitive",
+                "urgent",
+                "beginner",
+                "expert",
+                "error_present",
+                "first_turn",
+                "long_session",
+                "returning",
+                "corrected"
+              ]
+            },
+            "type": "array",
+            "maxItems": 11,
+            "title": "Tags"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "none",
+              "python",
+              "typescript",
+              "javascript",
+              "go",
+              "rust",
+              "java",
+              "c_cpp",
+              "csharp",
+              "ruby",
+              "php",
+              "shell",
+              "sql",
+              "markup",
+              "config",
+              "other"
+            ],
+            "title": "Language",
+            "default": "none"
+          },
+          "repo_kind": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "software",
+              "infrastructure",
+              "documentation",
+              "data_science"
+            ],
+            "title": "Repo Kind",
+            "default": "unknown"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Context"
+      },
+      "Controls": {
+        "properties": {
+          "directness": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Directness"
+          },
+          "warmth": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Warmth"
+          },
+          "verbosity": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Verbosity"
+          },
+          "humour": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Humour"
+          },
+          "formality": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Formality"
+          },
+          "explanation_depth": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Explanation Depth"
+          },
+          "assertiveness": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Assertiveness"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "directness",
+          "warmth",
+          "verbosity",
+          "humour",
+          "formality",
+          "explanation_depth",
+          "assertiveness"
+        ],
+        "title": "Controls"
+      },
+      "Create": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/2",
+            "title": "Protocol Version"
+          },
+          "persona_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Persona Id"
+          },
+          "archetype": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "balanced",
+                  "mentor",
+                  "pragmatic_engineer",
+                  "concierge",
+                  "collaborator",
+                  "analyst",
+                  "critic"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archetype"
+          },
+          "seed_preferences": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "concise",
+                "detailed",
+                "warm",
+                "reserved",
+                "formal",
+                "casual",
+                "direct",
+                "gentle",
+                "playful",
+                "serious"
+              ]
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Seed Preferences"
+          },
+          "parent_persona_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Persona Id"
+          },
+          "evolution": {
+            "type": "string",
+            "enum": [
+              "automatic",
+              "manual"
+            ],
+            "title": "Evolution",
+            "default": "automatic"
+          },
+          "maturation_rate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "fast",
+                  "normal",
+                  "slow"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/MaturationHorizon"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maturation Rate"
+          },
+          "agent_feedback": {
+            "type": "boolean",
+            "title": "Agent Feedback",
+            "default": true
+          },
+          "individuality": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Individuality",
+            "default": 0.3
+          },
+          "individuality_seed": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2147483647.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Individuality Seed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "persona_id"
+        ],
+        "title": "Create"
+      },
+      "Decision": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/2",
+            "title": "Protocol Version",
+            "default": "upap/2"
+          },
+          "request_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Request Id"
+          },
+          "decision_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Decision Id"
+          },
+          "persona_version": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Persona Version"
+          },
+          "relationship_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relationship Version"
+          },
+          "decoder_hash": {
+            "type": "string",
+            "title": "Decoder Hash"
+          },
+          "control_schema": {
+            "type": "string",
+            "const": "behaviour-controls/2",
+            "title": "Control Schema",
+            "default": "behaviour-controls/2"
+          },
+          "catalogue_hash": {
+            "type": "string",
+            "title": "Catalogue Hash"
+          },
+          "controls": {
+            "$ref": "#/components/schemas/Controls"
+          },
+          "habits": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "summary_first",
+                "risks_first",
+                "next_step",
+                "confirm_goal",
+                "clarify_once",
+                "acknowledge_constraints",
+                "concrete_examples",
+                "analogies",
+                "structured",
+                "plain_words",
+                "precise_terms",
+                "tradeoffs",
+                "acknowledge_progress",
+                "light_aside",
+                "recap_end",
+                "flag_uncertainty"
+              ]
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Habits"
+          },
+          "preferences": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Preferences"
+          },
+          "exploration": {
+            "type": "boolean",
+            "title": "Exploration",
+            "default": false
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "shadow",
+              "active",
+              "frozen"
+            ],
+            "title": "Mode"
+          },
+          "applies_to": {
+            "type": "string",
+            "const": "next_model_request",
+            "title": "Applies To",
+            "default": "next_model_request"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/Policy"
+          },
+          "cache_ttl_ms": {
+            "type": "integer",
+            "title": "Cache Ttl Ms",
+            "default": 30000
+          },
+          "engine_status": {
+            "type": "string",
+            "enum": [
+              "experimental_synthetic",
+              "baseline_fallback"
+            ],
+            "title": "Engine Status"
+          },
+          "propensity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Propensity"
+          },
+          "diagnostics": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnostics"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "decision_id",
+          "persona_version",
+          "decoder_hash",
+          "catalogue_hash",
+          "controls",
+          "habits",
+          "mode",
+          "policy",
+          "engine_status"
+        ],
+        "title": "Decision"
+      },
+      "Event": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Event Id"
+          },
+          "occurred_at": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Occurred At"
+          },
+          "persona_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Persona Id"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "decision_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "session.started",
+              "turn.preparing",
+              "turn.completed",
+              "turn.failed",
+              "model.changed",
+              "session.compacted",
+              "session.ended",
+              "tool.result.summary",
+              "experience.corrected"
+            ],
+            "title": "Type"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "failed",
+              "aborted"
+            ],
+            "title": "Status",
+            "default": "ok"
+          },
+          "feedback_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "event_id",
+          "occurred_at",
+          "persona_id",
+          "type"
+        ],
+        "title": "Event"
+      },
+      "Evolution": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/2",
+            "title": "Protocol Version"
+          },
+          "evolution": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "automatic",
+                  "manual"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evolution"
+          },
+          "maturation_rate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "fast",
+                  "normal",
+                  "slow"
+                ]
+              },
+              {
+                "$ref": "#/components/schemas/MaturationHorizon"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maturation Rate"
+          },
+          "agent_feedback": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Feedback"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version"
+        ],
+        "title": "Evolution"
+      },
+      "Export": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/2",
+            "title": "Protocol Version"
+          },
+          "include_relationships": {
+            "type": "boolean",
+            "title": "Include Relationships",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version"
+        ],
+        "title": "Export"
+      },
+      "Express": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/2",
+            "title": "Protocol Version"
+          },
+          "request_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Request Id"
+          },
+          "identity": {
+            "$ref": "#/components/schemas/Identity"
+          },
+          "session": {
+            "$ref": "#/components/schemas/Session"
+          },
+          "host": {
+            "$ref": "#/components/schemas/Host"
+          },
+          "context": {
+            "$ref": "#/components/schemas/Context"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "shadow",
+              "active",
+              "frozen"
+            ],
+            "title": "Mode",
+            "default": "shadow"
+          },
+          "selection": {
+            "type": "string",
+            "enum": [
+              "argmax",
+              "sample"
+            ],
+            "title": "Selection",
+            "default": "argmax"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "exploration_consent": {
+            "type": "boolean",
+            "title": "Exploration Consent",
+            "default": false
+          },
+          "pinned_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pinned Version"
+          },
+          "debug": {
+            "type": "boolean",
+            "title": "Debug",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "request_id",
+          "identity",
+          "session",
+          "host"
+        ],
+        "title": "Express"
+      },
+      "Feedback": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/2",
+            "title": "Protocol Version"
+          },
+          "feedback_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Feedback Id"
+          },
+          "decision_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Decision Id"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "explicit_user",
+              "owner",
+              "verified_evaluator",
+              "agent_reflection"
+            ],
+            "title": "Source"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "rating",
+              "pairwise_preference",
+              "correction"
+            ],
+            "title": "Kind"
+          },
+          "actor_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Actor Id"
+          },
+          "consent_scope": {
+            "type": "string",
+            "enum": [
+              "core",
+              "relationship",
+              "session",
+              "record_only"
+            ],
+            "title": "Consent Scope",
+            "default": "record_only"
+          },
+          "learning_consent": {
+            "type": "boolean",
+            "title": "Learning Consent",
+            "default": false
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": -1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "preferred": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Choice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rejected": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Choice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_group": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Evidence Group"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Evidence Refs"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "feedback_id",
+          "decision_id",
+          "source",
+          "kind",
+          "actor_id",
+          "evidence_group"
+        ],
+        "title": "Feedback"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Host": {
+        "properties": {
+          "adapter_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Adapter Id"
+          },
+          "adapter_version": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Adapter Version"
+          },
+          "host_version": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Host Version"
+          },
+          "provider_family": {
+            "type": "string",
+            "enum": [
+              "openai",
+              "anthropic",
+              "google",
+              "qwen",
+              "other"
+            ],
+            "title": "Provider Family",
+            "default": "other"
+          },
+          "model_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Model Id",
+            "default": "unspecified"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "adapter_id",
+          "adapter_version",
+          "host_version"
+        ],
+        "title": "Host"
+      },
+      "Identity": {
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Tenant Id"
+          },
+          "persona_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Persona Id"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "persona_id"
+        ],
+        "title": "Identity"
+      },
+      "Import": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/2",
+            "title": "Protocol Version"
+          },
+          "persona_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Persona Id"
+          },
+          "bundle": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Bundle"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "persona_id",
+          "bundle"
+        ],
+        "title": "Import"
+      },
+      "MaturationHorizon": {
+        "properties": {
+          "relationship_horizon": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 3.0,
+            "title": "Relationship Horizon"
+          },
+          "core_horizon": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 3.0,
+            "title": "Core Horizon"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "relationship_horizon",
+          "core_horizon"
+        ],
+        "title": "MaturationHorizon"
+      },
+      "Observations": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/2",
+            "title": "Protocol Version"
+          },
+          "adapter_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Adapter Id"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Events"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "adapter_id",
+          "events"
+        ],
+        "title": "Observations"
+      },
+      "Pin": {
+        "properties": {
+          "min": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Min",
+            "default": 0
+          },
+          "max": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Max",
+            "default": 4
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Pin"
+      },
+      "Policy": {
+        "properties": {
+          "eligible": {
+            "type": "boolean",
+            "title": "Eligible"
+          },
+          "mask_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mask Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "eligible",
+          "mask_reason"
+        ],
+        "title": "Policy"
+      },
+      "Preferences": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "informal",
+                  "formal"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "spelling": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "american",
+                  "british",
+                  "canadian",
+                  "australian"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spelling"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "metric",
+                  "imperial"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Units"
+          },
+          "format": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "code_first",
+                  "prose_first",
+                  "bullets",
+                  "paragraphs"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Format"
+          },
+          "dates": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "iso",
+                  "day_first",
+                  "month_first"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dates"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Preferences",
+        "description": "The linked user's explicit choices; each value renders one reviewed sentence."
+      },
+      "Promote": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/2",
+            "title": "Protocol Version"
+          },
+          "candidate_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Candidate Id"
+          },
+          "expected_version": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Expected Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "candidate_id",
+          "expected_version"
+        ],
+        "title": "Promote"
+      },
+      "Reflection": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/2",
+            "title": "Protocol Version"
+          },
+          "reflection_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Reflection Id"
+          },
+          "decision_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Decision Id"
+          },
+          "adjustments": {
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "more",
+                "less"
+              ]
+            },
+            "propertyNames": {
+              "enum": [
+                "directness",
+                "warmth",
+                "verbosity",
+                "humour",
+                "formality",
+                "explanation_depth",
+                "assertiveness"
+              ]
+            },
+            "type": "object",
+            "maxProperties": 3,
+            "title": "Adjustments"
+          },
+          "habits": {
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "more_often",
+                "less_often"
+              ]
+            },
+            "propertyNames": {
+              "enum": [
+                "summary_first",
+                "risks_first",
+                "next_step",
+                "confirm_goal",
+                "clarify_once",
+                "acknowledge_constraints",
+                "concrete_examples",
+                "analogies",
+                "structured",
+                "plain_words",
+                "precise_terms",
+                "tradeoffs",
+                "acknowledge_progress",
+                "light_aside",
+                "recap_end",
+                "flag_uncertainty"
+              ]
+            },
+            "type": "object",
+            "maxProperties": 2,
+            "title": "Habits"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "user_requested",
+              "user_corrected",
+              "observed_preference"
+            ],
+            "title": "Reason"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "core",
+                  "relationship"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "reflection_id",
+          "decision_id",
+          "reason"
+        ],
+        "title": "Reflection"
+      },
+      "Rollback": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/2",
+            "title": "Protocol Version"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Version"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "version",
+          "reason"
+        ],
+        "title": "Rollback"
+      },
+      "Session": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Id"
+          },
+          "turn_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Turn Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "turn_id"
+        ],
+        "title": "Session"
+      },
+      "Settings": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "upap/2",
+            "title": "Protocol Version"
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/Preferences"
+          },
+          "pins": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Pin"
+            },
+            "propertyNames": {
+              "enum": [
+                "directness",
+                "warmth",
+                "verbosity",
+                "humour",
+                "formality",
+                "explanation_depth",
+                "assertiveness"
+              ]
+            },
+            "type": "object",
+            "title": "Pins"
+          },
+          "vetoes": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "summary_first",
+                "risks_first",
+                "next_step",
+                "confirm_goal",
+                "clarify_once",
+                "acknowledge_constraints",
+                "concrete_examples",
+                "analogies",
+                "structured",
+                "plain_words",
+                "precise_terms",
+                "tradeoffs",
+                "acknowledge_progress",
+                "light_aside",
+                "recap_end",
+                "flag_uncertainty"
+              ]
+            },
+            "type": "array",
+            "maxItems": 16,
+            "title": "Vetoes"
+          },
+          "frozen": {
+            "type": "boolean",
+            "title": "Frozen",
+            "default": false
+          },
+          "cohort_contribution": {
+            "type": "boolean",
+            "title": "Cohort Contribution",
+            "default": false
+          },
+          "exploration": {
+            "type": "boolean",
+            "title": "Exploration",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "protocol_version"
+        ],
+        "title": "Settings",
+        "description": "User-controlled relationship settings: preferences, trait pins (allowed level\nranges), habit vetoes, a freeze on relationship evolution, and consent to contribute\nthis relationship to the persona's cohort prior."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

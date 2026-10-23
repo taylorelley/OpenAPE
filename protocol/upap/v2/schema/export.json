@@ -1,0 +1,20 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "protocol_version": {
+      "const": "upap/2",
+      "title": "Protocol Version",
+      "type": "string"
+    },
+    "include_relationships": {
+      "default": false,
+      "title": "Include Relationships",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "protocol_version"
+  ],
+  "title": "Export",
+  "type": "object"
+}

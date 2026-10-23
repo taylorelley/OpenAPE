@@ -1,7 +1,7 @@
 {
   "adapter_id": "upap.pi",
-  "protocol_version": "upap/1",
-  "adapter_version": "0.2.0",
+  "protocol_version": "upap/2",
+  "adapter_version": "0.3.0",
   "verified_with_actual_model": false,
   "default_mode": "shadow",
   "user_linking": "explicit configuration only",
@@ -21,6 +21,11 @@
     "agent_end",
     "session_shutdown"
   ],
+  "context_hooks": [
+    "tool_execution_end",
+    "before_agent_start"
+  ],
+  "context_signals": "previous-turn tool names and error count (tool_execution_end; never args or results), declared context (OPENAPE_CONTEXT); prompt only with OPENAPE_CONTEXT_TEXT=local, classified locally and never sent",
   "verified_capabilities": [
     "real_sdk_lifecycle_synthetic_model",
     "historical_injection_deduplicated",
@@ -34,5 +39,8 @@
   "release_status": "host_lifecycle_verified_synthetic_model",
   "agent_tools": [
     "persona_feedback (pi.registerTool; active mode only)"
+  ],
+  "unverified": [
+    "derived turn context against a real Pi run (tool_execution_end signals)"
   ]
 }

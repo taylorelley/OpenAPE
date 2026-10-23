@@ -6,8 +6,8 @@ import itertools
 from datetime import datetime,timezone
 import torch
 from conftest import *
-from engine.neural.policy import Decoder,CATALOGUE
-from engine.neural.profiles import ARCHETYPES,fit_seed_latent,seed_profile,agreement,reference_contexts
+from engine.neural.policy import Decoder
+from engine.neural.profiles import ARCHETYPES,fit_seed_latent,seed_profile,agreement,reference_contexts,selected
 from engine.learning import maturation
 
 def make(api,id,**kw):
@@ -39,11 +39,11 @@ def test_creation_requires_a_starting_persona(api):
     caps=api.get('/v1/capabilities').json();assert set(caps['archetypes'])==set(ARCHETYPES) and caps['automatic_promotion']=='persona_policy'
 
 def test_archetypes_are_distinct_and_track_their_profiles():
-    d=Decoder('models/decoder-v2/decoder.safetensors');contexts=reference_contexts();host={'provider_family':'other','adapter_id':'x'}
+    d=Decoder('models/decoder-v3/decoder.safetensors');contexts=reference_contexts();host={'provider_family':'other','adapter_id':'x'}
     choices={}
     for name,seeds in ARCHETYPES.items():
-        z=fit_seed_latent(d,seeds);choices[name]=[int(d.logits(z,torch.zeros(32),c,host).argmax()) for c in contexts]
-        if seeds:assert agreement(d,z,seed_profile(seeds),contexts)>agreement(d,torch.zeros(64),seed_profile(seeds),contexts),name
+        z=fit_seed_latent(d,seeds,archetype=name);choices[name]=[selected(d,z,c,host) for c in contexts]
+        if seeds:assert agreement(d,z,seed_profile(seeds,name),contexts)>agreement(d,torch.zeros(64),seed_profile(seeds,name),contexts),name
     for a,b in itertools.combinations(choices,2):assert choices[a]!=choices[b],(a,b)
 
 def test_square_root_schedule():
@@ -109,11 +109,11 @@ def test_shadow_sessions_and_manual_personas_do_not_mature(api):
     step=[m for m in audit(api,'quiet','matured') if m['scope']=='relationship'][0]
     assert step['previous_maturity']>0 and step['maturity']-step['previous_maturity']<0.1
 
-def preferences(api,persona,count,prefix,preferred=1,scope='core'):
+def preferences(api,persona,count,prefix,preferred=TERSE,scope='core'):
     for i in range(count):
         d=post(api,'/v1/express',solo(f'{prefix}{i}',persona,f'{prefix}s{i}')).json()
-        rejected=int(d['control_set_id'][-2:]);rejected=rejected if rejected!=preferred else 0
-        r=post(api,'/v1/feedback',dict(feedback_id=f'{prefix}f{i}',decision_id=d['decision_id'],source='owner',kind='pairwise_preference',actor_id='owner',consent_scope=scope,learning_consent=True,preferred_control=preferred,rejected_control=rejected,evidence_group=f'{prefix}s{i}'))
+        served={'controls':d['controls'],'habits':d['habits']};rejected=served if served!=option(**preferred) else option()
+        r=post(api,'/v1/feedback',dict(feedback_id=f'{prefix}f{i}',decision_id=d['decision_id'],source='owner',kind='pairwise_preference',actor_id='owner',consent_scope=scope,learning_consent=True,preferred=option(**preferred),rejected=rejected,evidence_group=f'{prefix}s{i}'))
         assert r.status_code==200,r.text
 
 def test_consented_feedback_evolves_persona_without_operator(api):
@@ -139,10 +139,10 @@ def test_manual_persona_keeps_operator_promotion(api):
     assert api.get('/v1/personas/ops').json()['active_version']==base and not audit(api,'ops','candidate_evaluated')
 
 def test_maturation_never_undoes_feedback():
-    d=Decoder('models/decoder-v2/decoder.safetensors')
+    d=Decoder('models/decoder-v3/decoder.safetensors')
     from engine.evaluation.policy import evaluate_maturation
     core=torch.zeros(64);rel=torch.zeros(32);ctx=reference_contexts()[0];host={'provider_family':'other','adapter_id':'x'}
-    feedback=[dict(kind='pairwise_preference',preferred_control=14,rejected_control=8,context=c,host=host) for c in reference_contexts()]  # formal-neutral over supportive
+    feedback=[dict(kind='pairwise_preference',preferred=option(),rejected=option(warmth=3,formality=1),context=c,host=host) for c in reference_contexts()]  # neutral over warmer and less formal
     x=maturation.familiarize(d,core,rel,{},1.0,1.0)  # warmer/less formal: the opposite of the feedback
     assert not evaluate_maturation(d,core,rel,x,'relationship',1.0,feedback)['checks']['feedback_preserved']
     assert evaluate_maturation(d,core,rel,x,'relationship',1.0,[])['eligible']

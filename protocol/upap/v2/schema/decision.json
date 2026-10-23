@@ -1,0 +1,252 @@
+{
+  "$defs": {
+    "Controls": {
+      "additionalProperties": false,
+      "properties": {
+        "directness": {
+          "maximum": 4,
+          "minimum": 0,
+          "title": "Directness",
+          "type": "integer"
+        },
+        "warmth": {
+          "maximum": 4,
+          "minimum": 0,
+          "title": "Warmth",
+          "type": "integer"
+        },
+        "verbosity": {
+          "maximum": 4,
+          "minimum": 0,
+          "title": "Verbosity",
+          "type": "integer"
+        },
+        "humour": {
+          "maximum": 4,
+          "minimum": 0,
+          "title": "Humour",
+          "type": "integer"
+        },
+        "formality": {
+          "maximum": 4,
+          "minimum": 0,
+          "title": "Formality",
+          "type": "integer"
+        },
+        "explanation_depth": {
+          "maximum": 4,
+          "minimum": 0,
+          "title": "Explanation Depth",
+          "type": "integer"
+        },
+        "assertiveness": {
+          "maximum": 4,
+          "minimum": 0,
+          "title": "Assertiveness",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "directness",
+        "warmth",
+        "verbosity",
+        "humour",
+        "formality",
+        "explanation_depth",
+        "assertiveness"
+      ],
+      "title": "Controls",
+      "type": "object"
+    },
+    "Policy": {
+      "additionalProperties": false,
+      "properties": {
+        "eligible": {
+          "title": "Eligible",
+          "type": "boolean"
+        },
+        "mask_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Mask Reason"
+        }
+      },
+      "required": [
+        "eligible",
+        "mask_reason"
+      ],
+      "title": "Policy",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "protocol_version": {
+      "const": "upap/2",
+      "default": "upap/2",
+      "title": "Protocol Version",
+      "type": "string"
+    },
+    "request_id": {
+      "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+      "title": "Request Id",
+      "type": "string"
+    },
+    "decision_id": {
+      "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+      "title": "Decision Id",
+      "type": "string"
+    },
+    "persona_version": {
+      "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+      "title": "Persona Version",
+      "type": "string"
+    },
+    "relationship_version": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Relationship Version"
+    },
+    "decoder_hash": {
+      "title": "Decoder Hash",
+      "type": "string"
+    },
+    "control_schema": {
+      "const": "behaviour-controls/2",
+      "default": "behaviour-controls/2",
+      "title": "Control Schema",
+      "type": "string"
+    },
+    "catalogue_hash": {
+      "title": "Catalogue Hash",
+      "type": "string"
+    },
+    "controls": {
+      "$ref": "#/$defs/Controls"
+    },
+    "habits": {
+      "items": {
+        "enum": [
+          "summary_first",
+          "risks_first",
+          "next_step",
+          "confirm_goal",
+          "clarify_once",
+          "acknowledge_constraints",
+          "concrete_examples",
+          "analogies",
+          "structured",
+          "plain_words",
+          "precise_terms",
+          "tradeoffs",
+          "acknowledge_progress",
+          "light_aside",
+          "recap_end",
+          "flag_uncertainty"
+        ],
+        "type": "string"
+      },
+      "maxItems": 3,
+      "title": "Habits",
+      "type": "array"
+    },
+    "preferences": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Preferences",
+      "type": "object"
+    },
+    "exploration": {
+      "default": false,
+      "title": "Exploration",
+      "type": "boolean"
+    },
+    "mode": {
+      "enum": [
+        "shadow",
+        "active",
+        "frozen"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "applies_to": {
+      "const": "next_model_request",
+      "default": "next_model_request",
+      "title": "Applies To",
+      "type": "string"
+    },
+    "policy": {
+      "$ref": "#/$defs/Policy"
+    },
+    "cache_ttl_ms": {
+      "default": 30000,
+      "title": "Cache Ttl Ms",
+      "type": "integer"
+    },
+    "engine_status": {
+      "enum": [
+        "experimental_synthetic",
+        "baseline_fallback"
+      ],
+      "title": "Engine Status",
+      "type": "string"
+    },
+    "propensity": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Propensity"
+    },
+    "diagnostics": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Diagnostics"
+    }
+  },
+  "required": [
+    "request_id",
+    "decision_id",
+    "persona_version",
+    "decoder_hash",
+    "catalogue_hash",
+    "controls",
+    "habits",
+    "mode",
+    "policy",
+    "engine_status"
+  ],
+  "title": "Decision",
+  "type": "object"
+}

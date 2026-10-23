@@ -1,20 +1,45 @@
 """Isolated latent candidate fitting. Decoder stays frozen; active state is untouched."""
 import torch
-from engine.neural.policy import mask
+import torch.nn.functional as F
+from engine.neural.policy import choice, choice_allowed, choice_score, habit_vector, APPROVED_LEVELS
+
+def pair(e):
+    """(preferred, rejected) choices of a pairwise preference/correction that are both
+    approved, allowed in its context and different; otherwise None."""
+    if e['kind'] not in ('pairwise_preference','correction') or not e.get('preferred') or not e.get('rejected'): return None
+    a=choice(e['preferred']['controls'],e['preferred'].get('habits',[]));b=choice(e['rejected']['controls'],e['rejected'].get('habits',[]))
+    if a is None or b is None or a==b or not choice_allowed(a,e['context']) or not choice_allowed(b,e['context']): return None
+    return a,b
+
+def trait_pair(e):
+    """A pair whose trait configurations differ; habit-only pairs belong to the habit
+    bias (engine.learning.habits), so they never drag the latent."""
+    p=pair(e)
+    return p if p is not None and p[0][0]!=p[1][0] else None
+
+def margin(t,h,a,b):
+    return choice_score(t,h,APPROVED_LEVELS[a[0]],habit_vector(a[1]))-choice_score(t,h,APPROVED_LEVELS[b[0]],habit_vector(b[1]))
+
+def trait_margin(t,a,b):
+    """Score difference of the trait configurations alone (habits excluded)."""
+    return (t.gather(-1,APPROVED_LEVELS[a[0]].unsqueeze(-1)).sum()-t.gather(-1,APPROVED_LEVELS[b[0]].unsqueeze(-1)).sum())
 
 def loss_for(decoder,core,rel,e,baseline=0.0):
-    logits=decoder.logits(core,rel,e['context'],e['host'])
     if e['kind'] in ('pairwise_preference','correction'):
-        a,b=e['preferred_control'],e['rejected_control']
-        if a is None or b is None or a==b or not mask(e['context'])[a] or not mask(e['context'])[b]: return None
-        return -torch.log_softmax(logits[[a,b]],0)[0]
-    # Only seeded sampled actions carry a meaningful logging propensity.
+        p=trait_pair(e)
+        if p is None: return None
+        t,_=decoder.heads(core,rel,e['context'],e['host'])
+        return -F.logsigmoid(trait_margin(t,*p))
+    # Only seeded sampled actions carry a meaningful logging propensity. Habits are
+    # selected deterministically, so the logged-bandit term trains the configuration only.
     if e.get('selection')!='sample' or (e.get('propensity') or 0)<=0 or e.get('value') is None: return None
     action=e['action']
-    current=torch.softmax(logits,0)[action]
-    ratio=(current.detach()/e['propensity']).clamp(max=5)
+    logits=decoder.logits(core,rel,e['context'],e['host'])
+    if not torch.isfinite(logits[action]): return None
+    logp=logits[action]-torch.logsumexp(logits,0)
+    ratio=(logp.detach().exp()/e['propensity']).clamp(max=5)
     # Clipped importance-weighted REINFORCE with a mean-reward baseline.
-    return -ratio*(e['value']-baseline)*torch.log_softmax(logits,0)[action]
+    return -ratio*(e['value']-baseline)*logp
 
 def fit_candidate(decoder,core,rel,train,scope,seed,maximum_drift):
     """Fit only on training groups. Held-out scoring and promotion rules live in

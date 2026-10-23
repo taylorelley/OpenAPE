@@ -1,1 +1,3 @@
-44 passed, 3 xfailed, 1 warning in 38.73s
+2026-10-23, Linux x86_64, Python 3.13, requirements.lock (torch 2.5.1)
+SQLite: 176 passed, 1 skipped, 3 xfailed in 206.81s (0:03:26)
+PostgreSQL 16 (OPENAPE_TEST_DATABASE_URL): 175 passed, 2 skipped (SQLite-only: artifact-file corruption, reset migration), 3 xfailed

@@ -1,19 +1,35 @@
-"""Agent reflections: map a bounded trait adjustment to an approved catalogue row.
+"""Agent reflections: map bounded trait and habit moves to an approved choice.
 
-The agent never supplies text or a control index. The engine moves the served row
-one level per adjusted trait and picks the nearest approved row that is valid in
-the decision's context, so a reflection is just another pairwise preference.
+The agent never supplies text, levels or habit sets. The engine moves the served
+configuration one level per adjusted trait (to the nearest approved configuration
+allowed in the decision's context) and adds or drops the named habits, so a
+reflection is just another pairwise preference.
 """
-from engine.neural.policy import CATALOGUE, mask
+import torch
+from engine.neural.policy import APPROVED_LEVELS, TRAITS, HABIT_IDS, mask, habits_allowed
 
-LEVEL = {'low': 0, 'moderate': 1, 'high': 2}
-
-def adjusted_control(served, adjustments, context):
-    base = CATALOGUE[served]; allowed = mask(context); best = None
-    for i, row in enumerate(CATALOGUE):
-        if i == served or not allowed[i]: continue
-        moves = {t: LEVEL[row[t]] - LEVEL[base[t]] for t in row}
-        if not all(moves[t] * (1 if way == 'more' else -1) >= 1 for t, way in adjustments.items()): continue
-        cost = sum(abs(v) for t, v in moves.items() if t not in adjustments) + sum(abs(moves[t]) - 1 for t in adjustments)
-        if best is None or (cost, i) < best: best = (cost, i)
-    return None if best is None else best[1]
+def adjusted_choice(served, adjustments, context, habit_moves=None):
+    """served: (action, habits). Returns the preferred (action, habits), or None if no
+    approved move goes that way in this context."""
+    action, habits = served
+    if adjustments:
+        delta = APPROVED_LEVELS - APPROVED_LEVELS[action]
+        sign = torch.zeros(len(TRAITS))
+        for t, way in adjustments.items(): sign[TRAITS.index(t)] = 1 if way == 'more' else -1
+        moved = sign != 0
+        ok = mask(context) & ((delta * sign)[:, moved] >= 1).all(1)
+        ok[action] = False
+        if not ok.any(): return None
+        cost = (delta.abs() * ~moved).sum(1) + ((delta.abs() - 1) * moved).sum(1)
+        cost = torch.where(ok, cost.float(), torch.tensor(float('inf')))
+        action = int(torch.argmin(cost))  # lowest cost, then lowest index
+    chosen = set(habits)
+    for h, way in (habit_moves or {}).items():
+        if way == 'more_often': chosen.add(h)
+        else: chosen.discard(h)
+    habits = tuple(sorted(chosen, key=HABIT_IDS.index))
+    # Habits that no longer fit the moved configuration are dropped unless the agent asked for them.
+    asked = {h for h, way in (habit_moves or {}).items() if way == 'more_often'}
+    habits = tuple(h for h in habits if h in asked or habits_allowed([h], action, context))
+    if not habits_allowed(list(habits), action, context): return None
+    return None if (action, habits) == served else (action, habits)

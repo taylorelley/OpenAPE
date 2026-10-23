@@ -6,7 +6,9 @@ from datetime import datetime,timezone
 import torch
 from conftest import *
 from test_engine import create,decision,wait_job
-from engine.neural.policy import Decoder,CATALOGUE,mask
+from engine.neural.policy import Decoder,mask
+# The v1 'patient teacher' row on the five-level scale.
+PATIENT=dict(warmth=3,verbosity=3,formality=1,explanation_depth=3,assertiveness=1)
 from engine.neural.profiles import fit_seed_latent,seed_profile,agreement,random_context
 
 def seeded(api,id,seeds):
@@ -18,14 +20,14 @@ def low_risk(request_id,persona,session):
 
 def test_seeded_personas_distinct_and_reproducible(api):
     seeded(api,'terse',['concise','direct','serious']);seeded(api,'kind',['warm','detailed','playful'])
-    a=[post(api,'/v1/express',low_risk(f'a{i}','terse',f's{i}')).json()['control_set_id'] for i in range(3)]
-    b=[post(api,'/v1/express',low_risk(f'b{i}','kind',f's{i}')).json()['control_set_id'] for i in range(3)]
+    a=[json.dumps(post(api,'/v1/express',low_risk(f'a{i}','terse',f's{i}')).json()['controls']) for i in range(3)]
+    b=[json.dumps(post(api,'/v1/express',low_risk(f'b{i}','kind',f's{i}')).json()['controls']) for i in range(3)]
     assert len(set(a))==1 and len(set(b))==1 and a[0]!=b[0]
-    terse=CATALOGUE[int(a[0][-2:])];kind=CATALOGUE[int(b[0][-2:])]
-    assert terse['verbosity']=='low' and kind['warmth']=='high'
+    terse=json.loads(a[0]);kind=json.loads(b[0])
+    assert terse['verbosity']<=1 and kind['warmth']>=3
 
 def test_seed_latent_tracks_declared_profile():
-    d=Decoder('models/decoder-v2/decoder.safetensors');rng=random.Random(3)
+    d=Decoder('models/decoder-v3/decoder.safetensors');rng=random.Random(3)
     contexts=[random_context(rng) for _ in range(48)]
     for seeds in (['formal','reserved'],['casual','warm']):
         z=fit_seed_latent(d,seeds);assert torch.equal(z,fit_seed_latent(d,seeds))
@@ -51,33 +53,33 @@ def preference_evidence(api,persona,preferred,count=36,prefix='p'):
     ids=[]
     for i in range(count):
         d=post(api,'/v1/express',low_risk(f'{prefix}-{i}',persona,f'{prefix}-scenario-{i}')).json()
-        rejected=int(d['control_set_id'][-2:]);rejected=rejected if rejected!=preferred else 0
+        served={'controls':d['controls'],'habits':d['habits']};rejected=served if served!=option(**preferred) else option()
         fid=f'{prefix}-feedback-{i}';ids.append(fid)
-        r=post(api,'/v1/feedback',dict(feedback_id=fid,decision_id=d['decision_id'],source='owner',kind='pairwise_preference',actor_id='owner',consent_scope='core',learning_consent=True,preferred_control=preferred,rejected_control=rejected,evidence_group=f'{prefix}-scenario-{i}'))
+        r=post(api,'/v1/feedback',dict(feedback_id=fid,decision_id=d['decision_id'],source='owner',kind='pairwise_preference',actor_id='owner',consent_scope='core',learning_consent=True,preferred=option(**preferred),rejected=rejected,evidence_group=f'{prefix}-scenario-{i}'))
         assert r.status_code==200,r.text
     return ids
 
-def probability(api,persona,control,request_id):
+def probability(api,persona,request_id):
     req=low_risk(request_id,persona,request_id);req['debug']=True
-    d=post(api,'/v1/express',req).json();return d['diagnostics'],d['control_set_id']
+    d=post(api,'/v1/express',req).json();return d['diagnostics'],d['controls']
 
 def test_directional_learning_and_unrelated_persona_unchanged(api):
     base=create(api,'learner');create(api,'bystander')
-    before,_=probability(api,'learner',9,'before');bystander_before=probability(api,'bystander',9,'by-before')
-    preference_evidence(api,'learner',9)  # style-09: warm, detailed, patient teacher
+    before,_=probability(api,'learner','before');bystander_before=probability(api,'bystander','by-before')
+    preference_evidence(api,'learner',PATIENT)  # warm, detailed, patient teacher
     jid=post(api,'/v1/consolidations',dict(persona_id='learner',scope='core')).json()['job_id'];job=wait_job(api,jid)
     assert job['eligible'],job;assert job['report']['metrics']['heldout_gain']>0
     assert post(api,'/v1/personas/learner/promotions',dict(candidate_id=jid,expected_version=base)).status_code==200
-    after,choice=probability(api,'learner',9,'after')
+    after,choice=probability(api,'learner','after')
     assert after['warmth']>before['warmth'] and after['verbosity']>before['verbosity']
-    assert probability(api,'bystander',9,'by-after')[0]==bystander_before[0]
+    assert probability(api,'bystander','by-after')[0]==bystander_before[0]
 
 def test_contradictory_feedback_is_not_eligible(api):
     base=create(api,'noisy');rng=random.Random(0)
     for i in range(36):
         d=post(api,'/v1/express',low_risk(f'n-{i}','noisy',f'n-s-{i}')).json()
-        a,b=rng.sample([9,1],2)  # coin-flip labels: no consistent preference to learn
-        post(api,'/v1/feedback',dict(feedback_id=f'n-{i}',decision_id=d['decision_id'],source='owner',kind='pairwise_preference',actor_id='owner',consent_scope='core',learning_consent=True,preferred_control=a,rejected_control=b,evidence_group=f'n-{i}'))
+        a,b=rng.sample([PATIENT,TERSE],2)  # coin-flip labels: no consistent preference to learn
+        post(api,'/v1/feedback',dict(feedback_id=f'n-{i}',decision_id=d['decision_id'],source='owner',kind='pairwise_preference',actor_id='owner',consent_scope='core',learning_consent=True,preferred=option(**a),rejected=option(**b),evidence_group=f'n-{i}'))
     jid=post(api,'/v1/consolidations',dict(persona_id='noisy',scope='core')).json()['job_id'];job=wait_job(api,jid)
     if job['status']=='evaluated' and job['eligible']:
         # Only acceptable if held-out data genuinely improved; never promoted automatically.
@@ -87,7 +89,7 @@ def test_contradictory_feedback_is_not_eligible(api):
 def test_duplicate_judgement_under_new_id_counts_once(api):
     create(api,'dup');d=post(api,'/v1/express',low_risk('dup','dup','dup')).json()
     for i in range(30):
-        post(api,'/v1/feedback',dict(feedback_id=f'dup-{i}',decision_id=d['decision_id'],source='owner',kind='pairwise_preference',actor_id='owner',consent_scope='core',learning_consent=True,preferred_control=9,rejected_control=1,evidence_group=f'claimed-{i}'))
+        post(api,'/v1/feedback',dict(feedback_id=f'dup-{i}',decision_id=d['decision_id'],source='owner',kind='pairwise_preference',actor_id='owner',consent_scope='core',learning_consent=True,preferred=option(**PATIENT),rejected=option(**TERSE),evidence_group=f'claimed-{i}'))
     job=wait_job(api,post(api,'/v1/consolidations',dict(persona_id='dup',scope='core')).json()['job_id'])
     assert job['status']=='failed' or len(job['evidence_ids'])==1
 
@@ -97,11 +99,11 @@ def revoke(api,persona,fid,event):
 
 def test_revocation_follows_lineage_only(api):
     base=create(api,'lineage')
-    used=preference_evidence(api,'lineage',9)
+    used=preference_evidence(api,'lineage',PATIENT)
     jid=post(api,'/v1/consolidations',dict(persona_id='lineage',scope='core')).json()['job_id'];assert wait_job(api,jid)['eligible']
     v1=post(api,'/v1/personas/lineage/promotions',dict(candidate_id=jid,expected_version=base)).json()['version']
     # Evidence recorded after promotion was never used: revoking it must not reset state.
-    unused=preference_evidence(api,'lineage',1,count=1,prefix='late')
+    unused=preference_evidence(api,'lineage',TERSE,count=1,prefix='late')
     revoke(api,'lineage',unused[0],'r-unused')
     assert api.get('/v1/personas/lineage').json()['active_version']==v1
     revoke(api,'lineage',used[0],'r-used')

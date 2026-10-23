@@ -64,7 +64,7 @@ def main():
         obs=[json.loads(r['data']) for r in engine.rows('SELECT data FROM observations ORDER BY rowid')]
         report['observations']=sorted({o['type'] for o in obs})
         c['decision_linked_turn_completed']=any(o['type']=='turn.completed' and o['decision_id']==decisions()[0]['decision_id'] for o in obs)
-        fb=engine.post('/v1/feedback',dict(feedback_id='openclaw-smoke-feedback',decision_id=decisions()[0]['decision_id'],source='owner',kind='pairwise_preference',actor_id='host-smoke',consent_scope='core',learning_consent=True,preferred_control=9,rejected_control=int(decisions()[0]['control_set_id'][-2:]) or 1,evidence_group='openclaw-smoke'))
+        fb=engine.post('/v1/feedback',dict(feedback_id='openclaw-smoke-feedback',decision_id=decisions()[0]['decision_id'],source='owner',kind='pairwise_preference',actor_id='host-smoke',consent_scope='core',learning_consent=True,preferred={'controls':dict(directness=2,warmth=3,verbosity=3,humour=0,formality=1,explanation_depth=3,assertiveness=1),'habits':[]},rejected={'controls':decisions()[0]['controls'],'habits':decisions()[0]['habits']},evidence_group='openclaw-smoke'))
         c['approved_feedback_linked_to_host_decision']=fb['learning_recorded'] is True
         engine.stop()
         outage=run('Engine outage fixture request.','smoke-4')

@@ -1,0 +1,194 @@
+{
+  "$defs": {
+    "Pin": {
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "default": 0,
+          "maximum": 4,
+          "minimum": 0,
+          "title": "Min",
+          "type": "integer"
+        },
+        "max": {
+          "default": 4,
+          "maximum": 4,
+          "minimum": 0,
+          "title": "Max",
+          "type": "integer"
+        }
+      },
+      "title": "Pin",
+      "type": "object"
+    },
+    "Preferences": {
+      "additionalProperties": false,
+      "description": "The linked user's explicit choices; each value renders one reviewed sentence.",
+      "properties": {
+        "address": {
+          "anyOf": [
+            {
+              "enum": [
+                "informal",
+                "formal"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Address"
+        },
+        "spelling": {
+          "anyOf": [
+            {
+              "enum": [
+                "american",
+                "british",
+                "canadian",
+                "australian"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Spelling"
+        },
+        "units": {
+          "anyOf": [
+            {
+              "enum": [
+                "metric",
+                "imperial"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Units"
+        },
+        "format": {
+          "anyOf": [
+            {
+              "enum": [
+                "code_first",
+                "prose_first",
+                "bullets",
+                "paragraphs"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Format"
+        },
+        "dates": {
+          "anyOf": [
+            {
+              "enum": [
+                "iso",
+                "day_first",
+                "month_first"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dates"
+        }
+      },
+      "title": "Preferences",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "User-controlled relationship settings: preferences, trait pins (allowed level\nranges), habit vetoes, a freeze on relationship evolution, and consent to contribute\nthis relationship to the persona's cohort prior.",
+  "properties": {
+    "protocol_version": {
+      "const": "upap/2",
+      "title": "Protocol Version",
+      "type": "string"
+    },
+    "preferences": {
+      "$ref": "#/$defs/Preferences"
+    },
+    "pins": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Pin"
+      },
+      "propertyNames": {
+        "enum": [
+          "directness",
+          "warmth",
+          "verbosity",
+          "humour",
+          "formality",
+          "explanation_depth",
+          "assertiveness"
+        ]
+      },
+      "title": "Pins",
+      "type": "object"
+    },
+    "vetoes": {
+      "items": {
+        "enum": [
+          "summary_first",
+          "risks_first",
+          "next_step",
+          "confirm_goal",
+          "clarify_once",
+          "acknowledge_constraints",
+          "concrete_examples",
+          "analogies",
+          "structured",
+          "plain_words",
+          "precise_terms",
+          "tradeoffs",
+          "acknowledge_progress",
+          "light_aside",
+          "recap_end",
+          "flag_uncertainty"
+        ],
+        "type": "string"
+      },
+      "maxItems": 16,
+      "title": "Vetoes",
+      "type": "array"
+    },
+    "frozen": {
+      "default": false,
+      "title": "Frozen",
+      "type": "boolean"
+    },
+    "cohort_contribution": {
+      "default": false,
+      "title": "Cohort Contribution",
+      "type": "boolean"
+    },
+    "exploration": {
+      "default": false,
+      "title": "Exploration",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "protocol_version"
+  ],
+  "title": "Settings",
+  "type": "object"
+}

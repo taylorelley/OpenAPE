@@ -1,0 +1,138 @@
+{
+  "$defs": {
+    "Event": {
+      "additionalProperties": false,
+      "properties": {
+        "event_id": {
+          "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "occurred_at": {
+          "maxLength": 40,
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "persona_id": {
+          "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+          "title": "Persona Id",
+          "type": "string"
+        },
+        "user_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "User Id"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "decision_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decision Id"
+        },
+        "type": {
+          "enum": [
+            "session.started",
+            "turn.preparing",
+            "turn.completed",
+            "turn.failed",
+            "model.changed",
+            "session.compacted",
+            "session.ended",
+            "tool.result.summary",
+            "experience.corrected"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "status": {
+          "default": "ok",
+          "enum": [
+            "ok",
+            "failed",
+            "aborted"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "feedback_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Feedback Id"
+        }
+      },
+      "required": [
+        "event_id",
+        "occurred_at",
+        "persona_id",
+        "type"
+      ],
+      "title": "Event",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "protocol_version": {
+      "const": "upap/2",
+      "title": "Protocol Version",
+      "type": "string"
+    },
+    "adapter_id": {
+      "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+      "title": "Adapter Id",
+      "type": "string"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/Event"
+      },
+      "maxItems": 100,
+      "minItems": 1,
+      "title": "Events",
+      "type": "array"
+    }
+  },
+  "required": [
+    "protocol_version",
+    "adapter_id",
+    "events"
+  ],
+  "title": "Observations",
+  "type": "object"
+}

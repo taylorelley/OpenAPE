@@ -1,0 +1,30 @@
+{
+  "kind": "on-host context classifier evaluation; synthetic templates, not real messages",
+  "heldout_families": 9,
+  "heldout_rows": 2700,
+  "train_rows": 5400,
+  "classifier": {
+    "task_accuracy": 0.6011,
+    "tag_f1": {
+      "technical": 0.621,
+      "review": 0.5665,
+      "urgent": 0.9705,
+      "sensitive": 1.0,
+      "beginner": 0.9189,
+      "expert": 0.9938,
+      "error_present": 0.9599
+    }
+  },
+  "keyword_rules": {
+    "task_accuracy": 0.3319,
+    "tag_f1": {
+      "technical": 0.295,
+      "review": 0.5714,
+      "urgent": 0.6676,
+      "sensitive": 0.7955,
+      "beginner": 0.9149,
+      "expert": 0.7722,
+      "error_present": 0.5994
+    }
+  }
+}

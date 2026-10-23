@@ -1,7 +1,7 @@
 {
   "adapter_id": "upap.opencogni",
-  "protocol_version": "upap/1",
-  "adapter_version": "0.2.0",
+  "protocol_version": "upap/2",
+  "adapter_version": "0.3.0",
   "verified_with_actual_model": false,
   "default_mode": "shadow",
   "user_linking": "explicit configuration only",

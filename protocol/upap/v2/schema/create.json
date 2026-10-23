@@ -1,0 +1,155 @@
+{
+  "$defs": {
+    "MaturationHorizon": {
+      "additionalProperties": false,
+      "properties": {
+        "relationship_horizon": {
+          "maximum": 1000,
+          "minimum": 3,
+          "title": "Relationship Horizon",
+          "type": "integer"
+        },
+        "core_horizon": {
+          "maximum": 1000,
+          "minimum": 3,
+          "title": "Core Horizon",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "relationship_horizon",
+        "core_horizon"
+      ],
+      "title": "MaturationHorizon",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "protocol_version": {
+      "const": "upap/2",
+      "title": "Protocol Version",
+      "type": "string"
+    },
+    "persona_id": {
+      "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+      "title": "Persona Id",
+      "type": "string"
+    },
+    "archetype": {
+      "anyOf": [
+        {
+          "enum": [
+            "balanced",
+            "mentor",
+            "pragmatic_engineer",
+            "concierge",
+            "collaborator",
+            "analyst",
+            "critic"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Archetype"
+    },
+    "seed_preferences": {
+      "items": {
+        "enum": [
+          "concise",
+          "detailed",
+          "warm",
+          "reserved",
+          "formal",
+          "casual",
+          "direct",
+          "gentle",
+          "playful",
+          "serious"
+        ],
+        "type": "string"
+      },
+      "maxItems": 5,
+      "title": "Seed Preferences",
+      "type": "array"
+    },
+    "parent_persona_id": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Parent Persona Id"
+    },
+    "evolution": {
+      "default": "automatic",
+      "enum": [
+        "automatic",
+        "manual"
+      ],
+      "title": "Evolution",
+      "type": "string"
+    },
+    "maturation_rate": {
+      "anyOf": [
+        {
+          "enum": [
+            "fast",
+            "normal",
+            "slow"
+          ],
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/MaturationHorizon"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Maturation Rate"
+    },
+    "agent_feedback": {
+      "default": true,
+      "title": "Agent Feedback",
+      "type": "boolean"
+    },
+    "individuality": {
+      "default": 0.3,
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Individuality",
+      "type": "number"
+    },
+    "individuality_seed": {
+      "anyOf": [
+        {
+          "maximum": 2147483647,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Individuality Seed"
+    }
+  },
+  "required": [
+    "protocol_version",
+    "persona_id"
+  ],
+  "title": "Create",
+  "type": "object"
+}

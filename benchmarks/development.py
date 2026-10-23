@@ -14,9 +14,12 @@ regression record for these fixed priors, not a validation of them.
   change after development is complete).
 * Individuality: personas of the same archetype stay closer to each other than to
   other archetypes, but are not identical.
+* Smoothness of expression: how often the style a persona actually shows (in one
+  fixed context, after every session) changes, and how many trait levels change when
+  it does. Gradual development should show up one or two levels at a time.
 
-Each persona has a linked simulated user with a hidden preference for one catalogue
-row; in some sessions that user states a consented relationship preference for it.
+Each persona has a linked simulated user with a hidden preference for one approved
+configuration; in some sessions that user states a consented relationship preference for it.
 """
 import json
 import random
@@ -27,7 +30,7 @@ from pathlib import Path
 import numpy as np
 from fastapi.testclient import TestClient
 from engine.api.app import create_app
-from engine.neural.policy import CATALOGUE, VOCAB, mask
+from engine.neural.policy import ACTIONS, TRAITS as ALL_TRAITS, INDEX, VOCAB, mask, levels_of
 
 ROOT = Path(__file__).resolve().parents[1]
 SEED = 20261022
@@ -38,7 +41,7 @@ HORIZONS = dict(relationship_horizon=12, core_horizon=20)
 FEEDBACK_RATE = 0.3
 EVAL_CONTEXTS = [dict(task_type=t, channel='terminal', stakes='low', turn_origin='user', tags=tags)
                  for t, tags in (('general', []), ('coding', []), ('support', []), ('research', ['beginner']), ('code_review', ['expert']), ('creative', []))]
-TRAITS = list(CATALOGUE[0])
+TRAITS = list(ALL_TRAITS)
 
 def role(rng):
     tasks = rng.sample(VOCAB['task_type'], 2)
@@ -52,10 +55,10 @@ def run(data_dir):
     rng = random.Random(SEED)
     creds = [dict(token=TOKEN, tenant='local', actor='sim', scopes=['persona:express', 'observations:write', 'feedback:write', 'persona:admin', 'training:admin'], personas=['*'], users=['*'])]
     with TestClient(create_app(data_dir, credentials=creds, rate_limit_per_minute=100000), headers={'Authorization': 'Bearer ' + TOKEN}) as api:
-        post = lambda path, body: api.post(path, json={'protocol_version': 'upap/1', **body}).json()
+        post = lambda path, body: api.post(path, json={'protocol_version': 'upap/2', **body}).json()
         def express(persona, rid, session, ctx, mode='active', debug=False):
             return post('/v1/express', dict(request_id=rid, identity=dict(tenant_id='local', persona_id=persona, user_id='user'), session=dict(id=session, turn_id=rid),
-                host=dict(adapter_id='benchmark', adapter_version='0.2.0', host_version='simulated', provider_family='other', model_id='simulated'), context=ctx, mode=mode, debug=debug))
+                host=dict(adapter_id='benchmark', adapter_version='0.3.0', host_version='simulated', provider_family='other', model_id='simulated'), context=ctx, mode=mode, debug=debug))
         def traits(persona, k):
             levels = [express(persona, f'{persona}-eval-{k}-{i}', f'{persona}-eval-{k}-{i}', ctx, 'shadow', True)['diagnostics'] for i, ctx in enumerate(EVAL_CONTEXTS)]
             return [float(np.mean([d[t] for d in levels])) for t in TRAITS]
@@ -63,19 +66,23 @@ def run(data_dir):
         for name in ARCHETYPES:
             for i in range(INDIVIDUALS):
                 persona = f'{name}-{i}'; post('/v1/personas', dict(persona_id=persona, archetype=name, maturation_rate=HORIZONS))
-                personas.append(dict(id=persona, archetype=name, roles=(role(rng), role(rng)), liked=rng.randrange(len(CATALOGUE))))
+                personas.append(dict(id=persona, archetype=name, roles=(role(rng), role(rng)), liked=rng.randrange(ACTIONS), shown=[]))
+        def shown(p, s):
+            d = express(p['id'], f"{p['id']}-look-{s}", f"{p['id']}-look-{s}", EVAL_CONTEXTS[0], 'shadow'); p['shown'].append([d['controls'][t] for t in TRAITS])
+        for p in personas: shown(p, 0)
         checkpoints = [[traits(p['id'], 0) for p in personas]]
         for s in range(1, SESSIONS + 1):
             for p in personas:
                 session = f"{p['id']}-s{s}"; ctx = p['roles'][s > ROLE_SWITCH]()
                 for turn in range(2):
-                    d = express(p['id'], f'{session}-{turn}', session, ctx); shown = int(d['control_set_id'][-2:])
-                    if rng.random() < FEEDBACK_RATE and shown != p['liked'] and mask(ctx)[p['liked']]:
+                    d = express(p['id'], f'{session}-{turn}', session, ctx); served = INDEX[tuple(d['controls'][t] for t in TRAITS)]
+                    if rng.random() < FEEDBACK_RATE and served != p['liked'] and mask(ctx)[p['liked']]:
                         post('/v1/feedback', dict(feedback_id=f'{session}-f{turn}', decision_id=d['decision_id'], source='explicit_user', kind='pairwise_preference', actor_id='sim',
-                            consent_scope='relationship', learning_consent=True, preferred_control=p['liked'], rejected_control=shown, evidence_group=session))
+                            consent_scope='relationship', learning_consent=True, preferred=dict(controls=levels_of(p['liked']), habits=[]),
+                            rejected=dict(controls=d['controls'], habits=d['habits']), evidence_group=session))
                 post('/v1/observations', dict(adapter_id='benchmark', events=[dict(event_id=f'{session}-end', occurred_at=datetime.now(timezone.utc).isoformat(),
                     persona_id=p['id'], user_id='user', session_id=session, type='session.ended')]))
-                api.app.state.drain()
+                api.app.state.drain(); shown(p, s)
             if s % CHECK_EVERY == 0: checkpoints.append([traits(p['id'], s) for p in personas])
         events = {}; growth = {}
         for p in personas:
@@ -95,10 +102,16 @@ def main():
     for i in range(len(personas)):
         for j in range(i + 1, len(personas)):
             (same if personas[i]['archetype'] == personas[j]['archetype'] else other).append(float(np.abs(end[i] - end[j]).mean()))
+    steps = [np.abs(np.diff(np.array(p['shown']), axis=0)) for p in personas]
+    visible = [row for st in steps for row in st if row.sum()]
+    smoothness = dict(observations=sum(len(st) for st in steps), visible_changes=len(visible),
+        traits_changed_per_visible_change=round(float(np.mean([(row > 0).sum() for row in visible])), 4) if visible else 0.0,
+        levels_moved_per_visible_change=round(float(np.mean([row.sum() for row in visible])), 4) if visible else 0.0,
+        largest_single_change_levels=int(max((row.sum() for row in visible), default=0)))
     report = dict(kind='developmental trajectory engineering benchmark; NOT human or live-model evidence', seed=SEED, personas=len(personas), sessions=SESSIONS,
         role_switch_after_session=ROLE_SWITCH, horizons=HORIZONS, periods=periods, rank_order_stability=stability, mean_level_change=change,
         individuality=dict(same_archetype_distance=round(float(np.mean(same)), 4), different_archetype_distance=round(float(np.mean(other)), 4)),
-        life_events=events, consolidation_components=growth,
+        life_events=events, consolidation_components=growth, expression_smoothness=smoothness,
         final_growth={p['id']: dict(core=p['growth']['core']['maturity'], relationship=p['growth']['relationship']['maturity'], character_drift=p['character_drift']) for p in personas},
         human_reference='rank-order stability rises with age and plateaus near 0.7 (Roberts & DelVecchio 2000); mean-level change is largest in young adulthood and small later (Roberts, Walton & Viechtbauer 2006)',
         limitations=['Synthetic users and fixed priors; no human raters or live LLM outputs', 'Trait levels are decoder diagnostics over six fixed contexts',

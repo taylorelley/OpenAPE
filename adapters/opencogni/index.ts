@@ -15,10 +15,10 @@ export type StyleRecord={goalId:string;decisionId:string|null;personaVersion:str
 export function presentationStyle(client:Client,config:OpenCogniConfig,audit:(r:StyleRecord)=>void=()=>{}){
  return async(input:{goal:{id:string};state:{simulationTimeMs:number};history:unknown[]})=>{
   const goal=String(input.goal?.id??'unknown');
-  const request={protocol_version:'upap/1' as const,request_id:stable(`opencogni:${goal}:${input.state?.simulationTimeMs}:${input.history?.length??0}`),
+  const request={protocol_version:'upap/2' as const,request_id:stable(`opencogni:${goal}:${input.state?.simulationTimeMs}:${input.history?.length??0}`),
    identity:{tenant_id:config.tenant,persona_id:config.persona,...(config.user?{user_id:config.user}:{})},
    session:{id:stable(`opencogni:${goal}:${config.persona}`),turn_id:stable(`${input.state?.simulationTimeMs}:${input.history?.length??0}`)},
-   host:{adapter_id:'upap.opencogni',adapter_version:'0.2.0',host_version:HOST_COMMIT.slice(0,12),provider_family:'other' as const,model_id:'planner-http'},
+   host:{adapter_id:'upap.opencogni',adapter_version:'0.3.0',host_version:HOST_COMMIT.slice(0,12),provider_family:'other' as const,model_id:'planner-http'},
    // Operations planning: machine-initiated, background channel, medium stakes.
    context:{task_type:'general',channel:'background',stakes:'medium',turn_origin:'system',tags:['technical']}};
   const r:RenderedExpression=await client.express(request,config.mode??'shadow');
@@ -31,8 +31,8 @@ export function presentationStyle(client:Client,config:OpenCogniConfig,audit:(r:
 export function personalityPlugin(client:Client,config:OpenCogniConfig){
  const records:StyleRecord[]=[];
  const provider=presentationStyle(client,config,r=>{records.push(r);if(records.length>256)records.shift();});
- return {name:'brain.personality',version:'0.2.0',apply(ctx:any){
+ return {name:'brain.personality',version:'0.3.0',apply(ctx:any){
   if(typeof ctx.provide!=='function')throw Error('Cordis service API unavailable');
-  ctx.provide('brain.personality',{protocol:'upap/1',mode:config.mode??'shadow',presentationStyle:provider,records:()=>[...records]});
+  ctx.provide('brain.personality',{protocol:'upap/2',mode:config.mode??'shadow',presentationStyle:provider,records:()=>[...records]});
  },presentationStyle:provider,records:()=>[...records]};
 }

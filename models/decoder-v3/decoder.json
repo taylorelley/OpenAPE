@@ -1,0 +1,68 @@
+{
+  "hash": "sha256:7b514e003ab3dd7b3cac8dfd18333e4ab559ebd40dd4d28c9cf080252abe7609",
+  "seed": 42,
+  "encoder": "encoder/3",
+  "catalogue": "behaviour-controls/2",
+  "catalogue_hash": "sha256:a9decc190a7c16f7ca487d8c8b00b2cf5f67a3fcb25dc6fc162de20f2f107d15",
+  "actions": 51788,
+  "habits": 16,
+  "status": "experimental_synthetic",
+  "latent_norm_limit": 2.786,
+  "training": {
+    "rows": 28576,
+    "train_personas": 384,
+    "relationship_rows": 9216,
+    "neutral_rows": 4000,
+    "steps": 700,
+    "trait_level_accuracy_train": 0.9912,
+    "habit_accuracy_train": 0.9995,
+    "core_latent_norm_median": 1.377,
+    "relationship_latent_norm_median": 0.774,
+    "corpus_sha256": "80aa96ce982b691bda3f23cf3edb77fefe44c6b2371654f47e600cd0b4651892",
+    "episodic": null
+  },
+  "license": "Apache-2.0 weights; original CC0 synthetic corpus",
+  "limitations": [
+    "Synthetic rule/profile labels only",
+    "No independent human validation",
+    "No measured cross-model benefit"
+  ],
+  "heldout_persona_fewshot": {
+    "calibration": {
+      "personas": 64,
+      "support_pairs_per_persona": 16,
+      "query_contexts_per_persona": 32,
+      "metric": "mean per-trait level agreement of the selected configuration",
+      "trait_agreement_neutral": 0.5668,
+      "trait_agreement_fixed_default": 0.5259,
+      "trait_agreement_fitted": 0.7347,
+      "habit_f1_neutral": 0.6456,
+      "habit_f1_fitted": 0.477,
+      "habit_f1_fitted_with_bias": 0.5477
+    },
+    "validation": {
+      "personas": 96,
+      "support_pairs_per_persona": 16,
+      "query_contexts_per_persona": 32,
+      "metric": "mean per-trait level agreement of the selected configuration",
+      "trait_agreement_neutral": 0.5939,
+      "trait_agreement_fixed_default": 0.5349,
+      "trait_agreement_fitted": 0.7421,
+      "habit_f1_neutral": 0.6345,
+      "habit_f1_fitted": 0.4081,
+      "habit_f1_fitted_with_bias": 0.6556
+    }
+  },
+  "seed_initialization_trait_agreement": {
+    "casual": 0.9129,
+    "concise": 0.9509,
+    "detailed": 0.9978,
+    "direct": 0.9621,
+    "formal": 0.9286,
+    "gentle": 0.971,
+    "playful": 0.9821,
+    "reserved": 0.9866,
+    "serious": 0.9688,
+    "warm": 0.9888
+  }
+}

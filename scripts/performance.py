@@ -28,13 +28,13 @@ def main():
                         time.sleep(.05)
                     else:raise RuntimeError('Startup timeout')
                     cold=time.perf_counter()-start
-                    c.post('/v1/personas',json=dict(protocol_version='upap/1',persona_id='ape',archetype='balanced',evolution='manual')).raise_for_status()
+                    c.post('/v1/personas',json=dict(protocol_version='upap/2',persona_id='ape',archetype='balanced',evolution='manual')).raise_for_status()
                     req=json.loads((ROOT/'examples/express.json').read_text());req['mode']='active';latencies=[]
                     for i in range(520):
                         req['request_id']=f'perf-{i}';req['session']['turn_id']=f'turn-{i}'
                         start=time.perf_counter();r=c.post('/v1/express',json=req);r.raise_for_status()
                         if i>=20:latencies.append((time.perf_counter()-start)*1000)
-                    d=Decoder(ROOT/'models/decoder-v2/decoder.safetensors');neural=[]
+                    d=Decoder(ROOT/'models/decoder-v3/decoder.safetensors');neural=[]
                     with torch.no_grad():
                         for _ in range(520):
                             start=time.perf_counter();d.logits(torch.zeros(64),torch.zeros(32),req['context'],req['host']);neural.append((time.perf_counter()-start)*1000)

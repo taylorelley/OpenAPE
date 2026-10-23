@@ -1,14 +1,18 @@
-# Open release issues (0.2.0)
+# Open release issues (0.3.0, u## ISSUE-001: Live models and remaining host coverage
 
-## ISSUE-001 — Live models and remaining host coverage
+Live-model evidence is still thin. There were one OpenRouter pilot and one placement
+study (one model under test, one judge), plus live tool-calling smokes on Hermes and
+OpenClaw with the same model. Three model families are still unmet. OpenCogni's
+boundary change is up for review (taylorelley/opencogni#8). Its integration and
+evaluator suites (nats-server + PostgreSQL) have not been run. Remaining host gaps:
 
-All five hosts now run real turns with a synthetic model endpoint (see
-compatibility.md), but **no live provider model** has been called, so the three
-model-family requirement is unmet. Remaining host gaps: OpenCogni needs the
-`adapters/opencogni/upstream` patch reviewed and merged, and its integration/evaluator
-suites (nats-server + PostgreSQL) run; Claude Code `PostModelSwitch`/`StopFailure`
-paths; OpenClaw gateway/channel and Codex/Copilot runners; Pi child-process lineage;
-Pi 1.4.0. Strict xfails: `tests/test_release_gates.py`.
+* Claude Code `PostModelSwitch`/`StopFailure` paths;
+* OpenClaw gateway/channel and Codex/Copilot runners;
+* Pi child-process lineage and Pi 1.4.0.
+
+Strict xfails: `tests/test_release_gates.py`.
+
+release_gates.py`.
 
 ## ISSUE-002 — Independent behavioural evidence
 
@@ -26,14 +30,19 @@ packages. Session-vector learning/checkpoints are not implemented (session state
 zero). Diagnostic traits are decoder outputs, not independently trained probes.
 Seed initialization uses declared synthetic profiles, not learned evidence.
 
-## ISSUE-004 — Hardening and isolation
+## ISSUE-004: Hardening and isolation
 
-Training and evaluation run in one in-process worker thread; the evaluator is a
-separate module with fixed thresholds that host credentials cannot change, but it is
-not OS-isolated. No CVE/licence audit, penetration test, power-loss artifact GC test,
-backup/recovery automation or multi-instance support. Rate limits and job queues are
-memory-local. Docker image was verified for 0.1.0 only; no Docker daemon was
-available to re-run `scripts/docker_smoke.py` for 0.2.0.
+Training runs in an in-process worker thread. Candidate and maturation evaluation run
+in a separate spawned process that loads the decoder from disk, but there is no
+seccomp or user separation. Several replicas are supported on PostgreSQL. Writes
+serialize through one advisory lock, so write throughput is that of one writer. Rate
+limits stay per replica, and a lost replica's queued job is abandoned after 15
+minutes. Docker 0.3.0 was re-verified (hardened compose, two replicas on PostgreSQL).
+Still missing:
+
+* a CVE/licence audit and a penetration test;
+* a power-loss artifact GC test;
+* backup and recovery automation.
 
 ## ISSUE-005 — Provenance and re-derivation
 

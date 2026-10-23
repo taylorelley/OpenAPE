@@ -1,16 +1,16 @@
 {
-  "persona": "demo-42d02d9e",
-  "prior": "2d08bf94-f332-432b-8798-db2ae266796b",
-  "candidate": "b22f6858-7270-4053-90fa-fa4acb04bfd6",
+  "persona": "demo-3d2e19ea",
+  "prior": "3f9134a0-ba1d-4ad9-94e4-fb4cf7c4e342",
+  "candidate": "6ac76146-1894-4777-94c2-eca060b6f4de",
   "promoted": {
-    "protocol_version": "upap/1",
-    "version": "2f932a03-a3e8-4622-8a41-3495fe844bf7",
+    "protocol_version": "upap/2",
+    "version": "9eaae5b3-6ca1-424d-b39b-bace7ca71682",
     "scope": "core"
   },
   "rollback": {
-    "protocol_version": "upap/1",
-    "persona_id": "demo-42d02d9e",
-    "active_version": "2d08bf94-f332-432b-8798-db2ae266796b",
+    "protocol_version": "upap/2",
+    "persona_id": "demo-3d2e19ea",
+    "active_version": "3f9134a0-ba1d-4ad9-94e4-fb4cf7c4e342",
     "initialization": "archetype",
     "archetype": "balanced",
     "parent": null,
@@ -28,14 +28,14 @@
         "boost": 1.0
       }
     },
-    "temperament_version": "2d08bf94-f332-432b-8798-db2ae266796b",
+    "temperament_version": "3f9134a0-ba1d-4ad9-94e4-fb4cf7c4e342",
     "individuality": {
       "amount": 0.3,
-      "seed": 1480555252
+      "seed": 394335487
     },
     "character_drift": 0.0,
     "character_radius": 1.6,
-    "decoder_hash": "sha256:dda6b8441ab83f351c7b2488fb314c611339a575bbe0433b825eec692862b643",
+    "decoder_hash": "sha256:74f8d3946857e2726a18bff273225d51252569d779cb6fabdaddea4e34776cde",
     "engine_status": "experimental_synthetic"
   },
   "evaluation": {
@@ -52,13 +52,13 @@
       "validation_groups": 10,
       "train_examples": 26,
       "validation_examples": 10,
-      "heldout_loss_before": 2.0186500549316406,
-      "heldout_loss_after": 0.0015977962175384164,
-      "heldout_gain": 2.017052258714102,
+      "heldout_loss_before": 2.047976493835449,
+      "heldout_loss_after": 0.0009678190108388662,
+      "heldout_gain": 2.0470086748246104,
       "drift": 0.9800000190734863,
-      "state_norm": 0.960456132888794,
-      "state_norm_limit": 2.377,
-      "mean_kl_validation_contexts": 3.9630603790283203,
+      "state_norm": 1.247943639755249,
+      "state_norm_limit": 2.808,
+      "mean_kl_validation_contexts": 4.670562267303467,
       "constraints_ok": true
     },
     "policy": {
@@ -70,112 +70,106 @@
     "policy_hash": "b8c84e2e4bc273f03e8223b82c774c7ff15a3da20762a786385998c5732bf89e",
     "evidence": "synthetic_or_explicit_feedback; not a live-model behavioral evaluation"
   },
-  "export_checksum": "6d2f82e65ff5ff8fe715dbcbb8839e4b613991c329c8a477135c725702dc0caf",
+  "export_checksum": "7a71a0b93adf315417b25450052fe034223147db1bab62f47c6ec8fc47eb093a",
   "evidence": "Synthetic explicit preference labels. No live-model benefit claimed.",
   "automatic_evolution": {
-    "persona": "evolve-bbbbe0e3",
+    "persona": "evolve-60b2fe6d",
     "archetype": "mentor",
     "maturation_steps": [
       {
         "scope": "core",
         "experience": 1,
         "maturity": 0.1826,
-        "drift": 0.0994
+        "drift": 0.0938
       },
       {
         "scope": "relationship",
         "experience": 1,
         "maturity": 0.3162,
-        "drift": 0.4419
+        "drift": 0.3415
       },
       {
         "scope": "core",
         "experience": 2,
         "maturity": 0.2582,
-        "drift": 0.0433
+        "drift": 0.0394
       },
       {
         "scope": "relationship",
         "experience": 2,
         "maturity": 0.4472,
-        "drift": 0.3215
+        "drift": 0.3551
       },
       {
         "scope": "core",
         "experience": 3,
         "maturity": 0.3162,
-        "drift": 0.0333
+        "drift": 0.0305
       },
       {
         "scope": "relationship",
         "experience": 3,
         "maturity": 0.5477,
-        "drift": 0.4537
+        "drift": 0.512
       },
       {
         "scope": "core",
         "experience": 5,
         "maturity": 0.4082,
-        "drift": 0.0514
+        "drift": 0.0468
       },
       {
         "scope": "relationship",
         "experience": 4,
         "maturity": 0.6325,
-        "drift": 0.3023
+        "drift": 0.3495
       },
       {
         "scope": "core",
         "experience": 7,
         "maturity": 0.483,
-        "drift": 0.042
+        "drift": 0.0383
       },
       {
         "scope": "relationship",
         "experience": 5,
         "maturity": 0.7071,
-        "drift": 0.2055
+        "drift": 0.0732
       },
       {
         "scope": "core",
         "experience": 9,
         "maturity": 0.5477,
-        "drift": 0.0362
+        "drift": 0.0332
       },
       {
         "scope": "relationship",
         "experience": 6,
         "maturity": 0.7746,
-        "drift": 0.1449
+        "drift": 0.0661
       },
       {
         "scope": "core",
         "experience": 11,
         "maturity": 0.6055,
-        "drift": 0.0321
+        "drift": 0.0298
       },
       {
         "scope": "relationship",
         "experience": 7,
         "maturity": 0.8367,
-        "drift": 0.1086
+        "drift": 0.0608
       },
       {
         "scope": "core",
         "experience": 13,
         "maturity": 0.6583,
-        "drift": 0.0291
-      },
-      {
-        "scope": "relationship",
-        "experience": 8,
-        "maturity": 0.8944,
-        "drift": 0.0847
+        "drift": 0.0274
       }
     ],
     "automatic_promotions": {
       "feedback": 2,
-      "maturation": 16
+      "maturation": 14
     },
     "growth": {
       "core": {

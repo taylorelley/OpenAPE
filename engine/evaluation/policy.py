@@ -13,7 +13,7 @@ from dataclasses import dataclass, asdict
 import hashlib
 import json
 import torch
-from engine.learning.trainer import loss_for, state_norm_limit
+from engine.learning.trainer import loss_for, state_norm_limit, trait_pair, trait_margin
 from engine.neural.policy import mask
 
 def group_split(examples):
@@ -77,11 +77,11 @@ def evaluate_candidate(decoder,core,rel,candidate,scope,train,valid,auto=False):
 
 def preference_agreement(decoder,states,rows):
     """Fraction of explicit pairwise preferences/corrections the policy satisfies."""
-    pairs=[e for e in rows if e['kind'] in ('pairwise_preference','correction') and loss_for(decoder,*states,e) is not None]
+    pairs=[(e,p) for e in rows if (p:=trait_pair(e)) is not None]
     if not pairs:return None,0
     hits=0
-    for e in pairs:
-        logits=decoder.logits(*states,e['context'],e['host']);hits+=int(logits[e['preferred_control']]>logits[e['rejected_control']])
+    for e,p in pairs:
+        t,_=decoder.heads(*states,e['context'],e['host']);hits+=int(trait_margin(t,*p)>0)
     return hits/len(pairs),len(pairs)
 
 def evaluate_maturation(decoder,core,rel,candidate,scope,step_budget,feedback):

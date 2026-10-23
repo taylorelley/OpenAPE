@@ -35,7 +35,7 @@ class Engine:
             time.sleep(.05)
         else:raise RuntimeError('engine startup timed out')
     def post(self,path,body):
-        r=self.http.post(path,json={'protocol_version':'upap/1',**body});r.raise_for_status();return r.json()
+        r=self.http.post(path,json={'protocol_version':'upap/2',**body});r.raise_for_status();return r.json()
     def rows(self,sql):
         import sqlite3
         db=sqlite3.connect(self.tmp/'engine-data'/'openape.sqlite');db.row_factory=sqlite3.Row
@@ -99,3 +99,30 @@ def count_marker(obj):
 
 def write_report(name,report):
     path=ROOT/'docs/reports'/f'{name}.json';path.write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report,indent=2))
+
+class RelayModel:
+    """A recording relay to a real OpenAI-compatible provider (live-model smokes). The host
+    talks to the relay with a placeholder key; the relay adds the real key from `key_env`,
+    forwards the request unchanged and records the request body and the raw reply. The key
+    is never recorded."""
+    def __init__(self,upstream,key_env):
+        self.requests=[];outer=self;key=os.environ[key_env];upstream=upstream.rstrip('/')
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self,*a):pass
+            def do_POST(self):
+                raw=self.rfile.read(int(self.headers.get('content-length') or 0))
+                path=self.path.split('/v1',1)[-1]
+                with httpx.Client(timeout=300) as c, c.stream('POST',upstream+path,content=raw,headers={'content-type':'application/json','authorization':'Bearer '+key}) as r:
+                    self.send_response(r.status_code);self.send_header('content-type',r.headers.get('content-type','application/json'));self.end_headers();reply=b''
+                    for chunk in r.iter_bytes():self.wfile.write(chunk);self.wfile.flush();reply+=chunk
+                try:body=json.loads(raw)
+                except ValueError:body={}
+                outer.requests.append(dict(path=self.path,body=body,status=r.status_code,reply=reply.decode('utf-8','replace')))
+            def do_GET(self):
+                with httpx.Client(timeout=60) as c:r=c.get(upstream+self.path.split('/v1',1)[-1],headers={'authorization':'Bearer '+key})
+                self.send_response(r.status_code);self.send_header('content-type','application/json');self.end_headers();self.wfile.write(r.content)
+        self.server=ThreadingHTTPServer(('127.0.0.1',free_port()),Handler);self.url=f'http://127.0.0.1:{self.server.server_port}'
+        threading.Thread(target=self.server.serve_forever,daemon=True).start()
+    def model_requests(self):
+        return [r for r in self.requests if r['path'].split('?')[0].endswith('/chat/completions')]
+    def close(self):self.server.shutdown()

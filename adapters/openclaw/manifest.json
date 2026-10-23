@@ -1,7 +1,7 @@
 {
   "adapter_id": "upap.openclaw",
-  "protocol_version": "upap/1",
-  "adapter_version": "0.2.0",
+  "protocol_version": "upap/2",
+  "adapter_version": "0.3.0",
   "verified_with_actual_model": false,
   "default_mode": "shadow",
   "user_linking": "explicit configuration only",
@@ -20,6 +20,11 @@
   "observation_hooks": [
     "agent_end"
   ],
+  "context_hooks": [
+    "after_tool_call",
+    "before_prompt_build"
+  ],
+  "context_signals": "previous-turn tool names and error count (after_tool_call; never params or results), run channel, declared context (OPENAPE_CONTEXT); current user message only with OPENAPE_CONTEXT_TEXT=local, classified locally and never sent",
   "verified_capabilities": [
     "real_cli_lifecycle_synthetic_model",
     "append_context_once_per_turn",
@@ -30,7 +35,8 @@
   ],
   "unverified": [
     "gateway/channel runners",
-    "Codex/Copilot harness paths"
+    "Codex/Copilot harness paths",
+    "derived turn context against a real OpenClaw run (after_tool_call signals)"
   ],
   "subagents": "heartbeat, cron and non-user triggers opt out",
   "smoke": "python -m scripts.openclaw_host_smoke",

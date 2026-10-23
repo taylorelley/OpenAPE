@@ -20,22 +20,22 @@
   "compact_exit_code": 0,
   "controls": {
     "cc-terse": {
-      "directness": "high",
-      "warmth": "low",
-      "verbosity": "low",
-      "humour": "low",
-      "formality": "moderate",
-      "explanation_depth": "low",
-      "assertiveness": "high"
+      "directness": 3,
+      "warmth": 2,
+      "verbosity": 1,
+      "humour": 0,
+      "formality": 2,
+      "explanation_depth": 1,
+      "assertiveness": 3
     },
     "cc-kind": {
-      "directness": "moderate",
-      "warmth": "high",
-      "verbosity": "high",
-      "humour": "moderate",
-      "formality": "low",
-      "explanation_depth": "high",
-      "assertiveness": "low"
+      "directness": 2,
+      "warmth": 3,
+      "verbosity": 3,
+      "humour": 2,
+      "formality": 2,
+      "explanation_depth": 3,
+      "assertiveness": 2
     }
   },
   "observations": [

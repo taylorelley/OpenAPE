@@ -8,7 +8,11 @@
    declared prior, not learning) and `evolution: automatic`.
 3. Copy `examples/express.json`, set `identity.persona_id` to `terse`, and run
    `openape preview --file req.json`; repeat for `kind`. Identical context, visibly
-   different approved controls and injected text. Repeat calls are deterministic.
+   different approved controls (a level 0-4 per trait), signature habits and
+   injected text. Change `context.task_type` or `context.tags` (for example
+   `debugging` with `beginner`) and the same persona adapts its levels. Repeat calls
+   are deterministic. Upgrading a 0.2 data directory? Run `openape migrate --reset
+   --data DIR` first.
 4. `python -m scripts.offline_demo` first runs the manual path on a `manual`
    persona: it records 36 explicitly synthetic preference pairs on distinct
    sessions, trains a candidate, has the independent evaluator score held-out
@@ -36,9 +40,10 @@
 7. Stop the engine during a host session: the next prompt continues with no style
    injection (all five host smokes verify this).
 8. Collect genuine opted-in feedback (`openape feedback --file f.json`, see
-   `protocol/upap/v1/schema/feedback.json`). Automatic personas learn from it on
+   `protocol/upap/v2/schema/feedback.json`). Automatic personas learn from it on
    their own once enough evidence has built up. In active mode the agent can also
-   call its `persona_feedback` tool when you ask for a style change. Watch
+   call its `persona_feedback` tool when you ask for a style change, including
+   habits ("always end with next steps" → `next_step: more_often`). Watch
    `openape persona history ID`. Use `openape persona evolution ID --pause` to stop
    automatic evolution; for manual personas run `openape learn`, `openape job` and
    `openape promote --persona ID --file p.json` (candidate_id + expected_version).

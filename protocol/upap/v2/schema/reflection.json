@@ -1,0 +1,108 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "protocol_version": {
+      "const": "upap/2",
+      "title": "Protocol Version",
+      "type": "string"
+    },
+    "reflection_id": {
+      "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+      "title": "Reflection Id",
+      "type": "string"
+    },
+    "decision_id": {
+      "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+      "title": "Decision Id",
+      "type": "string"
+    },
+    "adjustments": {
+      "additionalProperties": {
+        "enum": [
+          "more",
+          "less"
+        ],
+        "type": "string"
+      },
+      "maxProperties": 3,
+      "propertyNames": {
+        "enum": [
+          "directness",
+          "warmth",
+          "verbosity",
+          "humour",
+          "formality",
+          "explanation_depth",
+          "assertiveness"
+        ]
+      },
+      "title": "Adjustments",
+      "type": "object"
+    },
+    "habits": {
+      "additionalProperties": {
+        "enum": [
+          "more_often",
+          "less_often"
+        ],
+        "type": "string"
+      },
+      "maxProperties": 2,
+      "propertyNames": {
+        "enum": [
+          "summary_first",
+          "risks_first",
+          "next_step",
+          "confirm_goal",
+          "clarify_once",
+          "acknowledge_constraints",
+          "concrete_examples",
+          "analogies",
+          "structured",
+          "plain_words",
+          "precise_terms",
+          "tradeoffs",
+          "acknowledge_progress",
+          "light_aside",
+          "recap_end",
+          "flag_uncertainty"
+        ]
+      },
+      "title": "Habits",
+      "type": "object"
+    },
+    "reason": {
+      "enum": [
+        "user_requested",
+        "user_corrected",
+        "observed_preference"
+      ],
+      "title": "Reason",
+      "type": "string"
+    },
+    "scope": {
+      "anyOf": [
+        {
+          "enum": [
+            "core",
+            "relationship"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Scope"
+    }
+  },
+  "required": [
+    "protocol_version",
+    "reflection_id",
+    "decision_id",
+    "reason"
+  ],
+  "title": "Reflection",
+  "type": "object"
+}

@@ -5,12 +5,33 @@ TOKEN='test-owner-token-0000000000000000'
 USER_TOKEN='test-user-token-0000000000000000'
 OTHER_TOKEN='other-tenant-token-00000000000000'
 CREDENTIALS=[dict(token=TOKEN,tenant='local',actor='owner',scopes=['persona:express','observations:write','feedback:write','persona:admin','training:admin','reflection:write'],personas=['*'],users=['*']),dict(token=USER_TOKEN,tenant='local',actor='alice',scopes=['persona:express','feedback:write','observations:write'],personas=['ape'],users=['alice']),dict(token=OTHER_TOKEN,tenant='other',actor='owner',scopes=['persona:express','persona:admin'],personas=['*'],users=['*'])]
+PG_URL=__import__('os').environ.get('OPENAPE_TEST_DATABASE_URL')
+@pytest.fixture(autouse=True)
+def postgres_backend(monkeypatch):
+    """With OPENAPE_TEST_DATABASE_URL set, every store runs on PostgreSQL in a schema of its
+    own (derived from its data directory), dropped after the test."""
+    if not PG_URL:yield;return
+    import hashlib,psycopg
+    from engine.storage import store
+    schemas=set();original=store.Store.__init__
+    def init(self,root,database_url=None,schema=None):
+        schema=schema or 't_'+hashlib.sha256(str(root).encode()).hexdigest()[:20];schemas.add(schema)
+        original(self,root,database_url or PG_URL,schema)
+    monkeypatch.setattr(store.Store,'__init__',init)
+    yield
+    with psycopg.connect(PG_URL,autocommit=True) as c:
+        for schema in schemas:c.execute(f'DROP SCHEMA IF EXISTS {schema} CASCADE')
 @pytest.fixture
 def api(tmp_path):
     app=create_app(tmp_path,credentials=CREDENTIALS)
     with TestClient(app,headers={'Authorization':'Bearer '+TOKEN}) as c:
         yield c
 
-def post(api,path,data):return api.post(path,json={'protocol_version':'upap/1',**data})
+def post(api,path,data):return api.post(path,json={'protocol_version':'upap/2',**data})
 def expression(request_id='req-1',persona='ape',user='alice',session='session-1',mode='active'):
-    return dict(protocol_version='upap/1',request_id=request_id,identity={'tenant_id':'local','persona_id':persona,'user_id':user},session={'id':session,'turn_id':'turn-1'},host={'adapter_id':'custom','adapter_version':'0.1','host_version':'fixture','provider_family':'anthropic','model_id':'fixture'},context={'task_type':'general','channel':'terminal','stakes':'low','turn_origin':'user','tags':[]},mode=mode)
+    return dict(protocol_version='upap/2',request_id=request_id,identity={'tenant_id':'local','persona_id':persona,'user_id':user},session={'id':session,'turn_id':'turn-1'},host={'adapter_id':'custom','adapter_version':'0.1','host_version':'fixture','provider_family':'anthropic','model_id':'fixture'},context={'task_type':'general','channel':'terminal','stakes':'low','turn_origin':'user','tags':[]},mode=mode)
+from protocol.catalogue import NEUTRAL
+def option(habits=(),**levels):
+    """A feedback option: an approved configuration (neutral plus overrides) and its habits."""
+    return {'controls':{**NEUTRAL,**levels},'habits':list(habits)}
+TERSE=dict(directness=3,warmth=1,verbosity=1,explanation_depth=1,assertiveness=3)

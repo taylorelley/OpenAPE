@@ -1,0 +1,27 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "protocol_version": {
+      "const": "upap/2",
+      "title": "Protocol Version",
+      "type": "string"
+    },
+    "candidate_id": {
+      "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+      "title": "Candidate Id",
+      "type": "string"
+    },
+    "expected_version": {
+      "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+      "title": "Expected Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "protocol_version",
+    "candidate_id",
+    "expected_version"
+  ],
+  "title": "Promote",
+  "type": "object"
+}

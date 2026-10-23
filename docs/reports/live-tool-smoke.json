@@ -1,0 +1,128 @@
+{
+  "host": "Hermes Agent",
+  "host_version": "0.19.0",
+  "model": "z-ai/glm-5.3-flash",
+  "provider": "https://openrouter.ai/api/v1",
+  "kind": "live model; a few turns, not a benchmark",
+  "checks": {
+    "turn_completes": true,
+    "provider_calls_succeed": true,
+    "style_reached_provider": true,
+    "persona_feedback_offered": true,
+    "second_turn_completes": true,
+    "key_not_recorded": true
+  },
+  "observed": {
+    "model_called_persona_feedback": true,
+    "reflections_recorded": 1,
+    "reflection_moves": [
+      {
+        "preferred": {
+          "controls": {
+            "directness": 1,
+            "warmth": 3,
+            "verbosity": 2,
+            "humour": 0,
+            "formality": 2,
+            "explanation_depth": 3,
+            "assertiveness": 1
+          },
+          "habits": [
+            "next_step",
+            "concrete_examples",
+            "acknowledge_progress"
+          ]
+        },
+        "rejected": {
+          "controls": {
+            "directness": 1,
+            "warmth": 3,
+            "verbosity": 3,
+            "humour": 0,
+            "formality": 2,
+            "explanation_depth": 3,
+            "assertiveness": 1
+          },
+          "habits": [
+            "next_step",
+            "concrete_examples",
+            "acknowledge_progress"
+          ]
+        }
+      }
+    ],
+    "reflection_audit": [
+      {
+        "reason": "user_requested",
+        "adjustments": {
+          "verbosity": "less"
+        },
+        "habits": {
+          "concrete_examples": "more_often",
+          "next_step": "more_often"
+        }
+      }
+    ],
+    "tool_results": [
+      "Not recorded: No approved style moves that way in this context",
+      "Recorded. Your persona will adapt gradually in future sessions if this preference is consistent."
+    ],
+    "style_before": {
+      "controls": {
+        "directness": 1,
+        "warmth": 3,
+        "verbosity": 3,
+        "humour": 0,
+        "formality": 2,
+        "explanation_depth": 3,
+        "assertiveness": 1
+      },
+      "habits": [
+        "next_step",
+        "concrete_examples",
+        "acknowledge_progress"
+      ]
+    },
+    "style_after": {
+      "controls": {
+        "directness": 1,
+        "warmth": 3,
+        "verbosity": 3,
+        "humour": 0,
+        "formality": 2,
+        "explanation_depth": 3,
+        "assertiveness": 1
+      },
+      "habits": [
+        "next_step",
+        "concrete_examples",
+        "acknowledge_progress"
+      ]
+    },
+    "note": "Each `hermes chat -q` process ends its session on exit, so the engine discards the session state and the resumed run starts a new engine session: the reflection is evidence for later learning, not for this second run. The in-session effect is covered by tests/test_habits.py and the session-state tests.",
+    "requested_moves_only": false,
+    "reply_chars": [
+      11860,
+      1124
+    ],
+    "decisions": [
+      {
+        "session": "593e5322eff9",
+        "session_state": null,
+        "verbosity": 3,
+        "tags": [
+          "first_turn"
+        ]
+      },
+      {
+        "session": "593e5322eff9",
+        "session_state": null,
+        "verbosity": 3,
+        "tags": [
+          "first_turn"
+        ]
+      }
+    ]
+  },
+  "status": "PASS"
+}

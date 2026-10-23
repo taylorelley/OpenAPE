@@ -14,7 +14,7 @@ def demo(c):
     for i in range(36):
         req['request_id']=f'demo-{i}';req['session']['id']=f'scenario-{i}'
         d=c.request('POST','/v1/express',{**req,'mode':'active'})
-        c.request('POST','/v1/feedback',dict(feedback_id=f'{persona}-f-{i}',decision_id=d['decision_id'],actor_id='owner',source='owner',kind='pairwise_preference',consent_scope='core',learning_consent=True,preferred_control=1,rejected_control=0,evidence_group=f'synthetic-{i}'))
+        c.request('POST','/v1/feedback',dict(feedback_id=f'{persona}-f-{i}',decision_id=d['decision_id'],actor_id='owner',source='owner',kind='pairwise_preference',consent_scope='core',learning_consent=True,preferred={'controls':dict(directness=3,warmth=1,verbosity=1,humour=0,formality=2,explanation_depth=1,assertiveness=3),'habits':[]},rejected={'controls':dict(directness=2,warmth=2,verbosity=2,humour=0,formality=2,explanation_depth=2,assertiveness=2),'habits':[]},evidence_group=f'synthetic-{i}'))
     job=c.request('POST','/v1/consolidations',dict(persona_id=persona,scope='core'))
     deadline=time.monotonic()+30
     while time.monotonic()<deadline:
@@ -37,7 +37,7 @@ def evolution_demo(c):
     for i in range(20):
         req['request_id']=f'{persona}-{i}';req['session']['id']=f'{persona}-s{i}'
         d=c.request('POST','/v1/express',{**req,'mode':'active'})
-        c.request('POST','/v1/feedback',dict(feedback_id=f'{persona}-f{i}',decision_id=d['decision_id'],actor_id='owner',source='explicit_user',kind='pairwise_preference',consent_scope='relationship',learning_consent=True,preferred_control=22,rejected_control=int(d['control_set_id'][-2:]) or 1,evidence_group=f'{persona}-s{i}'))
+        c.request('POST','/v1/feedback',dict(feedback_id=f'{persona}-f{i}',decision_id=d['decision_id'],actor_id='owner',source='explicit_user',kind='pairwise_preference',consent_scope='relationship',learning_consent=True,preferred={'controls':dict(directness=3,warmth=3,verbosity=1,humour=0,formality=2,explanation_depth=1,assertiveness=2),'habits':[]},rejected={'controls':d['controls'],'habits':d['habits']},evidence_group=f'{persona}-s{i}'))
         c.request('POST','/v1/observations',dict(adapter_id=req['host']['adapter_id'],events=[dict(event_id=f'{persona}-end{i}',occurred_at=datetime.now(timezone.utc).isoformat(),persona_id=persona,user_id='alice',session_id=f'{persona}-s{i}',type='session.ended')]))
     deadline=time.monotonic()+60;history=None
     while time.monotonic()<deadline:

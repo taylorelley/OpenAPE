@@ -1,0 +1,264 @@
+{
+  "vocab": {
+    "task_type": [
+      "general",
+      "code_review",
+      "coding",
+      "support",
+      "creative",
+      "research",
+      "debugging",
+      "planning",
+      "writing"
+    ],
+    "channel": [
+      "terminal",
+      "chat",
+      "voice",
+      "background"
+    ],
+    "stakes": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "turn_origin": [
+      "user",
+      "system",
+      "tool",
+      "subagent"
+    ],
+    "tags": [
+      "technical",
+      "review",
+      "sensitive",
+      "urgent",
+      "beginner",
+      "expert",
+      "error_present",
+      "first_turn",
+      "long_session",
+      "returning",
+      "corrected"
+    ],
+    "language": [
+      "none",
+      "python",
+      "typescript",
+      "javascript",
+      "go",
+      "rust",
+      "java",
+      "c_cpp",
+      "csharp",
+      "ruby",
+      "php",
+      "shell",
+      "sql",
+      "markup",
+      "config",
+      "other"
+    ],
+    "repo_kind": [
+      "unknown",
+      "software",
+      "infrastructure",
+      "documentation",
+      "data_science"
+    ]
+  },
+  "engine_tags": [
+    "first_turn",
+    "long_session",
+    "returning",
+    "corrected"
+  ],
+  "defaults": {
+    "task_type": "general",
+    "channel": "terminal",
+    "stakes": "medium",
+    "turn_origin": "user",
+    "language": "none",
+    "repo_kind": "unknown"
+  },
+  "tools": [
+    {
+      "names": [
+        "edit",
+        "multiedit",
+        "write",
+        "notebookedit",
+        "apply_patch",
+        "patch",
+        "str_replace_editor",
+        "edit_file",
+        "write_file"
+      ],
+      "task_type": "coding",
+      "tags": [
+        "technical"
+      ]
+    },
+    {
+      "names": [
+        "bash",
+        "shell",
+        "terminal",
+        "exec",
+        "run_command",
+        "execute_code"
+      ],
+      "tags": [
+        "technical"
+      ]
+    },
+    {
+      "names": [
+        "read",
+        "grep",
+        "glob",
+        "ls",
+        "find",
+        "search",
+        "read_file",
+        "search_files",
+        "websearch",
+        "webfetch",
+        "web_search",
+        "web_fetch",
+        "web_extract",
+        "browse",
+        "browser",
+        "browser_navigate"
+      ],
+      "task_type": "research"
+    }
+  ],
+  "failures": [
+    {
+      "at_least": 1,
+      "tags": [
+        "error_present"
+      ]
+    },
+    {
+      "at_least": 2,
+      "task_type": "debugging",
+      "stakes": "high"
+    }
+  ],
+  "plan_mode": {
+    "task_type": "planning"
+  },
+  "extensions": {
+    "py": "python",
+    "pyi": "python",
+    "ipynb": "python",
+    "ts": "typescript",
+    "tsx": "typescript",
+    "mts": "typescript",
+    "js": "javascript",
+    "jsx": "javascript",
+    "mjs": "javascript",
+    "cjs": "javascript",
+    "go": "go",
+    "rs": "rust",
+    "java": "java",
+    "kt": "java",
+    "scala": "java",
+    "c": "c_cpp",
+    "h": "c_cpp",
+    "cc": "c_cpp",
+    "cpp": "c_cpp",
+    "hpp": "c_cpp",
+    "cs": "csharp",
+    "rb": "ruby",
+    "php": "php",
+    "sh": "shell",
+    "bash": "shell",
+    "zsh": "shell",
+    "ps1": "shell",
+    "sql": "sql",
+    "md": "markup",
+    "mdx": "markup",
+    "rst": "markup",
+    "txt": "markup",
+    "html": "markup",
+    "css": "markup",
+    "tex": "markup",
+    "json": "config",
+    "yaml": "config",
+    "yml": "config",
+    "toml": "config",
+    "ini": "config",
+    "cfg": "config",
+    "tf": "config",
+    "xml": "config"
+  },
+  "repo": [
+    {
+      "kind": "infrastructure",
+      "names": [
+        "main.tf",
+        "terraform.tf",
+        "chart.yaml",
+        "kustomization.yaml",
+        "ansible.cfg",
+        "pulumi.yaml",
+        "serverless.yml",
+        "cdk.json"
+      ]
+    },
+    {
+      "kind": "documentation",
+      "names": [
+        "mkdocs.yml",
+        "docusaurus.config.js",
+        "book.toml",
+        "_config.yml",
+        "antora.yml",
+        "conf.py"
+      ]
+    },
+    {
+      "kind": "data_science",
+      "names": [
+        "dvc.yaml",
+        "environment.yml",
+        "mlproject",
+        "params.yaml"
+      ],
+      "suffixes": [
+        ".ipynb"
+      ]
+    },
+    {
+      "kind": "software",
+      "names": [
+        "package.json",
+        "pyproject.toml",
+        "setup.py",
+        "go.mod",
+        "cargo.toml",
+        "pom.xml",
+        "build.gradle",
+        "build.gradle.kts",
+        "gemfile",
+        "composer.json",
+        "cmakelists.txt",
+        "makefile",
+        "mix.exs"
+      ],
+      "suffixes": [
+        ".csproj",
+        ".sln"
+      ]
+    }
+  ],
+  "classifier": {
+    "stakes_high_tags": [
+      "urgent",
+      "sensitive"
+    ]
+  }
+}

@@ -65,7 +65,7 @@ def main():
         obs=[json.loads(r['data']) for r in engine.rows('SELECT data FROM observations ORDER BY rowid')]
         report['observations']=sorted({o['type'] for o in obs})
         c['decision_linked_turn_completed']=any(o['type']=='turn.completed' and o['decision_id']==decisions()[0]['decision_id'] for o in obs)
-        fb=engine.post('/v1/feedback',dict(feedback_id='hermes-smoke-feedback',decision_id=decisions()[0]['decision_id'],source='owner',kind='pairwise_preference',actor_id='host-smoke',consent_scope='core',learning_consent=True,preferred_control=9,rejected_control=int(decisions()[0]['control_set_id'][-2:]) or 1,evidence_group='hermes-smoke'))
+        fb=engine.post('/v1/feedback',dict(feedback_id='hermes-smoke-feedback',decision_id=decisions()[0]['decision_id'],source='owner',kind='pairwise_preference',actor_id='host-smoke',consent_scope='core',learning_consent=True,preferred={'controls':dict(directness=2,warmth=3,verbosity=3,humour=0,formality=1,explanation_depth=3,assertiveness=1),'habits':[]},rejected={'controls':decisions()[0]['controls'],'habits':decisions()[0]['habits']},evidence_group='hermes-smoke'))
         c['approved_feedback_linked_to_host_decision']=fb['learning_recorded'] is True
         dry=json.loads(cli('adapter','migrate-soul').stdout)
         c['migration_dry_run_writes_nothing']=dry['seeds']==['warm'] and (home/'SOUL.md').read_text()==SOUL and not list(home.glob('SOUL.md.openape-backup-*'))
@@ -73,7 +73,7 @@ def main():
         backups=list(home.glob('SOUL.md.openape-backup-*'))
         c['migration_backs_up_and_keeps_operational']=len(backups)==1 and backups[0].read_text()==SOUL and 'Always run tests before you commit code.' in (home/'SOUL.md').read_text() and 'Be warm and friendly.' not in (home/'SOUL.md').read_text() and applied['persona']['initialization']=='seed_preferences'
         migrated=run('Fixture after migration.',persona='hz-migrated')
-        c['migrated_persona_expressed']=migrated['code']==0 and count_marker(last_user(migrated['requests'][-1]))==1 and decisions('hz-migrated')[-1]['controls']['warmth']=='high'
+        c['migrated_persona_expressed']=migrated['code']==0 and count_marker(last_user(migrated['requests'][-1]))==1 and decisions('hz-migrated')[-1]['controls']['warmth']>=3
         doctor=json.loads(cli('adapter','doctor','hermes','--persona','hz').stdout);report['doctor']=doctor;c['doctor_ok']=doctor['ok']
         engine.stop()
         outage=run('Engine outage fixture request.')

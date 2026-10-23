@@ -1,0 +1,62 @@
+{
+  "host": "OpenClaw",
+  "host_version": "2026.10.5",
+  "model": "z-ai/glm-5.3-flash",
+  "provider": "https://openrouter.ai/api/v1",
+  "kind": "live model; a few turns, not a benchmark",
+  "checks": {
+    "turn_completes": true,
+    "provider_calls_succeed": true,
+    "style_reached_provider": true,
+    "persona_feedback_discoverable": true,
+    "second_turn_completes": true,
+    "key_not_recorded": true
+  },
+  "observed": {
+    "model_called_persona_feedback": true,
+    "reflections_recorded": 1,
+    "reflection_audit": [
+      {
+        "reason": "user_requested",
+        "adjustments": {
+          "verbosity": "less"
+        },
+        "habits": {
+          "next_step": "more_often"
+        }
+      }
+    ],
+    "requested_moves_only": true,
+    "tool_results": [],
+    "decisions": [
+      {
+        "session_state": null,
+        "verbosity": 3,
+        "habits": [
+          "next_step",
+          "concrete_examples",
+          "acknowledge_progress"
+        ],
+        "tags": [
+          "first_turn"
+        ]
+      },
+      {
+        "session_state": 1.4,
+        "verbosity": 1,
+        "habits": [
+          "concrete_examples",
+          "acknowledge_progress"
+        ],
+        "tags": [
+          "corrected"
+        ]
+      }
+    ],
+    "model_requests": [
+      4,
+      1
+    ]
+  },
+  "status": "PASS"
+}
