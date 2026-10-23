@@ -109,15 +109,15 @@ def consistency(records):
 def flags(traits, habits, quality):
     out = []
     for t, m in traits.items():
-        if m['spearman'] is not None and m['spearman'] < SPEARMAN_MIN: out.append(dict(kind='trait', trait=t, issue=f'requested and judged levels barely correlate (Spearman {m["spearman"]})'))
+        if m['spearman'] is not None and m['spearman'] < SPEARMAN_MIN: out.append(dict(kind='trait', trait=t, issue=f'{t}: requested and judged levels barely correlate (Spearman {m["spearman"]})'))
         for pair, a in m['adjacent'].items():
             if a['distinguishability'] is not None and a['distinguishability'] < DISTINGUISH_MIN:
-                out.append(dict(kind='levels', trait=t, levels=pair, issue=f'levels {pair} are hard to tell apart (distinguishability {a["distinguishability"]})'))
+                out.append(dict(kind='levels', trait=t, levels=pair, issue=f'{t} levels {pair} are hard to tell apart (distinguishability {a["distinguishability"]})'))
         if m['leakage'] is not None and m['leakage'] > LEAKAGE_MAX: out.append(dict(kind='leakage', trait=t, issue=f'moving {t} also moves other traits (mean {m["leakage"]} levels)'))
     for h, m in habits.items():
-        if m['lift'] is not None and m['lift'] < HABIT_LIFT_MIN: out.append(dict(kind='habit', habit=h, issue=f'habit barely changes replies (lift {m["lift"]})'))
+        if m['lift'] is not None and m['lift'] < HABIT_LIFT_MIN: out.append(dict(kind='habit', habit=h, issue=f'habit {h} barely changes replies (lift {m["lift"]}; control rate {m["control_rate"]})'))
     for w in quality['worst_conditions']:
-        if w['mean_delta'] is not None and w['mean_delta'] < QUALITY_DROP_MAX: out.append(dict(kind='quality', condition=w['condition'], issue=f'task quality drops by {w["mean_delta"]} against no style'))
+        if w['mean_delta'] is not None and w['mean_delta'] < QUALITY_DROP_MAX: out.append(dict(kind='quality', condition=w['condition'], issue=f'condition {w["condition"]}: task quality changes by {w["mean_delta"]} against no style'))
     return out
 
 def analyse(records):

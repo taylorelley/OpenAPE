@@ -50,6 +50,8 @@ def test_analysis_flags_injected_defects():
     assert ('habit', None, None, 'clarify_once', None) in issues
     assert ('quality', None, None, None, design.condition_id(dict(NEUTRAL, verbosity=0))) in issues
     assert report['traits']['humour']['adjacent']['3-4']['distinguishability'] == 0.5 and report['habits']['clarify_once']['lift'] == 0.0
+    texts = [f['issue'] for f in report['flags']]  # every flag names what to revise
+    assert any(t.startswith('humour levels 3-4') for t in texts) and any(t.startswith('habit clarify_once') for t in texts)
 
 def test_cli_dry_run_calls_nothing_and_mock_run_resumes(tmp_path, capsys):
     args = ['--provider', 'mock', '--model', 'mock-model', '--per-task', '1', '--kinds', 'habit', '--run-dir', str(tmp_path / 'run'), '--report-dir', str(tmp_path / 'rep')]
