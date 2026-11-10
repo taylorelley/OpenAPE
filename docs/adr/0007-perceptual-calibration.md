@@ -1,6 +1,6 @@
 # ADR 0007: Perceptual calibration, model style profiles and the persona identity test
 
-Status: accepted (experimental, unvalidated on live models). Builds on ADR 0005.
+Status: accepted (experimental). The first live run did not support it: see "First live run" below. Builds on ADR 0005.
 
 ## Context
 
@@ -145,6 +145,28 @@ simulated run, which is why it is not a hypothesis. H1 keeps its registered thre
 First simulated run (`docs/reports/identity-simulated.md`): H1 not met (15%; systematic
 distance −29%), H2 met (+0.19), H5 met, H3 and H4 not testable in simulation.
 
+### First live run (2026-11-10)
+
+GLM 5.3 flash, GPT-6 luna, Claude Haiku 5.5; judge DeepSeek v4.1 flash; consensus
+reference; `docs/reports/identity-live-deepseek.md`. Incomplete: credit ran out with
+671 of 810 replies rated and 240 of 378 line-ups answered.
+
+| | Result |
+|---|---|
+| H1 | **not met**: distance 0.63 in both arms (difference −0.00 [−0.02, 0.02]) |
+| H2 | **not met**: line-up 0.44 in both arms (difference 0.00 [−0.04, 0.05]) |
+| H3 | **not met, reversed**: static persona 0.81, engine 0.44 (difference −0.42 [−0.59, −0.27]) |
+| H4 | met: quality difference 0.00 |
+| H5 | met: 0 violations |
+
+What it shows. The catalogue's sentences steer these models weakly: at the top level
+of warmth the judge perceived 3.1, 2.6 and 1.5 on the three models, and GPT-6 luna
+was dead on every trait. Different personas were about as far apart (0.60) as one
+persona on two models (0.63). Calibration can only choose among those same sentences,
+so it had little to work with and changed the rendering in 13% of replies. The
+constraint is expressive strength, not per-model bending. One judge family and an
+incomplete run; it does not count towards the release gate. Calibration stays opt-in.
+
 A live run needs at least three model families and two judge families to count
 towards the release gate. If H1 or H2 fails on live models, the report says so and the
 shipped profiles stay behind `--calibration all`.
@@ -160,4 +182,5 @@ shipped profiles stay behind `--calibration all`.
 * Simulated models are engineering evidence. They show that the mechanism recovers and
   corrects distortions of the kind built into them, not that real models have such
   distortions or that people notice the difference.
-* The shipped GLM profile comes from 9 prompts and one judge. It is a worked example.
+* The shipped profiles (GLM 5.3 flash, GPT-6 luna, Claude Haiku 5.5) come from 18
+  prompts and one judge in the first live run. They are worked examples.

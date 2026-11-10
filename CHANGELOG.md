@@ -18,8 +18,8 @@
   list|inspect|install|remove|reference`, `openape preview --model`.
 * Explanations and the dashboard say which traits were adjusted for the model and
   which it cannot express. `GET /v1/capabilities` lists loaded profiles.
-* A pilot profile for GLM 5.3 flash, built from the existing placement study (9
-  prompts, one judge), ships in `models/style-profiles/`.
+* Pilot profiles for GLM 5.3 flash, GPT-6 luna and Claude Haiku 5.5, measured in the
+  first live run (18 prompts, one judge), ship in `models/style-profiles/`.
 
 ### Protocol and adapters
 * Additive: optional `rendering` on decisions; golden fixtures for calibrated decisions
@@ -36,8 +36,11 @@
   target (not met). Not live-model or human evidence.
 * `benchmarks/identity/rater.html` and `humans.py`: an offline page and scoring for
   human raters.
-* **Not done:** the live run on three model families (needs a provider key) and any
-  human rating.
+* First live run (three model families, one judge, incomplete): calibration made no
+  measurable difference (line-up 0.44 with and without), and a hand-written persona
+  was recognised far more often (0.81). The engine's personas were about as far from
+  each other as one persona was from itself on another model. Task quality unchanged.
+* **Not done:** a second judge family, a complete run, and any human rating.
 
 ## Unreleased: relationship controls, separate habit learning, multi-replica (ADR 0006)
 

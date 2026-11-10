@@ -126,7 +126,21 @@ averaged distance −29%. Nothing was rendered outside the approved, masked set.
 built in and the simulated judge reads percepts directly. Task quality and the static
 persona arm cannot be simulated. `identity/rater.html` is a single offline page for
 human raters; `python -m benchmarks.identity.humans score KEY RESULTS...` gives their
-accuracy and agreement with the model judge. **No live run and no human raters yet.**
+accuracy and agreement with the model judge.
+
+First live run (`../docs/reports/identity-live-deepseek.md`; GLM 5.3 flash, GPT-6 luna,
+Claude Haiku 5.5; one judge; cut short by credit at 671/810 rated replies and 240/378
+line-ups):
+
+| Arm | line-up accuracy | cross-model distance | two personas, one model |
+|---|---|---|---|
+| uncalibrated | 0.44 [0.34, 0.53] | 0.63 | 0.62 |
+| calibrated | 0.44 [0.33, 0.54] | 0.63 | 0.60 |
+| static hand-written persona | 0.81 [0.73, 0.89] | 0.74 | 0.84 |
+
+Calibration made no difference, and the hand-written persona was much easier to
+recognise. H1, H2 and H3 are not met; H4 and H5 are. Records are in
+`identity/data/live-2026-11-10.tar.gz`. **One judge family; no human raters yet.**
 
 ## 2. Independent outcome evaluation (the release-gate benchmark)
 

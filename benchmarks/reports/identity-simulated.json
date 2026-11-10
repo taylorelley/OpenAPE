@@ -1,7 +1,7 @@
 {
   "kind": "simulated models with built-in distortions; engineering evidence, NOT live-model or human evidence",
   "catalogue_hash": "sha256:a9decc190a7c16f7ca487d8c8b00b2cf5f67a3fcb25dc6fc162de20f2f107d15",
-  "generated_at": "2026-11-10T09:15:06.160575+00:00",
+  "generated_at": "2026-11-10T17:29:27.008386+00:00",
   "provider": "simulated",
   "models": [
     "sim-faithful",
@@ -34,7 +34,7 @@
   },
   "profiles": {
     "sim-faithful": {
-      "hash": "sha256:cbe8a217a9246c591390f6d88684f924d9d878dd59398c74d032a50009fdf7ff",
+      "hash": "sha256:d7e467028fbd36340f18e712aca4e638d94df6d383478d3dc241607e2a0fdb32",
       "dead": [],
       "max_shift": {
         "directness": 1,
@@ -98,7 +98,7 @@
       }
     },
     "sim-compressed": {
-      "hash": "sha256:b17c174d4ee161e7de46925942ce66b394458a836776f5e37865402f2ff6e520",
+      "hash": "sha256:c9915b6a42e9db1b835e2f5f171a59a263411f154813da2307ee50450f578466",
       "dead": [],
       "max_shift": {
         "directness": 1,
@@ -162,7 +162,7 @@
       }
     },
     "sim-effusive": {
-      "hash": "sha256:175d84fb43b7c55e447415b798ff92ab9f7fcd2696b5ce2f86dcaf67cb55c3ca",
+      "hash": "sha256:9c18a724728728ecf31f4ba527b55bd3547e6a5027ed7cdf7ceb66cc9af6de17",
       "dead": [],
       "max_shift": {
         "directness": 1,
@@ -226,7 +226,7 @@
       }
     },
     "sim-stiff": {
-      "hash": "sha256:b9c6bb9245d489f60ce752caeef1792cf51bb6487768e76a92345e67542c508a",
+      "hash": "sha256:b6b76d3deee2d1b2022f85173bba3baa4964d8952386781845ca31556651ec4e",
       "dead": [
         "formality"
       ],
@@ -292,7 +292,7 @@
       }
     },
     "sim-dramatic": {
-      "hash": "sha256:321423bc26917c9ac5cc90334e9f2aea866fa16047828a46b211a49c5444c745",
+      "hash": "sha256:511dd0fe1e8ba25b2758a3e460e38d2556a9e9ee70e983b910b271ab966f8bc9",
       "dead": [],
       "max_shift": {
         "directness": 1,
@@ -570,5 +570,6 @@
     "Personas are the seven archetypes with no individual variation and no learned state.",
     "Profiles are fitted on half of the prompts and scored on the other half, from the same prompt set and judge."
   ],
-  "counts_towards_release_gate": false
+  "counts_towards_release_gate": false,
+  "release_gate_note": "simulated"
 }

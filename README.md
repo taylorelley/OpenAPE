@@ -49,7 +49,10 @@ LLM itself.
 > against 0.54 for a neutral persona). All five host adapters have been run against real host
 > builds, but with a synthetic model endpoint. There is **no live-model or
 > independent human evidence yet** that it improves user preference, carries over
-> across providers, or leaves task quality and safety unchanged. See
+> across providers, or leaves task quality and safety unchanged. The first live
+> identity test went against it: on three real models a blind judge recognised an
+> OpenAPE persona across models 44% of the time and a hand-written persona 81%
+> (see [One voice on every model](#one-voice-on-every-model)). See
 > [release status](docs/reports/release-status.md). Archetypes, automatic
 > evolution, maturation and the agent `persona_feedback` tool are unreleased
 > engineering features (see [CHANGELOG](CHANGELOG.md)). The maturation curve,
@@ -298,17 +301,28 @@ openape preview --file examples/express.json --model MODEL   # intent and render
 ```
 
 Restart `openape serve` after installing a profile. Profiles you install apply by
-default; the pilot profile shipped in `models/style-profiles/` (GLM 5.3 flash, 9
-prompts, one judge) applies only with `openape serve --calibration all`, and
+default; the pilot profiles shipped in `models/style-profiles/` (three models, 18
+prompts, one judge) apply only with `openape serve --calibration all`, and
 `--calibration off` applies none. Profiles are matched on `host.model_id`.
 
-**Does it work?** On simulated models with distortions built in, a blind line-up judge
-picked a persona out of four on another model 82% of the time with calibration and 64%
-without (chance 25%). The cross-model style distance fell 15% per reply, short of the
-30% target set in advance, and 29% once reply noise is averaged out. That shows the
-mechanism corrects distortions of the kind built into the simulation. It says nothing
-yet about real models or people: the live run needs a provider key and has not been
-done ([report](docs/reports/identity-simulated.md)).
+**Does it work? On real models, not so far.** The first live run (GLM 5.3 flash,
+GPT-6 luna and Claude Haiku 5.5; one judge; cut short when credit ran out;
+[report](docs/reports/identity-live-deepseek.md)) found:
+
+* calibration made no measurable difference: cross-model distance 0.63 with and
+  without it, line-up accuracy 0.44 both ways (chance 0.25);
+* a hand-written persona paragraph was far easier to recognise on another model:
+  line-up accuracy 0.81 against 0.44 for the engine;
+* the engine's seven archetypes were barely further apart from each other (0.60) than
+  one archetype was from itself on another model (0.63);
+* one model (GPT-6 luna) hardly responded to the style sentences at all;
+* task quality was unchanged and nothing left the approved catalogue.
+
+So the limiting factor is not how models bend the catalogue's sentences, which is what
+calibration corrects, but how weakly those sentences steer models in the first place.
+On simulated models with distortions built in, calibration did help (line-up 0.64 to
+0.82, [report](docs/reports/identity-simulated.md)), which shows only that the
+mechanism does what it was built to do.
 `benchmarks/identity/rater.html` is a single offline page for people to take the same
 blinded line-up.
 

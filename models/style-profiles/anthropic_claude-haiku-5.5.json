@@ -1,0 +1,283 @@
+{
+  "format": "style-profile/1",
+  "model_id": "anthropic:claude-haiku-5.5",
+  "catalogue_hash": "sha256:a9decc190a7c16f7ca487d8c8b00b2cf5f67a3fcb25dc6fc162de20f2f107d15",
+  "placement": "turn",
+  "judge": "deepseek/deepseek-v4.1-flash-1017",
+  "reference_kind": "consensus",
+  "traits": {
+    "directness": {
+      "curve": [
+        2.9166,
+        2.9166,
+        3.2778,
+        3.7323,
+        3.8788
+      ],
+      "reference": [
+        2.9166,
+        2.9166,
+        3.2778,
+        3.7778,
+        3.8333
+      ],
+      "measured": [
+        2.9444,
+        2.8889,
+        3.2778,
+        3.7222,
+        3.8889
+      ],
+      "counts": [
+        18,
+        18,
+        18,
+        18,
+        18
+      ],
+      "spearman": 0.5161,
+      "dead": false,
+      "max_shift": 1,
+      "gamut": [
+        2.9166,
+        3.8788
+      ]
+    },
+    "warmth": {
+      "curve": [
+        0.7222,
+        0.8333,
+        1.2929,
+        1.8333,
+        2.6111
+      ],
+      "reference": [
+        0.7222,
+        0.8333,
+        1.1111,
+        1.8333,
+        2.6111
+      ],
+      "measured": [
+        0.7222,
+        0.8333,
+        1.3333,
+        1.8333,
+        2.6111
+      ],
+      "counts": [
+        18,
+        18,
+        18,
+        18,
+        18
+      ],
+      "spearman": 0.5867,
+      "dead": false,
+      "max_shift": 1,
+      "gamut": [
+        0.7222,
+        2.6111
+      ]
+    },
+    "verbosity": {
+      "curve": [
+        3.0,
+        3.3232,
+        3.5556,
+        3.7677,
+        3.9444
+      ],
+      "reference": [
+        3.0,
+        3.2778,
+        3.5556,
+        3.7222,
+        3.9444
+      ],
+      "measured": [
+        3.0,
+        3.3333,
+        3.5556,
+        3.7778,
+        3.9444
+      ],
+      "counts": [
+        18,
+        18,
+        18,
+        18,
+        18
+      ],
+      "spearman": 0.565,
+      "dead": false,
+      "max_shift": 1,
+      "gamut": [
+        3.0,
+        3.9444
+      ]
+    },
+    "humour": {
+      "curve": [
+        0.0,
+        0.0,
+        0.2777,
+        0.2777,
+        0.7778
+      ],
+      "reference": [
+        0.0,
+        0.0,
+        0.2777,
+        0.2777,
+        0.7778
+      ],
+      "measured": [
+        0.0,
+        0.0,
+        0.3333,
+        0.2222,
+        0.7778
+      ],
+      "counts": [
+        18,
+        18,
+        18,
+        18,
+        18
+      ],
+      "spearman": 0.3698,
+      "dead": false,
+      "max_shift": 1,
+      "gamut": [
+        0.0,
+        0.7778
+      ]
+    },
+    "formality": {
+      "curve": [
+        2.0,
+        2.0,
+        2.2778,
+        2.7778,
+        2.9444
+      ],
+      "reference": [
+        2.0,
+        2.0,
+        2.2778,
+        2.7778,
+        2.9444
+      ],
+      "measured": [
+        2.0,
+        2.0,
+        2.2778,
+        2.7778,
+        2.9444
+      ],
+      "counts": [
+        18,
+        18,
+        18,
+        18,
+        18
+      ],
+      "spearman": 0.5608,
+      "dead": false,
+      "max_shift": 1,
+      "gamut": [
+        2.0,
+        2.9444
+      ]
+    },
+    "explanation_depth": {
+      "curve": [
+        2.4242,
+        3.0,
+        3.1111,
+        3.4343,
+        3.8232
+      ],
+      "reference": [
+        2.3333,
+        3.0,
+        3.1111,
+        3.3889,
+        3.7778
+      ],
+      "measured": [
+        2.4444,
+        3.0,
+        3.1111,
+        3.4444,
+        3.8333
+      ],
+      "counts": [
+        18,
+        18,
+        18,
+        18,
+        18
+      ],
+      "spearman": 0.527,
+      "dead": false,
+      "max_shift": 1,
+      "gamut": [
+        2.4242,
+        3.8232
+      ]
+    },
+    "assertiveness": {
+      "curve": [
+        1.7222,
+        2.2626,
+        2.8131,
+        2.8333,
+        3.2222
+      ],
+      "reference": [
+        1.7222,
+        2.4444,
+        2.7222,
+        2.8333,
+        3.2222
+      ],
+      "measured": [
+        1.7222,
+        2.2222,
+        2.8333,
+        2.8333,
+        3.2222
+      ],
+      "counts": [
+        18,
+        18,
+        18,
+        18,
+        18
+      ],
+      "spearman": 0.5386,
+      "dead": false,
+      "max_shift": 1,
+      "gamut": [
+        1.7222,
+        3.2222
+      ]
+    }
+  },
+  "habits": {},
+  "weak_habits": [],
+  "source": {
+    "kind": "live-evaluation records",
+    "run": "live",
+    "prompts": 18,
+    "replies": 540,
+    "provider": [
+      "openai-compatible"
+    ],
+    "judge_consistency_within_one": null,
+    "measured_at": "2026-11-10T16:18:21.289901+00:00"
+  },
+  "hash": "sha256:743d1c3facc04ce98a9fd6e9b3d4440522803715493361cc21d98d171ffd087c"
+}

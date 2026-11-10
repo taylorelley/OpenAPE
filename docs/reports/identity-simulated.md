@@ -43,4 +43,4 @@ Distances are mean absolute differences in judged trait levels (0-4), with promp
 * Personas are the seven archetypes with no individual variation and no learned state.
 * Profiles are fitted on half of the prompts and scored on the other half, from the same prompt set and judge.
 
-Counts towards the live-model release gate: **no**.
+Counts towards the live-model release gate on its own: **no** (simulated).

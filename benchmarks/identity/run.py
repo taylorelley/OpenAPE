@@ -77,6 +77,7 @@ class Ledger:
         """items: {key: args}. Runs work(key, args) -> record for the missing keys."""
         todo = [(k, v) for k, v in items.items() if k not in self.rows]; failed = 0
         if not todo: return 0
+        random.Random(0).shuffle(todo)  # an interrupted stage then leaves an unbiased sample, not the first arm only
         self.path.parent.mkdir(parents=True, exist_ok=True)
         def one(k, v):
             try: r = dict(work(k, v), key=k)
@@ -149,6 +150,8 @@ def main(argv=None):
     ap.add_argument('--no-static', action='store_true', help='skip the hand-written persona arm on live models')
     ap.add_argument('--workers', type=int, default=4); ap.add_argument('--seed', type=int, default=20261110)
     ap.add_argument('--run-dir'); ap.add_argument('--report-dir')
+    ap.add_argument('--no-new-judgements', action='store_true', help='rate no further replies (keep those already rated); line-ups still run, since they need only the reply texts')
+    ap.add_argument('--label', help='suffix for the report name, e.g. the judge, when several judges rate one run')
     ap.add_argument('--export-items', help='also write blinded line-up items for human raters to this file (and FILE.key.json)')
     ap.add_argument('--execute', action='store_true', help='run (otherwise print the plan)')
     a = ap.parse_args(argv)
@@ -168,16 +171,26 @@ def main(argv=None):
     if not a.execute: print('Plan only: nothing was called. Add --execute to run.'); return 0
     gen, judge, effort, judge_effort = build_providers(a); judge_model = 'simulated-judge' if offline else a.judge_model
     conds = {c['id']: c for _, c in cal_rows}; by_id = {p['id']: p for p in fit + score}
-    replies = Ledger(run_dir / 'replies.jsonl')
-    def write_reply(_, v):
-        model, prompt_id, text = v; p = by_id[prompt_id]
-        g = gen.generate(model, p['prompt'], text, a.placement, effort)
-        r = dict(gen_model=model, placement=a.placement, prompt_id=prompt_id, style_text=text, gen=g, at=datetime.now(timezone.utc).isoformat())
-        if g['stop_reason'] != 'refusal': r['judge'] = judge.judge(judge_model, p['prompt'], g['text'], judge_effort, True)
-        return r
+    # Replies are generated once and kept apart from judgements, so a second judge model
+    # can rate the same replies (same --run-dir, another --judge-model and --label).
+    generated = Ledger(run_dir / 'replies.jsonl'); judgements = Ledger(run_dir / f'judgements-{model_key(judge_model).replace(":", "_")}.jsonl')
+    class Replies:
+        rows = {}
+        def run(self, items, workers, label):
+            def write(_, v):
+                model, prompt_id, text = v
+                return dict(gen_model=model, placement=a.placement, prompt_id=prompt_id, style_text=text, gen=gen.generate(model, by_id[prompt_id]['prompt'], text, a.placement, effort),
+                    at=datetime.now(timezone.utc).isoformat())
+            generated.run(items, write, workers, label)
+            todo = {k: v for k, v in items.items() if k in generated.rows and generated.rows[k]['gen']['stop_reason'] != 'refusal'}
+            if not a.no_new_judgements: judgements.run(todo, lambda k, v: dict(judge=judge.judge(judge_model, by_id[v[1]]['prompt'], generated.rows[k]['gen']['text'], judge_effort, True)), workers, label + ' (judge)')
+            for k in items:
+                if k in generated.rows and (k in judgements.rows or generated.rows[k]['gen']['stop_reason'] == 'refusal'):
+                    self.rows[k] = dict(generated.rows[k], judge=judgements.rows.get(k, {}).get('judge'))
+    replies = Replies()
     # 1. Calibrate on the fit prompts.
     cal_items = {reply_key(m, a.placement, p['id'], c['text']): (m, p['id'], c['text']) for m in models for p, c in cal_rows}
-    replies.run(cal_items, write_reply, a.workers, 'calibrate')
+    replies.run(cal_items, a.workers, 'calibrate')
     measured = []
     for m in models:
         recs = []
@@ -190,13 +203,17 @@ def main(argv=None):
     for p in profile_set: profiles.write(p, run_dir / 'profiles')
     # 2. Speak on the score prompts.
     rows = speak_plan(models, score, profile_set, static)
-    replies.run({reply_key(r['gen_model'], a.placement, r['prompt_id'], r['text']): (r['gen_model'], r['prompt_id'], r['text']) for r in rows}, write_reply, a.workers, 'speak')
+    replies.run({reply_key(r['gen_model'], a.placement, r['prompt_id'], r['text']): (r['gen_model'], r['prompt_id'], r['text']) for r in rows}, a.workers, 'speak')
     records = []
     for r in rows:
         got = replies.rows.get(reply_key(r['gen_model'], a.placement, r['prompt_id'], r['text']))
         if got: records.append(dict(r, gen=got['gen'], judge=got.get('judge')))
     # 3. Line-up.
-    said = {(r['arm'], r['persona'], r['gen_model'], r['prompt_id']): r['gen']['text'] for r in records if r['gen'].get('stop_reason') != 'refusal'}
+    # A line-up needs only the reply texts, so it does not wait for trait ratings.
+    said = {}
+    for r in rows:
+        got = generated.rows.get(reply_key(r['gen_model'], a.placement, r['prompt_id'], r['text']))
+        if got and got['gen'].get('stop_reason') != 'refusal': said[(r['arm'], r['persona'], r['gen_model'], r['prompt_id'])] = got['gen']['text']
     arms = ['uncalibrated', 'calibrated'] + (['static'] if static else [])
     lineups = Ledger(run_dir / 'lineups.jsonl'); trials = []; items = {}
     for arm in arms:
@@ -227,8 +244,10 @@ def write_report(a, run_dir, models, fit, score, profile_set, records, trials, o
         else ['A model judges style and picks line-ups; agreement with human raters is unmeasured (see benchmarks/identity/rater.html).',
             'Single-turn prompts; no sessions, tools or host harness.']) + \
         ['Personas are the seven archetypes with no individual variation and no learned state.', 'Profiles are fitted on half of the prompts and scored on the other half, from the same prompt set and judge.']
-    report['counts_towards_release_gate'] = (not offline) and len(models) >= 3 and len(judges) >= 2
-    stem = 'identity-simulated' if offline else 'identity-live'
+    # One report has one judge. The gate needs this result from two judge families.
+    report['counts_towards_release_gate'] = False
+    report['release_gate_note'] = 'simulated' if offline else 'needs at least three model families and the same run rated by a second judge family'
+    stem = ('identity-simulated' if offline else 'identity-live') + (f'-{a.label}' if a.label else '')
     out = Path(a.report_dir) if a.report_dir else ROOT / 'docs/reports'; out.mkdir(parents=True, exist_ok=True)
     if offline and not a.report_dir: (ROOT / 'benchmarks/reports' / f'{stem}.json').write_text(json.dumps(report, indent=2) + '\n')
     else: (out / f'{stem}.json').write_text(json.dumps(report, indent=2) + '\n')
@@ -260,7 +279,7 @@ def markdown(r):
     lines += ['', '## What each model does to the catalogue', '', '| Model | cannot steer | perceived warmth at levels 0-4 | perceived formality at levels 0-4 |', '|---|---|---|---|']
     lines += [f"| {m} | {', '.join(p['dead']) or '-'} | {' '.join(f'{v:.1f}' for v in p['curves']['warmth'])} | {' '.join(f'{v:.1f}' for v in p['curves']['formality'])} |" for m, p in r['profiles'].items()]
     lines += ['', '## Limitations', '', *[f'* {x}' for x in r['limitations']], '',
-        f"Counts towards the live-model release gate: **{'yes' if r['counts_towards_release_gate'] else 'no'}**.", '']
+        f"Counts towards the live-model release gate on its own: **no** ({r['release_gate_note']}).", '']
     return '\n'.join(lines)
 
 if __name__ == '__main__': sys.exit(main())

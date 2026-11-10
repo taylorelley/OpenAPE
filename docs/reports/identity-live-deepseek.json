@@ -1,0 +1,587 @@
+{
+  "kind": "live models, judged by a model, not by people",
+  "catalogue_hash": "sha256:a9decc190a7c16f7ca487d8c8b00b2cf5f67a3fcb25dc6fc162de20f2f107d15",
+  "generated_at": "2026-11-10T17:24:17.154900+00:00",
+  "provider": "openai-compatible",
+  "models": [
+    "z-ai/glm-5.3-flash",
+    "openai/gpt-6-luna",
+    "anthropic/claude-haiku-5.5"
+  ],
+  "judge_models": [
+    "deepseek/deepseek-v4.1-flash-1017"
+  ],
+  "placement": "turn",
+  "reference": "consensus",
+  "personas": [
+    "balanced",
+    "mentor",
+    "pragmatic_engineer",
+    "concierge",
+    "collaborator",
+    "analyst",
+    "critic"
+  ],
+  "fit_prompts": 18,
+  "score_prompts": 18,
+  "lineup": {
+    "references": 3,
+    "candidates": 4,
+    "chance": 0.25,
+    "trials": 378
+  },
+  "profiles": {
+    "z-ai:glm-5.3-flash": {
+      "hash": "sha256:13d2c4d594b50ece0bdd4f49a73d3ef6a28fd18a5570f9477d06c1e37f3d57a0",
+      "dead": [],
+      "max_shift": {
+        "directness": 1,
+        "warmth": 1,
+        "verbosity": 1,
+        "humour": 1,
+        "formality": 1,
+        "explanation_depth": 1,
+        "assertiveness": 1
+      },
+      "curves": {
+        "directness": [
+          2.6212,
+          2.7121,
+          2.9596,
+          3.7778,
+          3.8333
+        ],
+        "warmth": [
+          0.755,
+          0.755,
+          1.1111,
+          2.0606,
+          3.0657
+        ],
+        "verbosity": [
+          3.0,
+          3.2778,
+          3.7525,
+          3.7525,
+          3.9899
+        ],
+        "humour": [
+          0.0,
+          0.0,
+          1.3687,
+          1.6869,
+          2.8687
+        ],
+        "formality": [
+          1.8636,
+          1.8636,
+          2.4141,
+          3.0429,
+          3.0429
+        ],
+        "explanation_depth": [
+          2.3333,
+          3.0,
+          3.202,
+          3.3889,
+          3.7778
+        ],
+        "assertiveness": [
+          1.7222,
+          2.4444,
+          2.7222,
+          3.197,
+          3.5404
+        ]
+      }
+    },
+    "openai:gpt-6-luna": {
+      "hash": "sha256:187ce4a58254fc71321b570b5d781b979532ebc4006e2287003d1bee29bd123a",
+      "dead": [
+        "directness",
+        "warmth",
+        "verbosity",
+        "humour",
+        "formality",
+        "explanation_depth",
+        "assertiveness"
+      ],
+      "max_shift": {
+        "directness": 0,
+        "warmth": 0,
+        "verbosity": 0,
+        "humour": 0,
+        "formality": 0,
+        "explanation_depth": 0,
+        "assertiveness": 0
+      },
+      "curves": {
+        "directness": [
+          3.0757,
+          3.3939,
+          3.5505,
+          3.7601,
+          3.7601
+        ],
+        "warmth": [
+          0.7222,
+          0.8333,
+          0.9747,
+          1.0606,
+          1.5202
+        ],
+        "verbosity": [
+          2.5,
+          2.505,
+          2.7374,
+          2.8333,
+          2.8333
+        ],
+        "humour": [
+          0.0,
+          0.0,
+          0.1868,
+          0.1868,
+          0.5505
+        ],
+        "formality": [
+          2.0454,
+          2.0454,
+          2.096,
+          2.1869,
+          2.2626
+        ],
+        "explanation_depth": [
+          2.1061,
+          2.4091,
+          2.5656,
+          2.7071,
+          3.005
+        ],
+        "assertiveness": [
+          1.9495,
+          2.4444,
+          2.4495,
+          2.5505,
+          2.5505
+        ]
+      }
+    },
+    "anthropic:claude-haiku-5.5": {
+      "hash": "sha256:743d1c3facc04ce98a9fd6e9b3d4440522803715493361cc21d98d171ffd087c",
+      "dead": [],
+      "max_shift": {
+        "directness": 1,
+        "warmth": 1,
+        "verbosity": 1,
+        "humour": 1,
+        "formality": 1,
+        "explanation_depth": 1,
+        "assertiveness": 1
+      },
+      "curves": {
+        "directness": [
+          2.9166,
+          2.9166,
+          3.2778,
+          3.7323,
+          3.8788
+        ],
+        "warmth": [
+          0.7222,
+          0.8333,
+          1.2929,
+          1.8333,
+          2.6111
+        ],
+        "verbosity": [
+          3.0,
+          3.3232,
+          3.5556,
+          3.7677,
+          3.9444
+        ],
+        "humour": [
+          0.0,
+          0.0,
+          0.2777,
+          0.2777,
+          0.7778
+        ],
+        "formality": [
+          2.0,
+          2.0,
+          2.2778,
+          2.7778,
+          2.9444
+        ],
+        "explanation_depth": [
+          2.4242,
+          3.0,
+          3.1111,
+          3.4343,
+          3.8232
+        ],
+        "assertiveness": [
+          1.7222,
+          2.2626,
+          2.8131,
+          2.8333,
+          3.2222
+        ]
+      }
+    }
+  },
+  "shifted_share": 0.1323,
+  "arms": {
+    "calibrated": {
+      "replies": 310,
+      "judged": 310,
+      "same_persona_across_models": {
+        "mean": 0.626,
+        "ci95": [
+          0.5368,
+          0.7228
+        ],
+        "n": 288,
+        "clusters": 18
+      },
+      "systematic_cross_model": {
+        "mean": 0.4467,
+        "ci95": null,
+        "n": 18,
+        "clusters": 18
+      },
+      "different_personas_same_model": {
+        "mean": 0.5987,
+        "ci95": [
+          0.5378,
+          0.6576
+        ],
+        "n": 743,
+        "clusters": 18
+      },
+      "identity_ratio": 0.956,
+      "distance_from_intent": {
+        "mean": 0.888,
+        "ci95": [
+          0.8265,
+          0.9469
+        ],
+        "n": 310,
+        "clusters": 18
+      },
+      "lineup_accuracy": {
+        "mean": 0.4359,
+        "ci95": [
+          0.3289,
+          0.5375
+        ],
+        "n": 78,
+        "clusters": 18
+      },
+      "task_quality": {
+        "mean": 4.8839,
+        "ci95": [
+          4.7813,
+          4.9672
+        ],
+        "n": 310,
+        "clusters": 18
+      },
+      "rendered_outside_approved_set": 0
+    },
+    "static": {
+      "replies": 304,
+      "judged": 304,
+      "same_persona_across_models": {
+        "mean": 0.7366,
+        "ci95": [
+          0.6666,
+          0.8152
+        ],
+        "n": 282,
+        "clusters": 18
+      },
+      "systematic_cross_model": {
+        "mean": 0.5741,
+        "ci95": null,
+        "n": 18,
+        "clusters": 18
+      },
+      "different_personas_same_model": {
+        "mean": 0.8427,
+        "ci95": [
+          0.7892,
+          0.8971
+        ],
+        "n": 714,
+        "clusters": 18
+      },
+      "identity_ratio": 1.144,
+      "distance_from_intent": null,
+      "lineup_accuracy": {
+        "mean": 0.8133,
+        "ci95": [
+          0.7284,
+          0.8947
+        ],
+        "n": 75,
+        "clusters": 18
+      },
+      "task_quality": {
+        "mean": 4.9013,
+        "ci95": [
+          4.773,
+          4.9803
+        ],
+        "n": 304,
+        "clusters": 18
+      },
+      "rendered_outside_approved_set": 0
+    },
+    "uncalibrated": {
+      "replies": 310,
+      "judged": 310,
+      "same_persona_across_models": {
+        "mean": 0.628,
+        "ci95": [
+          0.5431,
+          0.7188
+        ],
+        "n": 288,
+        "clusters": 18
+      },
+      "systematic_cross_model": {
+        "mean": 0.4709,
+        "ci95": null,
+        "n": 18,
+        "clusters": 18
+      },
+      "different_personas_same_model": {
+        "mean": 0.6212,
+        "ci95": [
+          0.5612,
+          0.683
+        ],
+        "n": 743,
+        "clusters": 18
+      },
+      "identity_ratio": 0.989,
+      "distance_from_intent": {
+        "mean": 0.8885,
+        "ci95": [
+          0.8261,
+          0.9459
+        ],
+        "n": 310,
+        "clusters": 18
+      },
+      "lineup_accuracy": {
+        "mean": 0.4368,
+        "ci95": [
+          0.3402,
+          0.5309
+        ],
+        "n": 87,
+        "clusters": 17
+      },
+      "task_quality": {
+        "mean": 4.8839,
+        "ci95": [
+          4.7802,
+          4.9674
+        ],
+        "n": 310,
+        "clusters": 18
+      },
+      "rendered_outside_approved_set": 0
+    }
+  },
+  "comparisons": {
+    "calibrated minus uncalibrated": {
+      "cross_model_distance": {
+        "mean": -0.002,
+        "ci95": [
+          -0.018,
+          0.0176
+        ],
+        "n": 288,
+        "clusters": 18
+      },
+      "relative_reduction": 0.0032,
+      "systematic_distance": {
+        "mean": -0.0242,
+        "ci95": [
+          -0.0522,
+          0.0144
+        ],
+        "n": 18,
+        "clusters": 18
+      },
+      "systematic_relative_reduction": 0.0514,
+      "lineup_accuracy": {
+        "mean": 0.0,
+        "ci95": [
+          -0.0417,
+          0.0462
+        ],
+        "n": 67,
+        "clusters": 17
+      },
+      "task_quality": {
+        "mean": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ],
+        "n": 309,
+        "clusters": 18
+      }
+    },
+    "calibrated minus static": {
+      "cross_model_distance": {
+        "mean": -0.1087,
+        "ci95": [
+          -0.1738,
+          -0.0325
+        ],
+        "n": 280,
+        "clusters": 18
+      },
+      "relative_reduction": 0.1476,
+      "systematic_distance": {
+        "mean": -0.1274,
+        "ci95": [
+          -0.2067,
+          -0.022
+        ],
+        "n": 18,
+        "clusters": 18
+      },
+      "systematic_relative_reduction": 0.2219,
+      "lineup_accuracy": {
+        "mean": -0.4222,
+        "ci95": [
+          -0.5854,
+          -0.2727
+        ],
+        "n": 45,
+        "clusters": 18
+      },
+      "task_quality": {
+        "mean": -0.0202,
+        "ci95": [
+          -0.1221,
+          0.0731
+        ],
+        "n": 297,
+        "clusters": 18
+      }
+    },
+    "uncalibrated minus static": {
+      "cross_model_distance": {
+        "mean": -0.1066,
+        "ci95": [
+          -0.169,
+          -0.0385
+        ],
+        "n": 280,
+        "clusters": 18
+      },
+      "relative_reduction": 0.1447,
+      "systematic_distance": {
+        "mean": -0.1032,
+        "ci95": [
+          -0.1887,
+          -0.0081
+        ],
+        "n": 18,
+        "clusters": 18
+      },
+      "systematic_relative_reduction": 0.1798,
+      "lineup_accuracy": {
+        "mean": -0.3654,
+        "ci95": [
+          -0.5192,
+          -0.2295
+        ],
+        "n": 52,
+        "clusters": 17
+      },
+      "task_quality": {
+        "mean": -0.0202,
+        "ci95": [
+          -0.1221,
+          0.0731
+        ],
+        "n": 297,
+        "clusters": 18
+      }
+    }
+  },
+  "hypotheses": {
+    "H1 cross-model distance at least 30% lower": {
+      "result": "not met",
+      "relative_reduction": 0.0032,
+      "difference": {
+        "mean": -0.002,
+        "ci95": [
+          -0.018,
+          0.0176
+        ],
+        "n": 288,
+        "clusters": 18
+      }
+    },
+    "H2 line-up accuracy higher than uncalibrated": {
+      "result": "not met",
+      "difference": {
+        "mean": 0.0,
+        "ci95": [
+          -0.0417,
+          0.0462
+        ],
+        "n": 67,
+        "clusters": 17
+      },
+      "chance": 0.25
+    },
+    "H4 task quality not harmed": {
+      "result": "met",
+      "difference": {
+        "mean": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ],
+        "n": 309,
+        "clusters": 18
+      }
+    },
+    "H3 line-up accuracy higher than a static persona": {
+      "result": "not met",
+      "difference": {
+        "mean": -0.4222,
+        "ci95": [
+          -0.5854,
+          -0.2727
+        ],
+        "n": 45,
+        "clusters": 18
+      }
+    },
+    "H5 nothing rendered outside the approved, masked set": {
+      "result": "met",
+      "violations": 0
+    }
+  },
+  "limitations": [
+    "A model judges style and picks line-ups; agreement with human raters is unmeasured (see benchmarks/identity/rater.html).",
+    "Single-turn prompts; no sessions, tools or host harness.",
+    "Personas are the seven archetypes with no individual variation and no learned state.",
+    "Profiles are fitted on half of the prompts and scored on the other half, from the same prompt set and judge."
+  ],
+  "counts_towards_release_gate": false,
+  "release_gate_note": "needs at least three model families and the same run rated by a second judge family"
+}

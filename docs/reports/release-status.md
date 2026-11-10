@@ -45,17 +45,18 @@ A strict xfail is a known failing release gate, not a pass.
 
 | Check | Result | Level | Evidence |
 |---|---|---|---|
-| Python suites, SQLite, with ADR 0007 | 207 passed, 4 skipped (3 need the optional live SDKs), 3 strict xfail (open gates); Node 111 passed | unit/integration | `bash scripts/check_all.sh` |
+| Python suites, SQLite, with ADR 0007 | 209 passed, 2 skipped, 3 strict xfail (open gates); Node 111 passed | unit/integration | `bash scripts/check_all.sh` |
 | Profile maths, compensation safety properties, engine/SDK/CLI wiring | 12 passed | unit/integration | `tests/test_calibration.py` |
 | Python and TS render calibrated decisions identically and name models identically | PASS | protocol | `protocol/upap/v2/conformance.json` |
 | Identity benchmark, five simulated models (7 personas, 18 fit + 18 scored prompts, 840 line-ups) | line-up 0.64 → 0.82 (+0.19 [0.14, 0.23]); per-reply distance −15% (**H1 target 30% not met**); averaged over prompts −29%; 0 renderings outside the approved set | simulated, not live or human | `docs/reports/identity-simulated.md` |
 | Latency with a profile loaded | HTTP p95 9.9 ms (10.1 without); compensation p95 0.13 ms | single run, shared machine | `benchmarks/reports/performance.json` |
 | Human rater page in Chromium, desktop and phone width | completes, downloads results, refuses a wrong file, no console errors | manual browser run | — |
-| Live identity run, ≥3 model families, 2 judge families | **not run** (no provider key) | — | ISSUE-007 |
+| Live identity run: GLM 5.3 flash, GPT-6 luna, Claude Haiku 5.5; judge DeepSeek v4.1 flash; 671/810 replies rated, 240/378 line-ups (credit ran out) | **H1, H2, H3 not met**: distance 0.63 vs 0.63; line-up 0.44 vs 0.44; static persona 0.81. H4 and H5 met | live models, one judge, incomplete | `identity-live-deepseek.md`, ISSUE-007 |
+| Second judge family | **not run** | — | ISSUE-007 |
 | Human raters | **not run** | — | ISSUE-007 |
 
-Calibration is off unless an operator installs a profile. The shipped GLM pilot
-profile applies only with `--calibration all`.
+Calibration is off unless an operator installs a profile. The shipped pilot profiles
+apply only with `--calibration all`. The live result gives no reason to turn it on yet.
 
 ## Measured local performance
 

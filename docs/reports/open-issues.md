@@ -30,19 +30,26 @@ packages. Session-vector learning/checkpoints are not implemented (session state
 zero). Diagnostic traits are decoder outputs, not independently trained probes.
 Seed initialization uses declared synthetic profiles, not learned evidence.
 
-## ISSUE-007: Perceptual calibration is unvalidated on live models
+## ISSUE-007: The style catalogue steers live models weakly; calibration did not help
 
-ADR 0007 adds model style profiles and per-model rendering. The evidence is a
-simulated run only (`docs/reports/identity-simulated.md`): line-up accuracy 0.64 to
-0.82, per-reply cross-model distance down 15% against a registered 30% target (H1 not
-met), nothing rendered outside the approved set. Open:
+ADR 0007 adds model style profiles and per-model rendering. On simulated models it
+helps (`docs/reports/identity-simulated.md`: line-up 0.64 to 0.82). On live models it
+did not (`docs/reports/identity-live-deepseek.md`: three families, one judge, run cut
+short by credit): no change in cross-model distance or line-up accuracy, and a
+hand-written persona was recognised at 0.81 against the engine's 0.44. The engine's
+personas were about as far from each other (0.60) as one persona on two models (0.63),
+and GPT-6 luna hardly responded to style text placed after the task. This is the most
+important open problem: until style text moves models more, a learned persona cannot
+be told apart reliably, whatever is learned. Open:
 
-* the live identity run on at least three model families with two judge families
-  (needs a provider key; it would also close most of ISSUE-001);
-* H3 (against a static persona) and H4 (task quality), which cannot be simulated;
+* stronger expression: system-prompt placement per model (the placement study favoured
+  the user turn on GLM only), the tone example, or a catalogue revision (new schema
+  and decoder);
+* a complete run rated by a second judge family (records are kept in
+  `benchmarks/identity/data/`, so replies need not be regenerated);
 * agreement between the model judge and people: the rater page exists, no raters have
   used it;
-* the shipped GLM profile rests on 9 prompts and one judge, and is off by default;
+* the shipped profiles rest on 18 prompts and one judge, and are off by default;
 * profiles are per placement; leakage between traits is measured but not corrected;
 * habit adherence is reported per model but not compensated.
 
