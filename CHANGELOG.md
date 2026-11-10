@@ -1,5 +1,44 @@
 # Changelog
 
+## Unreleased: perceptual calibration and the persona identity test (ADR 0007)
+
+### One voice on every model
+* A decision's `controls` are the persona's intent. With a Model Style Profile
+  (`style-profile/1`) for the request's `host.model_id`, the engine also returns
+  `rendering`: the approved configuration to send to that model so the intent comes
+  across. Hosts render it in place of `controls`. Feedback and learning are unchanged
+  and stay in intent terms, so learned style carries across models.
+* Compensation stays inside the catalogue and the context masks, leaves pinned traits
+  alone, keeps the chosen habits eligible, and moves a trait at most one level (two
+  with at least 20 judged replies per level). Dead traits are never moved. It adds
+  about 0.1 ms.
+* `OPENAPE_CALIBRATION` / `openape serve --calibration installed|all|off`. The default
+  applies only profiles installed in the data directory.
+* New commands: `openape calibrate`, `openape profile
+  list|inspect|install|remove|reference`, `openape preview --model`.
+* Explanations and the dashboard say which traits were adjusted for the model and
+  which it cannot express. `GET /v1/capabilities` lists loaded profiles.
+* A pilot profile for GLM 5.3 flash, built from the existing placement study (9
+  prompts, one judge), ships in `models/style-profiles/`.
+
+### Protocol and adapters
+* Additive: optional `rendering` on decisions; golden fixtures for calibrated decisions
+  and for `model_key` shared by the Python and TypeScript SDKs.
+* Hermes, Pi and OpenClaw adapters now send `model_key(model name)` as
+  `host.model_id` (they used to send a hash), so profiles can match.
+
+### Evidence
+* `benchmarks/live/simulated_model.py`: five simulated models with known distortions,
+  usable as `--provider simulated`.
+* `benchmarks/identity`: cross-model sameness and a blind four-way line-up, with
+  hypotheses registered in ADR 0007 before any live run. On simulated models line-up
+  accuracy rose from 0.64 to 0.82; the per-reply distance fell 15% against a 30%
+  target (not met). Not live-model or human evidence.
+* `benchmarks/identity/rater.html` and `humans.py`: an offline page and scoring for
+  human raters.
+* **Not done:** the live run on three model families (needs a provider key) and any
+  human rating.
+
 ## Unreleased: relationship controls, separate habit learning, multi-replica (ADR 0006)
 
 ### Learning

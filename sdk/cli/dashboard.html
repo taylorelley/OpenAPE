@@ -28,7 +28,7 @@ table { border-collapse: collapse; width: 100%; font-size: 13px; } td, th { text
 <main>
 <header><h1 id="title">Persona</h1><div class="meta" id="meta"></div></header>
 <section><h2>How each trait has moved</h2><p class="meta">Expected level (0 to 4) in a reference context, one point per version, oldest first.</p><div class="grid" id="traits"></div></section>
-<section id="why" hidden><h2>Why this style</h2><ul id="summary"></ul><div class="scroll"><table id="detail"></table></div><h2 style="margin-top:12px">Habits</h2><ul id="habits"></ul></section>
+<section id="why" hidden><h2>Why this style</h2><ul id="summary"></ul><div class="scroll"><table id="detail"></table></div><h2 style="margin-top:12px">Habits</h2><ul id="habits"></ul><div id="calibration" hidden><h2 style="margin-top:12px">On this model</h2><p class="meta" id="calibration-meta"></p><ul id="calibration-list"></ul></div></section>
 <section><h2>Events</h2><div id="events"></div></section>
 </main>
 <script id="data" type="application/json">__DATA__</script>
@@ -58,6 +58,10 @@ if (data.explanation) {
     for (const l of e.layers) r.append(el('td', {}, x.expected[l].toFixed(2)));
     r.append(el('td', {class: 'limit'}, x.limits.map(l => `${l.kind === 'context' ? 'context' : 'your pin'} ${l.levels.join('-')}`).join(', '))); table.append(r); }
   for (const [id, h] of Object.entries(e.habits)) document.getElementById('habits').append(el('li', {}, h.why));
+  if (e.calibration) { const c = e.calibration; document.getElementById('calibration').hidden = false;
+    document.getElementById('calibration-meta').textContent = `${c.why} Style profile ${c.style_profile.slice(7, 19)}. The levels above are the persona's intent.`;
+    for (const x of Object.values(c.traits)) document.getElementById('calibration-list').append(el('li', {class: x.out_of_gamut ? 'limit' : ''}, x.why));
+    for (const h of c.weak_habits) document.getElementById('calibration-list').append(el('li', {class: 'limit'}, `The habit ${h.replaceAll('_', ' ')} barely shows on this model.`)); }
 }
 for (const [k, v] of Object.entries(tl.events)) document.getElementById('events').append(el('span', {class: 'chip'}, `${k.replaceAll('_', ' ')} ${v}`), ' ');
 </script>

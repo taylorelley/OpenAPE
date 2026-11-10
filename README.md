@@ -174,12 +174,13 @@ choices, see the [architecture ADRs](#design-and-evidence).
 
 | Path | Contents |
 |---|---|
-| `engine/` | FastAPI service: `api`, `neural` (decoder + encoder), `learning` (trainer, habits), `evaluation` (independent evaluator, run in its own process), `storage` (SQLite or PostgreSQL + artifacts), `explain.py`, `security` |
+| `engine/` | FastAPI service: `api`, `neural` (decoder + encoder, `calibration.py`), `learning` (trainer, habits), `evaluation` (independent evaluator, run in its own process), `storage` (SQLite or PostgreSQL + artifacts), `explain.py`, `security` |
 | `protocol/` | UPAP/2 spec, schemas, OpenAPI, conformance fixtures, style catalogue |
 | `sdk/` | Python client (`client.py`, stdlib `lite.py`), TypeScript client, `openape` CLI |
 | `adapters/` | Host integrations for Claude Code, Hermes, OpenClaw, Pi, OpenCogni |
 | `adapter-kit/` | Templates, mock host and conformance notes for writing new adapters |
 | `models/decoder-v3/` | Trained decoder weights, manifest and model card |
+| `models/style-profiles/` | Measured Model Style Profiles (pilot) |
 | `benchmarks/`, `scripts/`, `tests/` | Synthetic corpus and benchmark, smoke tests, reproducibility checks |
 | `docs/` | ADRs, walkthrough, adapter compatibility, verification reports |
 
@@ -261,6 +262,56 @@ OpenCogni keeps its fixed planner context (background, system-initiated).
 existing SOUL.md can run `openape adapter migrate-soul` (dry run; `--apply --persona
 ID` backs it up first). Details and limits: [compatibility](docs/adapters/compatibility.md).
 
+## One voice on every model
+
+*Experimental and unvalidated on live models ([ADR 0007](docs/adr/0007-perceptual-calibration.md)).*
+
+Sending every model the same style sentences does not make them sound the same. In the
+one live study so far, a model asked for formality levels 0 to 4 was judged between 2.0
+and 2.4 throughout. So the same persona is a different character on each model.
+
+OpenAPE borrows the fix that screens use for colour: measure the device, publish a
+profile, and convert.
+
+* A persona's `controls` are its **intent**: how it should come across. Everything
+  stored, explained and learned stays in those terms, so what a persona learns carries
+  over when you switch models.
+* A **Model Style Profile** records, for one model, the level a blind judge perceives
+  at each requested level of each trait. You measure it with your own key. The engine
+  never calls a model.
+* With a profile installed, the engine also returns a `rendering`: the approved
+  configuration to send to *this* model so that the intent comes across. Hosts render
+  it in place of `controls`. It never leaves the reviewed catalogue, never crosses a
+  context safety mask, never moves a trait you pinned, and moves a trait one level
+  (two with plenty of data).
+* A trait a model cannot express is reported as dead or out of gamut, not pushed to an
+  extreme.
+
+```sh
+openape calibrate --model MODEL                         # plan and cost estimate; no calls
+openape calibrate --model MODEL --execute --install     # measure with your key, install the profile
+openape calibrate --provider simulated --model sim-effusive --execute   # offline, a model with a known distortion
+openape profile list                                    # installed and shipped profiles
+openape profile inspect MODEL                           # what the model does to each trait
+openape profile reference A.json B.json C.json          # rebase profiles on their consensus
+openape preview --file examples/express.json --model MODEL   # intent and rendering side by side
+```
+
+Restart `openape serve` after installing a profile. Profiles you install apply by
+default; the pilot profile shipped in `models/style-profiles/` (GLM 5.3 flash, 9
+prompts, one judge) applies only with `openape serve --calibration all`, and
+`--calibration off` applies none. Profiles are matched on `host.model_id`.
+
+**Does it work?** On simulated models with distortions built in, a blind line-up judge
+picked a persona out of four on another model 82% of the time with calibration and 64%
+without (chance 25%). The cross-model style distance fell 15% per reply, short of the
+30% target set in advance, and 29% once reply noise is averaged out. That shows the
+mechanism corrects distortions of the kind built into the simulation. It says nothing
+yet about real models or people: the live run needs a provider key and has not been
+done ([report](docs/reports/identity-simulated.md)).
+`benchmarks/identity/rater.html` is a single offline page for people to take the same
+blinded line-up.
+
 ## Your relationship, your controls
 
 A linked user (a credential with `settings:write` for that user) can set:
@@ -288,6 +339,7 @@ bash scripts/check_all.sh          # pytest, node tests, protocol regeneration
 python -m scripts.check_reproducibility   # ~6.5 min decoder rebuild, exact hash
 python -m scripts.offline_smoke    # real HTTP lifecycle + restart persistence
 python -m benchmarks.simulated     # simulated-user A/B/C/D engineering benchmark
+python -m benchmarks.identity.run --execute   # persona identity benchmark on simulated models (~20 s)
 python -m scripts.performance
 ```
 
@@ -319,7 +371,7 @@ not an automatic native hook.
 `openape init | serve | token add | persona create/list/inspect/history/delete/archetypes/evolution |
 express | preview | feedback | observe | learn | job | promote | rollback | export |
 import | adapter install/uninstall/doctor/migrate-soul | bridge | migrate --reset |
-settings get/set | compare | rate | dashboard`. Write commands take
+settings get/set | compare | rate | dashboard | calibrate | profile list/inspect/install/remove/reference`. Write commands take
 `--file request.json` (or stdin). The engine promotes automatically only for personas
 with `evolution: automatic`; `learn`/`promote` remain for manual personas. Feedback
 is record-only unless `learning_consent: true` with an authorised scope.
@@ -341,7 +393,7 @@ Training candidates are judged by an evaluator in its own process.
 
 ## Design and evidence
 
-* ADRs: [0001 architecture](docs/adr/0001-architecture.md), [0002 decoder-v2, evaluator, lineage](docs/adr/0002-decoder-v2-evaluator-lineage.md), [0003 archetypes and automatic evolution](docs/adr/0003-automatic-evolution.md), [0004 human-like development](docs/adr/0004-human-like-development.md), [0005 expressive controls](docs/adr/0005-expressive-controls.md), [0006 relationship controls, habit learning, replicas](docs/adr/0006-relationship-learning-and-production.md)
+* ADRs: [0001 architecture](docs/adr/0001-architecture.md), [0002 decoder-v2, evaluator, lineage](docs/adr/0002-decoder-v2-evaluator-lineage.md), [0003 archetypes and automatic evolution](docs/adr/0003-automatic-evolution.md), [0004 human-like development](docs/adr/0004-human-like-development.md), [0005 expressive controls](docs/adr/0005-expressive-controls.md), [0006 relationship controls, habit learning, replicas](docs/adr/0006-relationship-learning-and-production.md), [0007 perceptual calibration](docs/adr/0007-perceptual-calibration.md)
 * [Protocol](protocol/upap/v2/specification.md), JSON Schemas, OpenAPI, conformance fixtures
 * [Model card](models/decoder-v3/MODEL_CARD.md) · [benchmarks](benchmarks/README.md)
 * [Release status](docs/reports/release-status.md) · [review of 0.1.0 against the brief](docs/reports/v0.2-review.md) · [open issues](docs/reports/open-issues.md)

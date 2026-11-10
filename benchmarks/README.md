@@ -95,6 +95,39 @@ they ignore, and any loss of task quality against no style. It also compares aga
 hand-written persona prompt. Dry run by default, with a cost estimate (a pilot is about
 $24); offline tests in `tests/test_live_harness.py`. **Not run yet: no live results.**
 
+## 1d. Persona identity benchmark (offline on simulated models; live with a key)
+
+```sh
+python -m benchmarks.identity.run             # plan only
+python -m benchmarks.identity.run --execute   # simulated models, ~20 s; writes reports/identity-simulated.json
+python -m benchmarks.identity.run --provider openai-compatible --base-url URL --models A B C \
+    --judge-provider openai-compatible --judge-model JUDGE [--execute]      # live, your key
+```
+
+Is a persona the same character on another model
+([ADR 0007](../docs/adr/0007-perceptual-calibration.md))? Each model answers trait
+probes on half of the prompts and gets a style profile. Seven archetype personas then
+answer the other half on every model, with and without calibration (and, live, as a
+hand-written persona). A blind judge rates each reply, and in a line-up picks one
+persona out of four on another model.
+
+Current simulated result (`reports/identity-simulated.json`, five simulated models):
+
+| Arm | line-up accuracy (chance 0.25) | cross-model distance per reply | averaged over prompts |
+|---|---|---|---|
+| uncalibrated | 0.64 | 0.73 | 0.55 |
+| calibrated | 0.82 | 0.62 | 0.39 |
+
+Paired, prompt-clustered 95% CI: line-up +0.19 [0.14, 0.23]; per-reply distance −0.11
+[−0.14, −0.09], a 15% reduction against a pre-registered target of 30% (**not met**);
+averaged distance −29%. Nothing was rendered outside the approved, masked set.
+
+**This is not live-model or human evidence.** The simulated models' distortions were
+built in and the simulated judge reads percepts directly. Task quality and the static
+persona arm cannot be simulated. `identity/rater.html` is a single offline page for
+human raters; `python -m benchmarks.identity.humans score KEY RESULTS...` gives their
+accuracy and agreement with the model judge. **No live run and no human raters yet.**
+
 ## 2. Independent outcome evaluation (the release-gate benchmark)
 
 `evaluate.py` accepts independent blinded outcome labels in JSONL:

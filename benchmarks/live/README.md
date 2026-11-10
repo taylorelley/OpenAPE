@@ -113,6 +113,20 @@ switch to another model would invalidate the measurement. Refusals are recorded 
 counted. The judge uses the server-side `fallbacks: "default"`, and the report names
 every model that judged. `--no-judge-fallback` turns that off.
 
+## Calibration and simulated models
+
+`openape calibrate --model M` (or `python -m benchmarks.live.calibrate`) runs only the
+trait probes, then fits a Model Style Profile with `profile.py`
+([ADR 0007](../../docs/adr/0007-perceptual-calibration.md)). It takes the same provider
+and judge options as `run`, is a dry run without `--execute`, and with `--install`
+copies the profile into the engine's data directory. `python -m benchmarks.live.profile
+--report REPORT.json --run LABEL --model M` builds a profile from an existing report.
+
+`--provider simulated` runs models with known distortions offline
+(`simulated_model.py`: `sim-faithful`, `sim-compressed`, `sim-effusive`, `sim-stiff`,
+`sim-dramatic`). They exist to give the calibration maths ground truth and to let the
+whole loop run in CI. They are not evidence about any real model.
+
 ## Limitations
 
 * A model judges style, not people. Judge consistency is measured; agreement with

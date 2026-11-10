@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Persona line-up</title>
+<style>
+/* One line-up at a time: references on top, candidates below as large tap targets. */
+:root { --bg: #f6f7f9; --panel: #ffffff; --fg: #1d2330; --muted: #5b6474; --line: #d9dde5; --accent: #2f6db5; --accent-fg: #ffffff; --pick: #e8f0fb;
+  --sans: system-ui, -apple-system, "Segoe UI", sans-serif; --mono: ui-monospace, "SFMono-Regular", Menlo, monospace; }
+@media (prefers-color-scheme: dark) { :root { --bg: #12151b; --panel: #1a1f27; --fg: #e3e7ee; --muted: #9aa4b5; --line: #2c3340; --accent: #7fb0ec; --accent-fg: #0d1117; --pick: #223049; color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 var(--sans); }
+main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; display: grid; gap: 16px; }
+h1 { font-size: 22px; margin: 0; text-wrap: balance; } h2 { font-size: 15px; margin: 0 0 8px; color: var(--muted); font-weight: 600; }
+p { margin: 0; } .meta { color: var(--muted); font-size: 13px; }
+section, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; min-width: 0; }
+.task { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.reply { white-space: pre-wrap; overflow-wrap: anywhere; }
+.stack { display: grid; gap: 12px; }
+button.card { display: block; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+button.card:hover, button.card:focus-visible { border-color: var(--accent); outline: none; }
+button.card[aria-pressed="true"] { border-color: var(--accent); background: var(--pick); }
+.num { display: inline-block; font: 600 12px var(--mono); color: var(--muted); margin-bottom: 6px; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { font: inherit; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); } .btn:disabled { opacity: .5; cursor: default; }
+input[type=text] { font: inherit; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); min-width: 0; }
+progress { width: 100%; height: 6px; accent-color: var(--accent); }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+<header class="stack"><h1>Which reply is in the same voice?</h1>
+<p class="meta">A blinded line-up for OpenAPE's persona identity test. Everything stays in this browser tab: nothing is uploaded. You get a results file to send back.</p></header>
+
+<section id="start" class="stack">
+  <p>Load the items file you were given (<code>items.json</code>). Do not open the answer key.</p>
+  <div class="bar"><input type="file" id="file" accept="application/json,.json"><input type="text" id="rater" placeholder="Your initials (optional)" maxlength="40"></div>
+  <p class="meta" id="error" role="alert"></p>
+</section>
+
+<div id="trial" class="stack" hidden>
+  <progress id="progress" value="0" max="1" aria-label="Progress"></progress>
+  <p class="meta" id="count"></p>
+  <section><h2>Reference replies: one assistant's voice</h2><div class="stack" id="references"></div></section>
+  <section><h2>Candidates: which one is the same assistant?</h2><p class="task" id="candidate-task"></p><div class="stack" id="candidates"></div></section>
+  <p class="meta" id="instructions"></p>
+  <div class="bar"><button class="btn primary" id="next" disabled>Next</button><button class="btn" id="skip">Skip</button><button class="btn" id="finish">Finish now</button></div>
+</div>
+
+<section id="done" class="stack" hidden>
+  <p id="summary"></p>
+  <div class="bar"><button class="btn primary" id="download">Download results</button></div>
+  <p class="meta">Send the downloaded file to whoever gave you the items. It holds your choices and timings, not the texts.</p>
+</section>
+</main>
+<script>
+// Items: {format:'openape-identity-items/1', instructions, items:[{id, references:[{task, reply}], candidate_task, candidates:[reply]}]}
+const $ = id => document.getElementById(id);
+const el = (tag, attrs = {}, text) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (text != null) e.textContent = text; return e; };
+let items = [], index = 0, picked = null, shown = 0; const answers = {}, seconds = {};
+function validItems(d) {
+  return d && d.format === 'openape-identity-items/1' && Array.isArray(d.items) && d.items.length > 0 && d.items.every(i => typeof i.id === 'string' && Array.isArray(i.references) && Array.isArray(i.candidates) && i.candidates.length > 1
+    && i.references.every(r => typeof r.task === 'string' && typeof r.reply === 'string') && i.candidates.every(c => typeof c === 'string'));
+}
+function show() {
+  if (index >= items.length) return finish();
+  const item = items[index]; picked = null; shown = Date.now(); $('next').disabled = true;
+  $('progress').max = items.length; $('progress').value = index; $('count').textContent = `Line-up ${index + 1} of ${items.length}`;
+  $('references').replaceChildren(...item.references.map(r => { const box = el('div', {class: 'card'}); box.append(el('p', {class: 'task'}, 'Task: ' + r.task), el('p', {class: 'reply'}, r.reply)); return box; }));
+  $('candidate-task').textContent = 'Task: ' + item.candidate_task;
+  $('candidates').replaceChildren(...item.candidates.map((reply, k) => {
+    const b = el('button', {class: 'card', type: 'button', 'aria-pressed': 'false'}); b.append(el('span', {class: 'num'}, 'Candidate ' + (k + 1)), el('p', {class: 'reply'}, reply));
+    b.addEventListener('click', () => { picked = k; for (const o of $('candidates').children) o.setAttribute('aria-pressed', String(o === b)); $('next').disabled = false; });
+    return b; }));
+  window.scrollTo({top: 0});
+}
+function record(answer) { const id = items[index].id; if (answer != null) { answers[id] = answer; seconds[id] = Math.round((Date.now() - shown) / 1000); } index += 1; show(); }
+function finish() {
+  $('trial').hidden = true; $('done').hidden = false;
+  $('summary').textContent = `You answered ${Object.keys(answers).length} of ${items.length} line-ups. Thank you.`;
+}
+$('file').addEventListener('change', async e => {
+  $('error').textContent = '';
+  try {
+    const data = JSON.parse(await e.target.files[0].text());
+    if (!validItems(data)) throw new Error('not an items file');
+    items = data.items; $('instructions').textContent = data.instructions || ''; $('start').hidden = true; $('trial').hidden = false; show();
+  } catch (err) { $('error').textContent = 'That file could not be read as line-up items. Check you picked items.json, not the answer key.'; }
+});
+$('next').addEventListener('click', () => record(picked));
+$('skip').addEventListener('click', () => record(null));
+$('finish').addEventListener('click', finish);
+$('download').addEventListener('click', () => {
+  const result = {format: 'openape-identity-results/1', rater: $('rater').value.trim() || 'anonymous', finished_at: new Date().toISOString(), answers, seconds};
+  const a = el('a', {href: URL.createObjectURL(new Blob([JSON.stringify(result, null, 2)], {type: 'application/json'})), download: 'identity-results.json'});
+  document.body.append(a); a.click(); a.remove();
+});
+</script>
+</body>
+</html>

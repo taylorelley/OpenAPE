@@ -55,6 +55,14 @@ class AnthropicProvider:
         text = next(b.text for b in r.content if b.type == 'text')
         return dict(J.parse(text), served_model=r.model, input_tokens=r.usage.input_tokens, output_tokens=r.usage.output_tokens)
 
+    def structured(self, model, system, user, schema, name='answer', effort='high'):
+        """One schema-constrained JSON answer (used by the identity line-up judge)."""
+        r = self.client.messages.create(model=model, max_tokens=16000, system=system, messages=[{'role': 'user', 'content': user}],
+            output_config={'format': {'type': 'json_schema', 'schema': schema}, **({'effort': effort} if effort else {})})
+        if r.stop_reason == 'refusal': raise Refused('refusal')
+        if r.stop_reason == 'max_tokens': raise ValueError('judge output truncated')
+        return dict(data=json.loads(next(b.text for b in r.content if b.type == 'text')), served_model=r.model, input_tokens=r.usage.input_tokens, output_tokens=r.usage.output_tokens)
+
 class OpenAICompatibleProvider:
     """Any OpenAI-compatible Chat Completions endpoint, through the official `openai` SDK
     (optional dependency: `pip install -e '.[live]'`). Serves as the model under test
@@ -96,6 +104,17 @@ class OpenAICompatibleProvider:
         if getattr(choice.message, 'refusal', None) or choice.finish_reason == 'content_filter': raise Refused(choice.message.refusal or 'content_filter')
         if choice.finish_reason == 'length': raise ValueError('judge output truncated')
         return dict(J.parse(_json_text(choice.message.content or '')), **meta)
+
+    def structured(self, model, system, user, schema, name='answer', effort=None):
+        """One JSON answer under the configured response format (used by the identity line-up judge)."""
+        if self.response_format == 'json_schema': extra = {'response_format': {'type': 'json_schema', 'json_schema': {'name': name, 'strict': True, 'schema': schema}}}
+        else:
+            system += '\n\nReply with only a JSON object matching this schema:\n' + json.dumps(schema)
+            extra = {'response_format': {'type': 'json_object'}} if self.response_format == 'json_object' else {}
+        _, choice, meta = self._create(model, [{'role': 'system', 'content': system}, {'role': 'user', 'content': user}], effort, **extra)
+        if getattr(choice.message, 'refusal', None) or choice.finish_reason == 'content_filter': raise Refused(choice.message.refusal or 'content_filter')
+        if choice.finish_reason == 'length': raise ValueError('judge output truncated')
+        return dict(data=json.loads(_json_text(choice.message.content or '')), **meta)
 
 def _json_text(text):
     """The JSON object in a reply, tolerating a Markdown code fence around it."""

@@ -30,6 +30,22 @@ packages. Session-vector learning/checkpoints are not implemented (session state
 zero). Diagnostic traits are decoder outputs, not independently trained probes.
 Seed initialization uses declared synthetic profiles, not learned evidence.
 
+## ISSUE-007: Perceptual calibration is unvalidated on live models
+
+ADR 0007 adds model style profiles and per-model rendering. The evidence is a
+simulated run only (`docs/reports/identity-simulated.md`): line-up accuracy 0.64 to
+0.82, per-reply cross-model distance down 15% against a registered 30% target (H1 not
+met), nothing rendered outside the approved set. Open:
+
+* the live identity run on at least three model families with two judge families
+  (needs a provider key; it would also close most of ISSUE-001);
+* H3 (against a static persona) and H4 (task quality), which cannot be simulated;
+* agreement between the model judge and people: the rater page exists, no raters have
+  used it;
+* the shipped GLM profile rests on 9 prompts and one judge, and is off by default;
+* profiles are per placement; leakage between traits is measured but not corrected;
+* habit adherence is reported per model but not compensated.
+
 ## ISSUE-004: Hardening and isolation
 
 Training runs in an in-process worker thread. Candidate and maturation evaluation run

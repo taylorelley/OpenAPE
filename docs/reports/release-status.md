@@ -41,6 +41,22 @@ x86_64 only. OpenCogni boundary change: under review upstream (taylorelley/openc
 
 A strict xfail is a known failing release gate, not a pass.
 
+## Perceptual calibration (ADR 0007, added 2026-11-10)
+
+| Check | Result | Level | Evidence |
+|---|---|---|---|
+| Python suites, SQLite, with ADR 0007 | 207 passed, 4 skipped (3 need the optional live SDKs), 3 strict xfail (open gates); Node 111 passed | unit/integration | `bash scripts/check_all.sh` |
+| Profile maths, compensation safety properties, engine/SDK/CLI wiring | 12 passed | unit/integration | `tests/test_calibration.py` |
+| Python and TS render calibrated decisions identically and name models identically | PASS | protocol | `protocol/upap/v2/conformance.json` |
+| Identity benchmark, five simulated models (7 personas, 18 fit + 18 scored prompts, 840 line-ups) | line-up 0.64 → 0.82 (+0.19 [0.14, 0.23]); per-reply distance −15% (**H1 target 30% not met**); averaged over prompts −29%; 0 renderings outside the approved set | simulated, not live or human | `docs/reports/identity-simulated.md` |
+| Latency with a profile loaded | HTTP p95 9.9 ms (10.1 without); compensation p95 0.13 ms | single run, shared machine | `benchmarks/reports/performance.json` |
+| Human rater page in Chromium, desktop and phone width | completes, downloads results, refuses a wrong file, no console errors | manual browser run | — |
+| Live identity run, ≥3 model families, 2 judge families | **not run** (no provider key) | — | ISSUE-007 |
+| Human raters | **not run** | — | ISSUE-007 |
+
+Calibration is off unless an operator installs a profile. The shipped GLM pilot
+profile applies only with `--calibration all`.
+
 ## Measured local performance
 
 Linux x86_64, Python 3.13, PyTorch 2.5.1+cpu, single client, 20 warm-up + 500
@@ -76,6 +92,7 @@ bash scripts/check_all.sh
 python -m scripts.check_reproducibility
 python -m scripts.offline_smoke
 python -m benchmarks.simulated
+python -m benchmarks.identity.run --execute
 npm --prefix .host-test install --no-audit --no-fund @earendil-works/pi-coding-agent@1.3.0
 python -m scripts.real_host_smoke
 python -m scripts.claude_code_host_smoke          # needs claude 2.1.307 on PATH

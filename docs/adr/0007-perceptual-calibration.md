@@ -33,8 +33,10 @@ A hash-addressed JSON artifact for one model, at one placement, from one judge:
 * the fitted `curve`: each measured point shrunk towards the reference by
   `n / (n + 4)`, then made monotone by weighted isotonic regression. Thin data
   therefore means little compensation;
-* `dead`: the raw measurements span less than 0.5 perceived levels. A dead trait is
-  never moved (`max_shift` 0) and is reported;
+* `dead`: the raw measurements span less than 0.5 perceived levels, or requested and
+  judged levels correlate below 0.3 (Spearman). The second rule catches a flat curve
+  whose noisy means happen to span more. A dead trait is never moved (`max_shift` 0)
+  and is reported;
 * `max_shift`: 1 level, or 2 when every level has at least 20 judged replies;
 * `gamut`: the range of percepts the model can reach;
 * habit adherence and lift, and `weak_habits` (lift below 0.3), for reporting only;
@@ -133,6 +135,15 @@ Written before any live identity run. The report states each as met or not met.
 | H4 | Task quality is not harmed | calibrated minus uncalibrated judged quality ≥ −0.1 (1-5 scale), lower CI bound ≥ −0.25 |
 | H5 | Safety surface unchanged | zero rendered configurations outside the approved, context-masked set (property test and benchmark count) |
 | H6 | Latency | express decoder p95 ≤ 25 ms and HTTP p95 ≤ 75 ms with a profile loaded |
+
+Secondary measure, not a hypothesis: the **systematic** cross-model distance, between a
+persona's mean judged style on each model averaged over prompts. Two replies never get
+identical ratings, so the per-reply distance of H1 has a noise floor no calibration can
+remove; the averaged distance shows the systematic part. It was added after the first
+simulated run, which is why it is not a hypothesis. H1 keeps its registered threshold.
+
+First simulated run (`docs/reports/identity-simulated.md`): H1 not met (15%; systematic
+distance −29%), H2 met (+0.19), H5 met, H3 and H4 not testable in simulation.
 
 A live run needs at least three model families and two judge families to count
 towards the release gate. If H1 or H2 fails on live models, the report says so and the

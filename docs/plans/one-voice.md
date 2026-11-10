@@ -1,5 +1,10 @@
 # One Voice: colour management for personality
 
+> Status: milestones 1-6 and 8 are implemented; milestone 7 (the live run) is open.
+> One change from this plan: `controls` stays the persona's intent and a new
+> `rendering.controls` is what hosts render, the reverse of what is written below.
+> ADR 0007 is the authoritative design.
+
 ## Context
 
 OpenAPE's headline promise is a persona whose style "stays the same whatever model or

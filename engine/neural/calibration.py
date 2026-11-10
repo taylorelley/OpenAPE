@@ -24,6 +24,7 @@ from engine.neural.policy import APPROVED_LEVELS, INDEX, N_TRAITS, level_mask, h
 FORMAT = 'style-profile/1'
 SHRINK = 4.0          # replies per level at which a measured point counts as much as the reference
 DEAD_RANGE = 0.5      # a curve spanning less than this many perceived levels cannot be steered
+DEAD_SPEARMAN = 0.3   # nor can a trait whose requested and judged levels correlate less than this
 WIDE_SHIFT_N = 20     # replies per level before a trait may move two levels instead of one
 SHIFT_COST = 0.15     # perceived-level gain a one-level move must buy
 GAMUT_MARGIN = 0.5    # intent further than this outside the reachable range is out of gamut
@@ -66,7 +67,9 @@ def trait_entry(means, counts, reference, spearman=None):
     curve = fit_curve(means, counts, reference)
     # Deadness is judged on the raw measurement: shrinking a flat curve towards the
     # reference would otherwise make an unresponsive trait look steerable.
-    dead = len(measured) >= 3 and (max(measured) - min(measured)) < DEAD_RANGE
+    # A trait is also dead when requested and judged levels barely correlate, which catches
+    # a flat curve whose noisy means happen to span more than DEAD_RANGE.
+    dead = len(measured) >= 3 and ((max(measured) - min(measured)) < DEAD_RANGE or (spearman is not None and spearman < DEAD_SPEARMAN))
     n = min((c for m, c in zip(means, counts) if m is not None), default=0)
     max_shift = 0 if dead or not measured else 2 if n >= WIDE_SHIFT_N else 1
     return dict(curve=curve, reference=[round(float(r), 4) for r in reference], measured=[None if m is None else round(float(m), 4) for m in means],

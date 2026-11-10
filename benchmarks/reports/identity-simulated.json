@@ -1,0 +1,574 @@
+{
+  "kind": "simulated models with built-in distortions; engineering evidence, NOT live-model or human evidence",
+  "catalogue_hash": "sha256:a9decc190a7c16f7ca487d8c8b00b2cf5f67a3fcb25dc6fc162de20f2f107d15",
+  "generated_at": "2026-11-10T09:15:06.160575+00:00",
+  "provider": "simulated",
+  "models": [
+    "sim-faithful",
+    "sim-compressed",
+    "sim-effusive",
+    "sim-stiff",
+    "sim-dramatic"
+  ],
+  "judge_models": [
+    "simulated-judge"
+  ],
+  "placement": "turn",
+  "reference": "consensus",
+  "personas": [
+    "balanced",
+    "mentor",
+    "pragmatic_engineer",
+    "concierge",
+    "collaborator",
+    "analyst",
+    "critic"
+  ],
+  "fit_prompts": 18,
+  "score_prompts": 18,
+  "lineup": {
+    "references": 3,
+    "candidates": 4,
+    "chance": 0.25,
+    "trials": 840
+  },
+  "profiles": {
+    "sim-faithful": {
+      "hash": "sha256:cbe8a217a9246c591390f6d88684f924d9d878dd59398c74d032a50009fdf7ff",
+      "dead": [],
+      "max_shift": {
+        "directness": 1,
+        "warmth": 1,
+        "verbosity": 1,
+        "humour": 1,
+        "formality": 1,
+        "explanation_depth": 1,
+        "assertiveness": 1
+      },
+      "curves": {
+        "directness": [
+          0.3333,
+          1.1313,
+          1.9646,
+          3.0758,
+          3.8232
+        ],
+        "warmth": [
+          0.3333,
+          0.9444,
+          1.9545,
+          3.1111,
+          3.7778
+        ],
+        "verbosity": [
+          0.1768,
+          0.9545,
+          1.9545,
+          3.0556,
+          3.8333
+        ],
+        "humour": [
+          0.2323,
+          0.9444,
+          1.9444,
+          3.1111,
+          3.8333
+        ],
+        "formality": [
+          0.298,
+          1.2222,
+          2.2929,
+          2.8889,
+          3.7424
+        ],
+        "explanation_depth": [
+          0.096,
+          0.9444,
+          2.0,
+          2.9343,
+          3.8687
+        ],
+        "assertiveness": [
+          0.0202,
+          0.9141,
+          1.7323,
+          2.7778,
+          3.5101
+        ]
+      }
+    },
+    "sim-compressed": {
+      "hash": "sha256:b17c174d4ee161e7de46925942ce66b394458a836776f5e37865402f2ff6e520",
+      "dead": [],
+      "max_shift": {
+        "directness": 1,
+        "warmth": 1,
+        "verbosity": 1,
+        "humour": 1,
+        "formality": 1,
+        "explanation_depth": 1,
+        "assertiveness": 1
+      },
+      "curves": {
+        "directness": [
+          0.6515,
+          1.4495,
+          1.8283,
+          2.6667,
+          3.2778
+        ],
+        "warmth": [
+          0.8788,
+          1.0808,
+          2.0,
+          2.7475,
+          3.1414
+        ],
+        "verbosity": [
+          0.8586,
+          1.4091,
+          2.0909,
+          2.6919,
+          3.106
+        ],
+        "humour": [
+          0.8232,
+          1.399,
+          2.0354,
+          2.7929,
+          3.2879
+        ],
+        "formality": [
+          0.7525,
+          1.5859,
+          1.9747,
+          2.6162,
+          3.1061
+        ],
+        "explanation_depth": [
+          0.6869,
+          1.2172,
+          1.9545,
+          2.5252,
+          3.1869
+        ],
+        "assertiveness": [
+          0.6566,
+          1.1869,
+          1.9141,
+          2.596,
+          3.101
+        ]
+      }
+    },
+    "sim-effusive": {
+      "hash": "sha256:175d84fb43b7c55e447415b798ff92ab9f7fcd2696b5ce2f86dcaf67cb55c3ca",
+      "dead": [],
+      "max_shift": {
+        "directness": 1,
+        "warmth": 1,
+        "verbosity": 1,
+        "humour": 1,
+        "formality": 1,
+        "explanation_depth": 1,
+        "assertiveness": 1
+      },
+      "curves": {
+        "directness": [
+          0.2879,
+          1.2222,
+          2.0556,
+          3.1667,
+          3.8232
+        ],
+        "warmth": [
+          0.697,
+          1.7626,
+          2.7727,
+          3.4748,
+          3.7778
+        ],
+        "verbosity": [
+          0.7677,
+          1.5909,
+          2.6818,
+          3.4647,
+          3.7879
+        ],
+        "humour": [
+          0.5505,
+          1.4899,
+          2.6717,
+          3.4748,
+          3.8788
+        ],
+        "formality": [
+          0.3889,
+          0.5858,
+          1.2475,
+          2.3434,
+          3.2424
+        ],
+        "explanation_depth": [
+          0.1869,
+          0.8535,
+          2.0,
+          2.8889,
+          3.8687
+        ],
+        "assertiveness": [
+          0.1111,
+          0.7778,
+          1.7778,
+          2.7778,
+          3.601
+        ]
+      }
+    },
+    "sim-stiff": {
+      "hash": "sha256:b9c6bb9245d489f60ce752caeef1792cf51bb6487768e76a92345e67542c508a",
+      "dead": [
+        "formality"
+      ],
+      "max_shift": {
+        "directness": 1,
+        "warmth": 1,
+        "verbosity": 1,
+        "humour": 1,
+        "formality": 0,
+        "explanation_depth": 1,
+        "assertiveness": 1
+      },
+      "curves": {
+        "directness": [
+          1.6515,
+          2.7677,
+          3.4192,
+          3.4849,
+          3.7778
+        ],
+        "warmth": [
+          0.197,
+          0.8081,
+          1.5909,
+          2.4293,
+          3.005
+        ],
+        "verbosity": [
+          0.0859,
+          1.0,
+          1.7727,
+          3.0101,
+          3.8333
+        ],
+        "humour": [
+          0.2778,
+          0.3535,
+          0.7626,
+          1.4747,
+          2.1969
+        ],
+        "formality": [
+          2.6162,
+          2.6667,
+          2.6667,
+          3.0707,
+          3.3333
+        ],
+        "explanation_depth": [
+          0.2778,
+          0.9444,
+          1.9091,
+          2.8434,
+          3.7778
+        ],
+        "assertiveness": [
+          0.1111,
+          0.7323,
+          1.7778,
+          2.9141,
+          3.5556
+        ]
+      }
+    },
+    "sim-dramatic": {
+      "hash": "sha256:321423bc26917c9ac5cc90334e9f2aea866fa16047828a46b211a49c5444c745",
+      "dead": [],
+      "max_shift": {
+        "directness": 1,
+        "warmth": 1,
+        "verbosity": 1,
+        "humour": 1,
+        "formality": 1,
+        "explanation_depth": 1,
+        "assertiveness": 1
+      },
+      "curves": {
+        "directness": [
+          0.197,
+          0.8586,
+          2.1465,
+          3.3485,
+          3.7323
+        ],
+        "warmth": [
+          0.197,
+          0.7626,
+          2.0455,
+          3.2929,
+          3.7778
+        ],
+        "verbosity": [
+          0.2222,
+          0.6818,
+          2.0,
+          3.3737,
+          3.8333
+        ],
+        "humour": [
+          0.1414,
+          0.7172,
+          1.9444,
+          3.5657,
+          3.8333
+        ],
+        "formality": [
+          0.2525,
+          0.7222,
+          2.1111,
+          3.3889,
+          3.697
+        ],
+        "explanation_depth": [
+          0.2778,
+          0.5353,
+          2.2273,
+          3.3889,
+          3.6869
+        ],
+        "assertiveness": [
+          0.0657,
+          0.4596,
+          1.7778,
+          3.1414,
+          3.6465
+        ]
+      }
+    }
+  },
+  "shifted_share": 0.5238,
+  "arms": {
+    "calibrated": {
+      "replies": 630,
+      "judged": 630,
+      "same_persona_across_models": {
+        "mean": 0.6154,
+        "ci95": [
+          0.5966,
+          0.6336
+        ],
+        "n": 1260,
+        "clusters": 18
+      },
+      "systematic_cross_model": {
+        "mean": 0.388,
+        "ci95": null,
+        "n": 18,
+        "clusters": 18
+      },
+      "different_personas_same_model": {
+        "mean": 1.0404,
+        "ci95": [
+          1.008,
+          1.0709
+        ],
+        "n": 1890,
+        "clusters": 18
+      },
+      "identity_ratio": 1.691,
+      "distance_from_intent": {
+        "mean": 0.4506,
+        "ci95": [
+          0.4329,
+          0.4689
+        ],
+        "n": 630,
+        "clusters": 18
+      },
+      "lineup_accuracy": {
+        "mean": 0.8238,
+        "ci95": [
+          0.7903,
+          0.8565
+        ],
+        "n": 420,
+        "clusters": 18
+      },
+      "task_quality": {
+        "mean": 4.0,
+        "ci95": [
+          4.0,
+          4.0
+        ],
+        "n": 630,
+        "clusters": 18
+      },
+      "rendered_outside_approved_set": 0
+    },
+    "uncalibrated": {
+      "replies": 630,
+      "judged": 630,
+      "same_persona_across_models": {
+        "mean": 0.7277,
+        "ci95": [
+          0.7054,
+          0.7488
+        ],
+        "n": 1260,
+        "clusters": 18
+      },
+      "systematic_cross_model": {
+        "mean": 0.5488,
+        "ci95": null,
+        "n": 18,
+        "clusters": 18
+      },
+      "different_personas_same_model": {
+        "mean": 0.9581,
+        "ci95": [
+          0.9312,
+          0.9855
+        ],
+        "n": 1890,
+        "clusters": 18
+      },
+      "identity_ratio": 1.317,
+      "distance_from_intent": {
+        "mean": 0.5098,
+        "ci95": [
+          0.4889,
+          0.5306
+        ],
+        "n": 630,
+        "clusters": 18
+      },
+      "lineup_accuracy": {
+        "mean": 0.6381,
+        "ci95": [
+          0.5995,
+          0.6768
+        ],
+        "n": 420,
+        "clusters": 18
+      },
+      "task_quality": {
+        "mean": 4.0,
+        "ci95": [
+          4.0,
+          4.0
+        ],
+        "n": 630,
+        "clusters": 18
+      },
+      "rendered_outside_approved_set": 0
+    }
+  },
+  "comparisons": {
+    "calibrated minus uncalibrated": {
+      "cross_model_distance": {
+        "mean": -0.1122,
+        "ci95": [
+          -0.1367,
+          -0.0871
+        ],
+        "n": 1260,
+        "clusters": 18
+      },
+      "relative_reduction": 0.1542,
+      "systematic_distance": {
+        "mean": -0.1608,
+        "ci95": [
+          -0.176,
+          -0.1238
+        ],
+        "n": 18,
+        "clusters": 18
+      },
+      "systematic_relative_reduction": 0.293,
+      "lineup_accuracy": {
+        "mean": 0.1857,
+        "ci95": [
+          0.1385,
+          0.2318
+        ],
+        "n": 420,
+        "clusters": 18
+      },
+      "task_quality": {
+        "mean": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ],
+        "n": 630,
+        "clusters": 18
+      }
+    }
+  },
+  "hypotheses": {
+    "H1 cross-model distance at least 30% lower": {
+      "result": "not met",
+      "relative_reduction": 0.1542,
+      "difference": {
+        "mean": -0.1122,
+        "ci95": [
+          -0.1367,
+          -0.0871
+        ],
+        "n": 1260,
+        "clusters": 18
+      }
+    },
+    "H2 line-up accuracy higher than uncalibrated": {
+      "result": "met",
+      "difference": {
+        "mean": 0.1857,
+        "ci95": [
+          0.1385,
+          0.2318
+        ],
+        "n": 420,
+        "clusters": 18
+      },
+      "chance": 0.25
+    },
+    "H4 task quality not harmed": {
+      "result": "met",
+      "difference": {
+        "mean": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ],
+        "n": 630,
+        "clusters": 18
+      }
+    },
+    "H3 line-up accuracy higher than a static persona": {
+      "result": "not tested",
+      "difference": null
+    },
+    "H5 nothing rendered outside the approved, masked set": {
+      "result": "met",
+      "violations": 0
+    }
+  },
+  "limitations": [
+    "Simulated models: their distortions were built in, and the simulated judge reads percepts directly. This tests the mechanism, not real models.",
+    "Task quality is constant in simulation, so H4 is not informative here.",
+    "The static-persona arm (H3) cannot be simulated: a simulated model does not read free prose.",
+    "Personas are the seven archetypes with no individual variation and no learned state.",
+    "Profiles are fitted on half of the prompts and scored on the other half, from the same prompt set and judge."
+  ],
+  "counts_towards_release_gate": false
+}

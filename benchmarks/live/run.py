@@ -69,8 +69,8 @@ def load(path):
 def key(r):
     return (r['gen_model'], r['placement'], bool(r.get('example')), r['prompt_id'], r['condition_id'])
 
-def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+def add_provider_args(ap):
+    """Model-under-test and judge options shared by the live evaluation, calibration and the identity benchmark."""
     ap.add_argument('--provider', choices=['anthropic', 'openai-compatible', 'mock', 'simulated'], default='anthropic',
         help="'simulated' runs models with known distortions offline (benchmarks/live/simulated_model.py)")
     ap.add_argument('--model', default=DEFAULT_MODEL, help='model under test')
@@ -86,6 +86,25 @@ def main(argv=None):
     ap.add_argument('--judge-key-env', help='env var holding the openai-compatible judge key (default: --key-env)')
     ap.add_argument('--judge-response-format', choices=['json_schema', 'json_object', 'none'], default='json_schema',
         help='openai-compatible judge output: strict JSON schema, JSON mode, or instructions only (always validated)')
+
+def build_providers(a):
+    """(generator, judge, generation effort, judge effort) for parsed provider options."""
+    def effort_for(value, provider, claude_default):
+        if value == 'none': return None
+        if value == 'auto': return claude_default if provider == 'anthropic' else None
+        return value
+    if a.provider == 'anthropic': gen = AnthropicProvider()
+    elif a.provider == 'openai-compatible': gen = OpenAICompatibleProvider(a.base_url, a.key_env)
+    elif a.provider == 'simulated': gen = SimulatedProvider(getattr(a, 'seed', 0))
+    else: gen = MockProvider()
+    if a.provider in OFFLINE: judge = gen
+    elif a.judge_provider == 'anthropic': judge = AnthropicProvider()
+    else: judge = OpenAICompatibleProvider(a.judge_base_url or a.base_url, a.judge_key_env or a.key_env, a.judge_response_format)
+    return gen, judge, effort_for(a.effort, a.provider, 'medium'), effort_for(a.judge_effort, a.judge_provider, 'high')
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    add_provider_args(ap)
     ap.add_argument('--placement', choices=['turn', 'prefix', 'system'], default='turn',
         help='style text after the task in the user turn (as Claude Code and Hermes inject it), before the task, or in the system prompt')
     ap.add_argument('--example', action='store_true', help='append the reviewed tone example to the style text (OPENAPE_STYLE_EXAMPLE=1)')
@@ -112,19 +131,8 @@ def main(argv=None):
     print(json.dumps(summary, indent=2))
     if not a.execute:
         print('Dry run: nothing was called. Add --execute to run.' if a.provider not in OFFLINE else 'Dry run. Add --execute to run the offline pipeline.'); return 0
-    def effort_for(value, provider, claude_default):
-        if value == 'none': return None
-        if value == 'auto': return claude_default if provider == 'anthropic' else None
-        return value
-    if a.provider == 'anthropic': gen = AnthropicProvider()
-    elif a.provider == 'openai-compatible': gen = OpenAICompatibleProvider(a.base_url, a.key_env)
-    elif a.provider == 'simulated': gen = SimulatedProvider(a.seed)
-    else: gen = MockProvider()
-    if a.provider in OFFLINE: judge = gen
-    elif a.judge_provider == 'anthropic': judge = AnthropicProvider()
-    else: judge = OpenAICompatibleProvider(a.judge_base_url or a.base_url, a.judge_key_env or a.key_env, a.judge_response_format)
-    effort = effort_for(a.effort, a.provider, 'medium')
-    judge_effort = effort_for(a.judge_effort, a.judge_provider, 'high')
+    gen, judge, effort, judge_effort = build_providers(a)
+    if a.provider in OFFLINE: a.judge_model = f'{a.provider}-judge'  # an offline provider judges its own replies
     run_dir.mkdir(parents=True, exist_ok=True); lock = threading.Lock()
     def work(p, c):
         r = dict(gen_model=a.model, provider=a.provider, judge_provider=a.provider if a.provider in OFFLINE else a.judge_provider, placement=a.placement, example=a.example, prompt_id=p['id'], task_type=p['task_type'], condition_id=c['id'], kind=c['kind'],

@@ -18,6 +18,7 @@ jobs:
       - run: bash scripts/check_all.sh
       - run: python -m scripts.offline_smoke
       - run: python -m benchmarks.simulated
+      - run: python -m benchmarks.identity.run --execute --report-dir /tmp/identity-report
   real-hosts:
     # Real host CLIs/SDKs against a synthetic model endpoint; no provider credentials.
     runs-on: ubuntu-latest

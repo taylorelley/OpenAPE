@@ -175,6 +175,30 @@ HTTP ENGINE_UNAVAILABLE is reserved for a future remote worker failure profile.
 Rendering: `sdk/python/lite.py` (stdlib) and `sdk/typescript/client.ts` must render
 byte-identical text; `conformance.json` carries golden `rendered` strings for both.
 
+## Perceptual calibration (ADR 0007)
+
+`controls` is always the persona's intent. When the engine holds a Model Style Profile
+for the request's `host.model_id`, the decision also carries
+
+```json
+"rendering": {"controls": {…}, "style_profile": "sha256:…", "model_id": "…",
+              "notes": ["shifted:warmth", "out_of_gamut:formality", "weak_habit:analogies"]}
+```
+
+Hosts render `rendering.controls` in place of `controls` (same templates, same habits,
+same preferences, same tone-example bands). Feedback, comparisons and reflections refer
+to `controls`. `rendering.controls` is an approved configuration, allowed in the
+request's context, for which the decision's habits are eligible; SDKs reject any other.
+`rendering` is `null` or absent when no profile matched. A client that ignores it
+renders the intent.
+
+`host.model_id` should be `model_key(name)`: the model's name in lower case with every
+run of characters outside `[a-z0-9_.:-]` replaced by `:`, trimmed of leading and
+trailing `:`, at most 100 characters, `unspecified` when empty. `conformance.json`
+carries golden `model_keys` and calibrated decision fixtures for both SDKs.
+`GET /v1/capabilities` lists the loaded profiles under `calibration`, and
+explanations gain a `calibration` object.
+
 Known conformance gaps: SDKs are hand-written (golden fixtures, not generated
 clients); write/read envelopes beyond decisions are not all modeled; source
 reliability is a credential class only; explicit relationship export unsupported;
