@@ -91,6 +91,8 @@ export type PersonalityContext = {
 };
 export type Decision = {protocol_version:'upap/2'; request_id:string; decision_id:string; persona_version:string;
  decoder_hash:string;control_schema:'behaviour-controls/2';catalogue_hash:string;controls:Record<string,number>;habits:string[];preferences:Record<string,string>;
+ /** Perceptual calibration (ADR 0007): render these levels instead of `controls` on this model. */
+ rendering?:{controls:Record<string,number>;style_profile:string;model_id:string;notes:string[]}|null;
  mode:Exclude<Mode,'disabled'>;applies_to:'next_model_request';policy:{eligible:boolean;mask_reason:string|null};cache_ttl_ms:number;engine_status:string};
 export type RenderedExpression = {text:string;status:string;decision:Decision|null};
 export type AdapterManifest = {adapter_id:string;version:string;verified:boolean;insertion_levels:string[];host_commit:string|null};
@@ -121,16 +123,22 @@ export function validateDecision(raw:unknown):Decision {
  if(!d||d.protocol_version!=='upap/2'||d.control_schema!==controls.schema||d.catalogue_hash!==CONTROLS_HASH)throw Error('Unsupported decision');
  if(!coherent(d.controls)||!habitsValid(d.habits,d.controls)||!preferencesValid(d.preferences))throw Error('Catalogue mismatch');
  if(!['shadow','active','frozen'].includes(d.mode)||d.applies_to!=='next_model_request'||!d.policy?.eligible||!Number.isInteger(d.cache_ttl_ms)||d.cache_ttl_ms<0||d.cache_ttl_ms>30000||typeof d.request_id!=='string'||typeof d.decision_id!=='string'||typeof d.persona_version!=='string'||typeof d.decoder_hash!=='string')throw Error('Invalid decision');
+ const r=d.rendering;
+ if(r!==undefined&&r!==null&&(typeof r!=='object'||!coherent(r.controls)||!habitsValid(d.habits,r.controls)||typeof r.style_profile!=='string'))throw Error('Invalid rendering');
  return d;
 }
+/** A model name as a wire-safe id ('z-ai/GLM-5.3' -> 'z-ai:glm-5.3'); style profiles are matched on it. Mirror of lite.py model_key. */
+export const modelKey=(model:unknown):string=>String(model).trim().toLowerCase().replace(/[^a-z0-9_.:-]+/g,':').replace(/^:+|:+$/g,'').slice(0,100)||'unspecified';
 const band=(level:number)=>level<=1?0:level===2?1:2;
+/** The levels to render: calibrated for this model when the engine sent a `rendering`. */
+export const shownControls=(d:Decision):Record<string,number>=>d.rendering?d.rendering.controls:d.controls;
 /** Mirror of sdk/python/lite.py render: prefix, traits, habits, the user's preferences and,
  * when the host opts in, the reviewed tone example for these levels. */
 export function render(raw:unknown,example=false):string {
- const d=validateDecision(raw);if(d.mode==='shadow')return '';
- const parts=[controls.prefix,...traits.map(t=>(controls.templates as Record<string,string[]>)[t][d.controls[t]]),...d.habits.map(h=>habits[h].text)];
+ const d=validateDecision(raw);if(d.mode==='shadow')return '';const shown=shownControls(d);
+ const parts=[controls.prefix,...traits.map(t=>(controls.templates as Record<string,string[]>)[t][shown[t]]),...d.habits.map(h=>habits[h].text)];
  for(const k of Object.keys(prefSlots))if(Object.hasOwn(d.preferences,k))parts.push(prefSlots[k][d.preferences[k]]);
- if(example)parts.push(`${controls.example_prefix} "${(controls.examples as Record<string,string>)[`${band(d.controls.warmth)}${band(d.controls.formality)}`]}"`);
+ if(example)parts.push(`${controls.example_prefix} "${(controls.examples as Record<string,string>)[`${band(shown.warmth)}${band(shown.formality)}`]}"`);
  const text=parts.join(' ');
  if(text.length>controls.max_style_chars)throw Error('Style size bound');return text;
 }

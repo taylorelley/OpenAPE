@@ -33,6 +33,9 @@ from pathlib import Path
 from protocol.catalogue import CATALOGUE_HASH
 from benchmarks.live import design, analysis
 from benchmarks.live.providers import AnthropicProvider, OpenAICompatibleProvider, MockProvider, Refused
+from benchmarks.live.simulated_model import SimulatedProvider
+
+OFFLINE = ('mock', 'simulated')  # providers that call nothing and judge their own replies
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MODEL = 'claude-opus-5-5'
@@ -68,7 +71,8 @@ def key(r):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--provider', choices=['anthropic', 'openai-compatible', 'mock'], default='anthropic')
+    ap.add_argument('--provider', choices=['anthropic', 'openai-compatible', 'mock', 'simulated'], default='anthropic',
+        help="'simulated' runs models with known distortions offline (benchmarks/live/simulated_model.py)")
     ap.add_argument('--model', default=DEFAULT_MODEL, help='model under test')
     ap.add_argument('--effort', default='auto', help="generation effort: Claude output_config.effort, or reasoning_effort on openai-compatible; "
         "'auto' = medium for Claude and omitted for openai-compatible; 'none' omits it")
@@ -94,6 +98,7 @@ def main(argv=None):
     ap.add_argument('--report-dir', default=str(ROOT / 'docs/reports'))
     ap.add_argument('--execute', action='store_true', help='call models (otherwise a dry run)')
     ap.add_argument('--report-only', action='store_true')
+    ap.add_argument('--no-report', action='store_true', help='keep the records but write no report (used by calibration)')
     a = ap.parse_args(argv)
     run_dir = Path(a.run_dir); records_path = run_dir / 'records.jsonl'
     if a.report_only: return write_report(load(records_path), a, run_dir)
@@ -106,22 +111,23 @@ def main(argv=None):
     summary = dict(prompts=len(prompts), conditions=len({c['id'] for _, c in rows}), planned=len(rows), already_done=len(rows) - len(todo), to_run=len(todo), rejudged=len(rejudge), **est)
     print(json.dumps(summary, indent=2))
     if not a.execute:
-        print('Dry run: nothing was called. Add --execute to run.' if a.provider != 'mock' else 'Dry run. Add --execute to run the mock pipeline.'); return 0
+        print('Dry run: nothing was called. Add --execute to run.' if a.provider not in OFFLINE else 'Dry run. Add --execute to run the offline pipeline.'); return 0
     def effort_for(value, provider, claude_default):
         if value == 'none': return None
         if value == 'auto': return claude_default if provider == 'anthropic' else None
         return value
     if a.provider == 'anthropic': gen = AnthropicProvider()
     elif a.provider == 'openai-compatible': gen = OpenAICompatibleProvider(a.base_url, a.key_env)
+    elif a.provider == 'simulated': gen = SimulatedProvider(a.seed)
     else: gen = MockProvider()
-    if a.provider == 'mock': judge = gen
+    if a.provider in OFFLINE: judge = gen
     elif a.judge_provider == 'anthropic': judge = AnthropicProvider()
     else: judge = OpenAICompatibleProvider(a.judge_base_url or a.base_url, a.judge_key_env or a.key_env, a.judge_response_format)
     effort = effort_for(a.effort, a.provider, 'medium')
     judge_effort = effort_for(a.judge_effort, a.judge_provider, 'high')
     run_dir.mkdir(parents=True, exist_ok=True); lock = threading.Lock()
     def work(p, c):
-        r = dict(gen_model=a.model, provider=a.provider, judge_provider='mock' if a.provider == 'mock' else a.judge_provider, placement=a.placement, example=a.example, prompt_id=p['id'], task_type=p['task_type'], condition_id=c['id'], kind=c['kind'],
+        r = dict(gen_model=a.model, provider=a.provider, judge_provider=a.provider if a.provider in OFFLINE else a.judge_provider, placement=a.placement, example=a.example, prompt_id=p['id'], task_type=p['task_type'], condition_id=c['id'], kind=c['kind'],
             trait=c.get('trait'), level=c.get('level'), habit=c.get('habit'), control_id=c.get('control_id'), controls=c['controls'], habits=c['habits'],
             style_text=c['text'], at=datetime.now(timezone.utc).isoformat())
         try:
@@ -138,7 +144,7 @@ def main(argv=None):
         for i, fut in enumerate(as_completed([pool.submit(work, p, c) for p, c in todo]), 1):
             failed += bool(fut.result().get('error'))
             if i % 25 == 0 or i == len(todo): print(f'{i}/{len(todo)} done, {failed} errors', file=sys.stderr)
-    return write_report(load(records_path), a, run_dir)
+    return 0 if a.no_report else write_report(load(records_path), a, run_dir)
 
 def write_report(records, a, run_dir):
     # Only the latest record per key counts (a failed attempt is retried by a later run).
@@ -159,8 +165,8 @@ def write_report(records, a, run_dir):
             'Probes vary one trait from the neutral configuration; interactions between traits are not measured.',
             'Arms (placement, tone example) are compared on the same prompts and judge; differences are within this model and judge only.'])
     out = Path(a.report_dir); out.mkdir(parents=True, exist_ok=True)
-    mock = any(r['provider'] == 'mock' for r in records)
-    stem = 'live-eval-mock' if mock else 'live-eval'
+    offline = sorted({r['provider'] for r in records} & set(OFFLINE))
+    stem = f'live-eval-{offline[0]}' if offline else 'live-eval'
     (out / f'{stem}.json').write_text(json.dumps(report, indent=2) + '\n'); (out / f'{stem}.md').write_text(markdown(report))
     print(f'wrote {out / stem}.json and .md'); return 0
 

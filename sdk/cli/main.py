@@ -39,12 +39,61 @@ def answer(client,args):
     k='ab'.index(choice)
     return client.request('POST','/v1/feedback',{**body,'kind':'pairwise_preference','preferred':options[k],'rejected':options[1-k]})
 
+def profile_command(args):
+    """Model Style Profiles in a data directory (ADR 0007). Local files only; no engine call."""
+    from engine.neural import calibration
+    from engine.api.app import SHIPPED_PROFILES
+    home=Path(args.data)/'style-profiles'
+    def load(path):return calibration.validate(json.loads(Path(path).read_text()))
+    def find(name):
+        for d in (home,SHIPPED_PROFILES):
+            for f in sorted(d.glob('*.json')) if d.is_dir() else ():
+                try:
+                    if f.name!='reference.json' and load(f)['model_id']==calibration.model_key(name):return f
+                except (ValueError,OSError):continue
+        raise SystemExit(f'no profile for {name}')
+    if args.action=='list':
+        installed=calibration.Profiles([home]);shipped=calibration.Profiles([SHIPPED_PROFILES])
+        return {'installed':installed.summary(),'shipped':shipped.summary(),'rejected':installed.rejected+shipped.rejected,
+            'note':"Installed profiles apply by default; shipped ones only with `openape serve --calibration all`."}
+    if not args.target:raise SystemExit('give a model id or a profile file')
+    if args.action=='inspect':
+        try:from benchmarks.live.profile import describe
+        except ImportError:return load(find(args.target))
+        print(describe(load(args.target) if Path(args.target).is_file() else load(find(args.target))),file=sys.stderr);return {'ok':True}
+    if args.action=='install':
+        source=Path(args.target) if Path(args.target).is_file() else find(args.target)
+        try:profile=load(source)
+        except ValueError as exc:raise SystemExit(f'refusing to install: {exc}')
+        home.mkdir(parents=True,exist_ok=True);target=home/(profile['model_id'].replace(':','_')+'.json');target.write_text(json.dumps(profile,indent=2)+'\n')
+        return {'installed':str(target),'model_id':profile['model_id'],'hash':profile['hash'],'note':'Restart `openape serve` to apply it.'}
+    if args.action=='remove':
+        target=home/(calibration.model_key(args.target).replace(':','_')+'.json')
+        if not target.exists():raise SystemExit(f'no installed profile for {args.target}')
+        target.unlink();return {'removed':str(target),'note':'Restart `openape serve`.'}
+    if args.action=='reference':
+        # A consensus reference from the named profile files, and each profile rebased onto it.
+        files=[Path(args.target)]+[Path(f) for f in args.more]
+        if len(files)<2:raise SystemExit('a consensus reference needs at least two profiles')
+        profiles=[load(f) for f in files];ref=calibration.consensus(profiles);out=Path(args.out or files[0].parent)
+        out.mkdir(parents=True,exist_ok=True);(out/'reference.json').write_text(json.dumps(dict(kind='consensus',models=[p['model_id'] for p in profiles],traits=ref),indent=2)+'\n')
+        written=[]
+        for p in profiles:
+            q=calibration.rebase(p,ref);f=out/(q['model_id'].replace(':','_')+'.json');f.write_text(json.dumps(q,indent=2)+'\n');written.append(str(f))
+        return {'reference':str(out/'reference.json'),'rebased':written}
+
 def main():
+    if len(sys.argv)>1 and sys.argv[1]=='calibrate':
+        # Measures a model with your own key and writes its style profile (benchmarks/live).
+        try:from benchmarks.live import calibrate
+        except ImportError:raise SystemExit('`openape calibrate` needs the repository checkout (benchmarks/live) on the Python path')
+        raise SystemExit(calibrate.main(sys.argv[2:]))
     parser=argparse.ArgumentParser(prog='openape',description='OpenAPE — Agent Personality Engine')
     parser.add_argument('--url',default=os.environ.get('OPENAPE_URL','http://127.0.0.1:8765'))
     sub=parser.add_subparsers(dest='cmd',required=True)
     sub.add_parser('init')
     serve=sub.add_parser('serve');serve.add_argument('--port',type=int,default=8765);serve.add_argument('--data',default='.openape');serve.add_argument('--host',default='127.0.0.1')
+    serve.add_argument('--calibration',choices=['installed','all','off'],help="perceptual calibration: profiles installed in the data directory (default), also the shipped pilot profiles, or none")
     token=sub.add_parser('token',help='add a scoped credential (restart serve to load it)');token.add_argument('action',choices=['add'])
     token.add_argument('--actor',required=True);token.add_argument('--scopes',default='persona:express,observations:write,reflection:write');token.add_argument('--personas',required=True);token.add_argument('--users',default='');token.add_argument('--tenant',default='local')
     persona=sub.add_parser('persona');persona.add_argument('action',choices=['create','list','inspect','history','delete','archetypes','evolution']);persona.add_argument('id',nargs='?')
@@ -61,12 +110,16 @@ def main():
     persona.add_argument('--user',help='inspect: include growth with this linked user')
     for name in ['express','preview','feedback','learn','promote','rollback','export','import','observe']:
         p=sub.add_parser(name);p.add_argument('--file',default='-');p.add_argument('--persona')
-        if name=='preview':p.add_argument('--mode',default='active',choices=['shadow','active','frozen'])
+        if name=='preview':p.add_argument('--mode',default='active',choices=['shadow','active','frozen']);p.add_argument('--model',help='preview as this model (sets host.model_id), to see its calibrated rendering')
     sub.add_parser('job').add_argument('id')
     adapter=sub.add_parser('adapter',help='install guidance, doctor checks and Hermes SOUL.md migration')
     adapter.add_argument('action',choices=['install','uninstall','doctor','migrate-soul']);adapter.add_argument('host',nargs='?',choices=['claude-code','hermes','pi','openclaw','opencogni'],default='hermes')
     adapter.add_argument('--hermes-home');adapter.add_argument('--persona');adapter.add_argument('--apply',action='store_true');adapter.add_argument('--force',action='store_true')
     sub.add_parser('bridge')
+    sub.add_parser('calibrate',help='measure a model with your own key and write its style profile (see `openape calibrate --help`)',add_help=False)
+    prof=sub.add_parser('profile',help='Model Style Profiles: how each model bends the style catalogue (perceptual calibration)')
+    prof.add_argument('action',choices=['list','inspect','install','remove','reference']);prof.add_argument('target',nargs='?',help='model id or profile file');prof.add_argument('more',nargs='*',help='reference: further profile files')
+    prof.add_argument('--data',default='.openape');prof.add_argument('--out',help='reference: directory for reference.json and the rebased profiles')
     st=sub.add_parser('settings',help="a linked user's own settings for a persona: preferences, pins, habit vetoes, freeze, cohort consent")
     st.add_argument('action',choices=['get','set']);st.add_argument('persona');st.add_argument('user')
     st.add_argument('--prefer',action='append',default=[],help='slot=value, e.g. spelling=british, units=metric, format=code_first (slot= clears it)')
@@ -85,6 +138,7 @@ def main():
     migrate=sub.add_parser('migrate',help='reset a data directory from an earlier release for decoder-v3 (learned state is dropped)')
     migrate.add_argument('--reset',action='store_true',required=True,help='re-create personas from their recorded archetypes');migrate.add_argument('--data',default='.openape')
     args=parser.parse_args()
+    if args.cmd=='profile':print(json.dumps(profile_command(args),indent=2));return
     if args.cmd=='migrate':
         from engine.api.app import DEFAULT_DECODER
         from engine.storage.migrate import reset
@@ -111,7 +165,7 @@ def main():
             os.environ['OPENAPE_CREDENTIALS']=Path(os.environ.get('OPENAPE_CREDENTIALS_FILE',str(CREDENTIALS))).read_text()
         from engine.api.app import create_app
         import uvicorn
-        uvicorn.run(create_app(args.data),host=args.host,port=args.port);return
+        uvicorn.run(create_app(args.data,calibration_mode=args.calibration),host=args.host,port=args.port);return
     if args.cmd=='adapter' and args.action in ('install','uninstall'):
         from sdk.cli import adapters
         result=adapters.install(args.host,args.hermes_home,args.force) if args.action=='install' else adapters.uninstall(args.host,args.hermes_home)
@@ -187,9 +241,13 @@ def main():
             data=json.load(sys.stdin) if args.file=='-' else json.loads(Path(args.file).read_text())
             if args.cmd=='preview':
                 # Exactly the text an adapter would inject for this request (decision is ledgered).
+                if args.model:
+                    from sdk.python.lite import model_key
+                    data['host']['model_id']=model_key(args.model);data['request_id']=data['request_id'][:60]+'-'+data['host']['model_id'][:39]
                 out=client.express(data,args.mode)
                 if out['status']=='unavailable':raise SystemExit('engine unavailable or request rejected; no style would be injected')
                 result={'status':out['status'],'injected_text':out['text'],'controls':out['decision']['controls'],'habits':out['decision']['habits'],'persona_version':out['decision']['persona_version']}
+                if out['decision'].get('rendering'):result['rendering']=out['decision']['rendering']
             else:
                 route={'express':'express','feedback':'feedback','learn':'consolidations','observe':'observations','import':'personas/import'}.get(args.cmd)
                 if route is None:

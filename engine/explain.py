@@ -37,6 +37,26 @@ def profile(decoder, core, rel, bias=None, context=REFERENCE_CONTEXT, host=REFER
         if bias is not None: h = h + bias
     return dict(traits=dict(zip(TRAITS, _expected(t))), habits={k: round(_sigmoid(float(h[i])), 3) for i, k in enumerate(HABIT_IDS)})
 
+def calibration_notes(resp):
+    """Perceptual calibration of one decision (ADR 0007): which traits are rendered at
+    another level on this model, and which the model cannot express as intended."""
+    r = resp.get('rendering')
+    if not r: return None
+    traits = {}; out = [n.split(':', 1)[1] for n in r.get('notes', []) if n.startswith('out_of_gamut:')]
+    for t in TRAITS:
+        intended, shown = resp['controls'][t], r['controls'][t]
+        if shown == intended and t not in out: continue
+        if shown != intended:
+            why = (f"{t.replace('_', ' ').capitalize()}: this model {'under' if shown > intended else 'over'}-expresses it, so it is asked for level {shown} "
+                f"(“{TEMPLATES[t][shown]}”) to come across as level {intended}")
+            if t in out: why += ', and still cannot fully reach it'
+        else: why = f"{t.replace('_', ' ').capitalize()}: this model cannot express level {intended} as intended; no instruction gets closer"
+        traits[t] = dict(intended=intended, rendered=shown, text=TEMPLATES[t][shown], out_of_gamut=t in out, why=why + '.')
+    weak = [n.split(':', 1)[1] for n in r.get('notes', []) if n.startswith('weak_habit:')]
+    names = ', '.join(t.replace('_', ' ') for t in traits)
+    return dict(model_id=r['model_id'], style_profile=r['style_profile'], traits=traits, weak_habits=weak,
+        why=f"Calibrated for {r['model_id']}: {names} adjusted so the persona comes across the same on this model." if traits else f"Calibrated for {r['model_id']}: no adjustment needed.")
+
 def explain(decoder, data, layers, biases, settings):
     """`layers`: [(name, core, rel)] in LAYERS order (only those that apply).
     `biases`: {'character', 'relationship', 'session'} habit-logit offsets (tensors)."""
@@ -82,5 +102,7 @@ def explain(decoder, data, layers, biases, settings):
         habits[hid] = dict(state=state, decoder_probability=round(_sigmoid(float(final_h[k])), 3), learned=parts, probability=round(_sigmoid(logit), 3),
             why=f"“{_HABIT[hid]['text']}” {state}" + (f' (learned {learned})' if learned else '') + '.')
     prefs = {k: PREFERENCES[k][v] for k, v in resp.get('preferences', {}).items()}
+    calibrated = calibration_notes(resp)
     return dict(decision_id=resp['decision_id'], context=ctx, layers=[name for name, *_ in heads], traits=traits, habits=habits, preferences=prefs,
-        exploration=resp.get('exploration', False), notes=resp['policy'].get('mask_reason'), summary=summary)
+        exploration=resp.get('exploration', False), notes=resp['policy'].get('mask_reason'), calibration=calibrated,
+        summary=summary + ([calibrated['why']] if calibrated and calibrated['traits'] else []))

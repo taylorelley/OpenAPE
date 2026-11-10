@@ -20,6 +20,7 @@ from engine.security.auth import Auth, Principal
 from engine.storage.store import Store
 from protocol.catalogue import SCHEMA, CATALOGUE_HASH, HABIT_IDS, PREFERENCES
 from engine.neural.policy import Decoder, ACTIONS, NEUTRAL_ACTION, CORE_DIM, REL_DIM, VOCAB, ENGINE_TAGS, mask_reason, joint, select_habits, levels_of, choice, apply_user_settings, pins_satisfiable
+from engine.neural import calibration
 from engine.neural.profiles import fit_seed_latent, seed_profile, ARCHETYPES, ARCHETYPE_HABITS
 from engine.learning.trainer import fit_candidate, state_norm_limit, trait_pair
 from engine.learning import habits as habit_learning
@@ -31,6 +32,7 @@ from engine import explain as explanation
 
 ROOT=Path(__file__).resolve().parents[2]
 DEFAULT_DECODER=ROOT/'models/decoder-v3/decoder.safetensors'
+SHIPPED_PROFILES=ROOT/'models/style-profiles'  # measured pilot profiles; applied only with calibration 'all'
 PROTOCOL='upap/2'
 LONG_SESSION=20  # turns after which the engine tags a session long_session
 RETURNING_DAYS=14  # a first turn after this long away is tagged returning
@@ -57,7 +59,7 @@ def short_id(value): return value if len(value)<=100 else hashlib.sha256(value.e
 
 class LegacyStore(RuntimeError):
     pass
-def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_minute=600):
+def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_minute=600,calibration_mode=None):
     auth=Auth(credentials); store=Store(data_dir or os.environ.get('OPENAPE_DATA','.openape'))
     if store.legacy:
         store.db.close()
@@ -68,8 +70,14 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
     except (ValueError,OSError,RuntimeError,KeyError):decoder=Decoder('/nonexistent-openape-approved-fallback')
     engine_status='experimental_synthetic' if decoder.model else 'baseline_fallback'
     evaluator=Evaluator(decoder,decoder_location)
+    # Perceptual calibration (ADR 0007). 'installed' (default) applies only profiles the
+    # operator put in <data>/style-profiles; 'all' also applies the shipped pilot profiles;
+    # 'off' applies none. Profiles are read once at start, so a session's rendering is stable.
+    calibration_mode=calibration_mode or os.environ.get('OPENAPE_CALIBRATION','installed')
+    if calibration_mode not in ('installed','all','off'):raise ValueError("OPENAPE_CALIBRATION must be 'installed', 'all' or 'off'")
+    profiles=calibration.Profiles(()) if calibration_mode=='off' else calibration.Profiles(([SHIPPED_PROFILES] if calibration_mode=='all' else [])+[store.root/'style-profiles'])
     app=FastAPI(title='OpenAPE — Agent Personality Engine',version='0.3.0')
-    app.state.store=store; app.state.decoder=decoder
+    app.state.store=store; app.state.decoder=decoder; app.state.profiles=profiles
     pool=ThreadPoolExecutor(max_workers=1,thread_name_prefix='openape-training')
     def drain():
         """Wait until no training/evolution job is queued (single worker; for tests and tools)."""
@@ -166,8 +174,9 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
             max_payload_bytes=65536,modes=['disabled','shadow','active','frozen'],initializations=['archetype','seed_preferences','snapshot','imported','neutral_prior'],
             archetypes={k:list(v) for k,v in ARCHETYPES.items()},archetype_habits={k:list(v) for k,v in ARCHETYPE_HABITS.items()},maturation_rates={k:dict(relationship_horizon=v[0],core_horizon=v[1]) for k,v in maturation.RATES.items()},
             features=['pairwise_learning','logged_bandit_learning','independent_evaluator','cas_promotion','rollback','lineage_revocation','core_export','subagent_snapshot','automatic_evolution','maturation','agent_reflection',
-                'temperament','individuality','session_state','habit_consolidation','life_events','relationship_accommodation','relationship_cooling','elastic_self','maturity_weighted_influence','user_settings','habit_bias','cohort_prior','exploration','comparisons','explanations','timeline'],
+                'temperament','individuality','session_state','habit_consolidation','life_events','relationship_accommodation','relationship_cooling','elastic_self','maturity_weighted_influence','user_settings','habit_bias','cohort_prior','exploration','comparisons','explanations','timeline','perceptual_calibration'],
             preferences={k:list(v) for k,v in PREFERENCES.items()},
+            calibration=dict(mode=calibration_mode,format=calibration.FORMAT,profiles=profiles.summary(),rejected=len(profiles.rejected)),
             session_state='ephemeral latent offset from consented in-session preferences; sampled at session end, never a version',automatic_promotion='persona_policy')
     def insert_persona(db,p,id,artifact,initialization,parent=None,archetype=None,seeds=(),evolution='manual',rate=None,agent_feedback=False,individuality=None):
         if db.execute('SELECT 1 FROM personas WHERE tenant=? AND id=?',(p.tenant,id)).fetchone():raise Fault('VERSION_CONFLICT','Persona already exists',409)
@@ -301,7 +310,14 @@ def create_app(data_dir=None,credentials=None,decoder_path=None,rate_limit_per_m
             propensity=float(probs[action]) if req.selection=='sample' and status!='baseline_fallback' else None
             if explore and status!='baseline_fallback':propensity=EXPLORE_RATE*float(probs[action])+(1-EXPLORE_RATE)*(action==best)
             if status=='baseline_fallback':explored=False
-            response=Decision(request_id=req.request_id,decision_id=uid(),persona_version=cv,relationship_version=rv,decoder_hash=decoder.hash,catalogue_hash=CATALOGUE_HASH,controls=Controls(**levels_of(action)),habits=habits,preferences={k:v for k,v in settings.get('preferences',{}).items() if v},exploration=explored,mode=req.mode,
+            # Perceptual calibration: `action` stays the persona's intent (what is stored, explained
+            # and learned from); the profile for this model only chooses which approved
+            # configuration to render so that the intent comes across.
+            rendered=None
+            if status!='baseline_fallback':
+                try:rendered=calibration.rendering(action,habits,context,profiles.get(host.get('model_id')),settings.get('pins'))
+                except (ValueError,RuntimeError,KeyError,IndexError):rendered=None
+            response=Decision(request_id=req.request_id,decision_id=uid(),persona_version=cv,relationship_version=rv,decoder_hash=decoder.hash,catalogue_hash=CATALOGUE_HASH,controls=Controls(**levels_of(action)),habits=habits,rendering=rendered,preferences={k:v for k,v in settings.get('preferences',{}).items() if v},exploration=explored,mode=req.mode,
                 policy=Policy(eligible=True,mask_reason=','.join(x for x in [mask_reason(context)]+notes if x) or None),engine_status=status,
                 propensity=propensity if req.debug else None,diagnostics=diagnostics).model_dump()
             data=dict(response=response,context=context,host=host,session=req.session.model_dump(),fingerprint=fingerprint,action=action,habits=habits,selection='sample' if propensity is not None else 'argmax',propensity=propensity,session_state=session_state,

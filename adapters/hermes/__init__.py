@@ -85,7 +85,7 @@ def register(ctx):
         turn = turn_id or str(uuid.uuid4())
         request = dict(request_id=stable(f'{session_id}:{turn}'), identity=dict(tenant_id=cfg['tenant'], persona_id=cfg['persona']),
             session=dict(id=session_key(cfg, session_id), turn_id=stable(turn)),
-            host=dict(adapter_id=ADAPTER, adapter_version=VERSION, host_version=HOST_VERSION, provider_family='other', model_id=stable(model or 'unspecified')),
+            host=dict(adapter_id=ADAPTER, adapter_version=VERSION, host_version=HOST_VERSION, provider_family='other', model_id=upap_lite.model_key(model or 'unspecified')),
             context=context)
         if cfg['user']: request['identity']['user_id'] = cfg['user']
         out = upap_lite.express(cfg['url'], cfg['token'], request, cfg['mode'], example=cfg['example'])

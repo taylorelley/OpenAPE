@@ -1413,6 +1413,16 @@
             "maxItems": 3,
             "title": "Habits"
           },
+          "rendering": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Rendering"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "preferences": {
             "additionalProperties": {
               "type": "string"
@@ -2337,6 +2347,41 @@
           "reason"
         ],
         "title": "Reflection"
+      },
+      "Rendering": {
+        "properties": {
+          "controls": {
+            "$ref": "#/components/schemas/Controls"
+          },
+          "style_profile": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "title": "Style Profile"
+          },
+          "model_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$",
+            "title": "Model Id"
+          },
+          "notes": {
+            "items": {
+              "type": "string",
+              "pattern": "^(shifted|out_of_gamut|weak_habit):[a-z_]{1,40}$"
+            },
+            "type": "array",
+            "maxItems": 24,
+            "title": "Notes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "controls",
+          "style_profile",
+          "model_id"
+        ],
+        "title": "Rendering",
+        "description": "Perceptual calibration (ADR 0007): the approved configuration to render on this\nmodel so that `controls`, the persona's intent, comes across as intended. Present\nonly when a Model Style Profile matched the request's `host.model_id`."
       },
       "Rollback": {
         "properties": {

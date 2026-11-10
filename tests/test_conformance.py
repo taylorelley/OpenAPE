@@ -77,3 +77,12 @@ def test_derived_context_never_contains_text():
     from sdk.python.lite import derive_context
     secret='zz-private-marker review this asap'
     assert 'zz-private-marker' not in json.dumps(derive_context({'tools':['Edit']},None,secret))
+
+@pytest.mark.parametrize('case',fixtures['model_keys'],ids=lambda f:f['model'][:20] or 'empty')
+def test_model_key_parity(case):
+    # The engine, the Python SDK and the TypeScript SDK must name a model identically,
+    # or a style profile would match on one host and not on another.
+    from sdk.python.lite import model_key
+    from engine.neural.calibration import model_key as engine_key
+    import re
+    assert model_key(case['model'])==engine_key(case['model'])==case['key'] and re.fullmatch(r'[A-Za-z0-9_.:-]{1,100}',case['key'])

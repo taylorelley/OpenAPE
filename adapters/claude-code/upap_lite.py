@@ -189,6 +189,11 @@ def derive_context(signals=None,declared=None,text=None,rules=CONTEXT_RULES,mode
     ctx['tags']=[t for t in vocab['tags'] if t in tags]
     return ctx
 
+def model_key(model_id):
+    """A model name as a wire-safe id ('z-ai/GLM-5.3' -> 'z-ai:glm-5.3'); style profiles are matched on it."""
+    key=re.sub(r'[^a-z0-9_.:-]+',':',str(model_id).strip().lower()).strip(':')
+    return key[:100] or 'unspecified'
+
 def coherent(controls):
     """A complete, in-range configuration that passes the catalogue's coherence rules."""
     if not isinstance(controls,dict) or set(controls)!=set(TRAITS) or any(type(controls[t]) is not int or not 0<=controls[t]<CONTROLS['levels'] for t in TRAITS):return False
@@ -209,7 +214,16 @@ def validate_decision(d):
     ttl=d.get('cache_ttl_ms')
     if d.get('mode') not in ('shadow','active','frozen') or d.get('applies_to')!='next_model_request' or not (d.get('policy') or {}).get('eligible') or type(ttl) is not int or not 0<=ttl<=30000:raise ValueError('Invalid decision')
     if not all(isinstance(d.get(k),str) for k in ('request_id','decision_id','persona_version','decoder_hash')):raise ValueError('Invalid decision')
+    r=d.get('rendering')
+    if r is not None:
+        # Perceptual calibration: another approved configuration to render for this model.
+        if not isinstance(r,dict) or not coherent(r.get('controls')) or not habits_valid(d['habits'],r['controls']) or not isinstance(r.get('style_profile'),str):raise ValueError('Invalid rendering')
     return d
+
+def shown_controls(d):
+    """The levels to render: the calibrated ones for this model when the engine sent a
+    `rendering`, otherwise the persona's own controls."""
+    return d['rendering']['controls'] if d.get('rendering') else d['controls']
 
 def band(level):
     return 0 if level<=1 else 1 if level==2 else 2
@@ -219,9 +233,10 @@ def render(decision,example=False):
     preferences, and (if the host opts in) the reviewed tone example for these levels."""
     d=validate_decision(decision)
     if d['mode']=='shadow':return ''
-    parts=[CONTROLS['prefix']]+[CONTROLS['templates'][t][d['controls'][t]] for t in TRAITS]+[HABITS[h]['text'] for h in d['habits']]
+    shown=shown_controls(d)
+    parts=[CONTROLS['prefix']]+[CONTROLS['templates'][t][shown[t]] for t in TRAITS]+[HABITS[h]['text'] for h in d['habits']]
     parts+=[CONTROLS['preferences'][k][d['preferences'][k]] for k in CONTROLS['preferences'] if k in d['preferences']]
-    if example:parts.append(CONTROLS['example_prefix']+' "'+CONTROLS['examples'][f"{band(d['controls']['warmth'])}{band(d['controls']['formality'])}"]+'"')
+    if example:parts.append(CONTROLS['example_prefix']+' "'+CONTROLS['examples'][f"{band(shown['warmth'])}{band(shown['formality'])}"]+'"')
     text=' '.join(parts)
     if len(text)>MAX_STYLE_CHARS:raise ValueError('Renderer size bound exceeded')
     return text

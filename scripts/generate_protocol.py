@@ -29,6 +29,13 @@ invalid=[('ineligible policy',{**d,'policy':{'eligible':False,'mask_reason':None
  ('cache ttl above bound',{**d,'cache_ttl_ms':999999}),('disabled is not a wire mode',{**d,'mode':'disabled'}),('wrong protocol',{**d,'protocol_version':'upap/1'}),
  ('wrong control schema',{**d,'control_schema':'behaviour-controls/1'}),('unknown preference slot',{**d,'preferences':{'tone':'snarky'}}),
  ('unknown preference value',{**d,'preferences':{'spelling':'klingon'}}),('preferences missing',{k:v for k,v in d.items() if k!='preferences'}),('wrong catalogue hash',{**d,'catalogue_hash':'sha256:'+'1'*64})]
+# Perceptual calibration (ADR 0007): hosts render `rendering.controls`; `controls` stays the intent.
+def rendering(controls,notes=()):return {'controls':controls,'style_profile':'sha256:'+'2'*64,'model_id':'fixture','notes':list(notes)}
+valid+=[('valid calibrated rendering',{**warm,'rendering':rendering({**NEUTRAL,'warmth':3,'verbosity':4,'formality':3},['shifted:warmth','shifted:verbosity','shifted:formality'])}),
+ ('valid calibrated rendering without a shift',{**d,'rendering':rendering(dict(NEUTRAL),['out_of_gamut:formality'])}),('valid null rendering',{**d,'rendering':None})]
+invalid+=[('rendering incoherent',{**d,'rendering':rendering({**NEUTRAL,'verbosity':0,'explanation_depth':4})}),('rendering level out of range',{**d,'rendering':rendering({**NEUTRAL,'warmth':7})}),
+ ('rendering makes a habit ineligible',{**warm,'rendering':rendering({**NEUTRAL,'warmth':4,'verbosity':2})}),('rendering without a profile',{**d,'rendering':{'controls':dict(NEUTRAL)}}),
+ ('rendering as text',{**d,'rendering':'warm'})]
 fixtures=[dict(name=n,valid=True,value=v,rendered=render(v),rendered_with_example=render(v,example=True)) for n,v in valid]+[dict(name=n,valid=False,value=v) for n,v in invalid]
 (ROOT/'examples/express.json').write_text(json.dumps(req,indent=2)+'\n')
 from sdk.python.lite import TOOL, CONTEXT_RULES, derive_context
@@ -64,4 +71,6 @@ probes=['Review this diff please','write a Go function that retries with backoff
  'brainstorm names for our CLI','I am stuck and frustrated','compare Postgres and MySQL','plan the migration to Kubernetes','thanks!','URGENT prod is down',
  'Révisez ce code, ÜRGENT','Ǆ ǅ ǆ İstanbul ﬁle KELVIN K','tl;dr just the code','a'*500,' '.join(['word']*400),'']
 classifier_cases=[dict(text=t,result=list(r) if (r:=classify_text(t)) else None) for t in probes]
-(P/'conformance.json').write_text(json.dumps({'request':req,'decisions':fixtures,'contexts':contexts,'classifier':classifier_cases},indent=2)+'\n')
+from sdk.python.lite import model_key
+model_keys=[dict(model=m,key=model_key(m)) for m in ['claude-opus-5-5','z-ai/GLM-5.3-Flash','  openai/gpt 6 (preview)  ','accounts/x/models/llama@v4','///','', 'a'*150,'Qwen:Max_2.5','meta.llama-4:70b']]
+(P/'conformance.json').write_text(json.dumps({'request':req,'decisions':fixtures,'contexts':contexts,'classifier':classifier_cases,'model_keys':model_keys},indent=2)+'\n')

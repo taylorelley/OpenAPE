@@ -168,6 +168,15 @@ class Settings(Envelope):
     exploration: bool = False
 class Comparison(Envelope):
     decision_id: Id
+class Rendering(Strict):
+    """Perceptual calibration (ADR 0007): the approved configuration to render on this
+    model so that `controls`, the persona's intent, comes across as intended. Present
+    only when a Model Style Profile matched the request's `host.model_id`."""
+    controls: Controls
+    style_profile: Annotated[str, StringConstraints(pattern=r'^sha256:[0-9a-f]{64}$')]
+    model_id: Id
+    # shifted:<trait>, out_of_gamut:<trait>, weak_habit:<habit>
+    notes: list[Annotated[str, StringConstraints(pattern=r'^(shifted|out_of_gamut|weak_habit):[a-z_]{1,40}$')]] = Field(default_factory=list, max_length=24)
 class Decision(Envelope):
     protocol_version: Literal['upap/2'] = 'upap/2'
     request_id: Id
@@ -179,6 +188,9 @@ class Decision(Envelope):
     catalogue_hash: str
     controls: Controls
     habits: list[Habit] = Field(max_length=MAX_HABITS)
+    # `controls` is always the persona's intent. When `rendering` is present, hosts render
+    # `rendering.controls` instead; feedback and learning stay in terms of `controls`.
+    rendering: Rendering | None = None
     preferences: dict[str, str] = Field(default_factory=dict)
     # True when the user's opt-in exploration served a style other than the persona's first choice.
     exploration: bool = False
