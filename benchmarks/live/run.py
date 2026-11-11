@@ -82,6 +82,7 @@ def add_provider_args(ap):
     ap.add_argument('--no-judge-fallback', action='store_true', help='do not let a declined Claude judgement fall back to another model')
     ap.add_argument('--base-url', help='openai-compatible base URL (default: OPENAI_BASE_URL, else the OpenAI API)')
     ap.add_argument('--key-env', default='OPENAI_API_KEY', help='env var holding the openai-compatible key')
+    ap.add_argument('--stream', action='store_true', help='openai-compatible: stream responses (for gateways that cut long requests)')
     ap.add_argument('--judge-base-url', help='openai-compatible judge base URL (default: --base-url)')
     ap.add_argument('--judge-key-env', help='env var holding the openai-compatible judge key (default: --key-env)')
     ap.add_argument('--judge-response-format', choices=['json_schema', 'json_object', 'none'], default='json_schema',
@@ -94,12 +95,12 @@ def build_providers(a):
         if value == 'auto': return claude_default if provider == 'anthropic' else None
         return value
     if a.provider == 'anthropic': gen = AnthropicProvider()
-    elif a.provider == 'openai-compatible': gen = OpenAICompatibleProvider(a.base_url, a.key_env)
+    elif a.provider == 'openai-compatible': gen = OpenAICompatibleProvider(a.base_url, a.key_env, stream=getattr(a, 'stream', False))
     elif a.provider == 'simulated': gen = SimulatedProvider(getattr(a, 'seed', 0))
     else: gen = MockProvider()
     if a.provider in OFFLINE: judge = gen
     elif a.judge_provider == 'anthropic': judge = AnthropicProvider()
-    else: judge = OpenAICompatibleProvider(a.judge_base_url or a.base_url, a.judge_key_env or a.key_env, a.judge_response_format)
+    else: judge = OpenAICompatibleProvider(a.judge_base_url or a.base_url, a.judge_key_env or a.key_env, a.judge_response_format, stream=getattr(a, 'stream', False))
     return gen, judge, effort_for(a.effort, a.provider, 'medium'), effort_for(a.judge_effort, a.judge_provider, 'high')
 
 def main(argv=None):
