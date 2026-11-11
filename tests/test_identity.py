@@ -76,3 +76,23 @@ def test_rater_page_is_self_contained():
     html = Path('benchmarks/identity/rater.html').read_text()
     assert 'src=' not in html and 'http://' not in html and 'https://' not in html and 'fetch(' not in html and 'innerHTML' not in html
     assert 'openape-identity-items/1' in html and 'openape-identity-results/1' in html
+
+def test_expression_ablation_variants_and_offline_run(tmp_path):
+    from benchmarks.identity import ablation
+    from protocol.catalogue import NEUTRAL, PREFIX, TEMPLATES
+    controls = dict(NEUTRAL, warmth=4, verbosity=1, humour=1)
+    engine = PREFIX + ' all seven'
+    assert ablation.deviations(controls) == [TEMPLATES['warmth'][4], TEMPLATES['verbosity'][1], TEMPLATES['humour'][1]]  # largest departure first, then catalogue order
+    assert ablation.variant_text('no_prefix', 'mentor', engine, controls, []) == 'all seven'
+    card = ablation.variant_text('card', 'mentor', engine, controls, ['next_step'])
+    assert card.startswith('You are a patient mentor.') and PREFIX not in card and 'End with a suggested next step' in card and TEMPLATES['formality'][2] not in card
+    assert ablation.variant_text('static', 'mentor', engine, controls, []).startswith(ablation.ROLE['mentor']) and ablation.variant_text('none', 'mentor', engine, controls, []) == ''
+    assert ablation.arms_for(['engine', 'none'], ['turn', 'system']) == ['engine@turn', 'engine@system', 'none']
+    within = ablation.trials(['m'], run.split(design.load_prompts())[1], 2, 1)
+    assert all(t['source_model'] == t['target_model'] == 'm' and t['target_prompt'] not in t['reference_prompts'] for t in within)
+    out = tmp_path / 'out'
+    assert ablation.main(['--models', 'sim-effusive', '--variants', 'engine', 'card', 'static', 'none', '--placements', 'turn', '--trials', '2',
+        '--run-dir', str(tmp_path / 'run'), '--report-dir', str(out), '--execute']) == 0
+    r = json.loads((out / 'identity-ablation-simulated.json').read_text())
+    assert set(r['arms']) == {'engine@turn', 'card@turn', 'static@turn', 'none'} and r['within_model'] and 'engine@turn' in r['versus']
+    assert r['judge_can_tell_voices_apart'] in (True, False)
