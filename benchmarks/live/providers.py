@@ -74,12 +74,12 @@ class OpenAICompatibleProvider:
     with the schema in the prompt) or `none` (instructions only). Every judgement is
     validated against the schema either way."""
     name = 'openai-compatible'
-    def __init__(self, base_url=None, key_env='OPENAI_API_KEY', response_format='json_schema', max_retries=4, timeout=600.0, stream=False):
+    def __init__(self, base_url=None, key_env='OPENAI_API_KEY', response_format='json_schema', max_retries=4, timeout=600.0, stream=False, max_tokens=None):
         import openai  # optional dependency: pip install -e '.[live]'
         key = os.environ.get(key_env or 'OPENAI_API_KEY')
         if not key: raise SystemExit(f'{key_env or "OPENAI_API_KEY"} is not set')
         self.client = openai.OpenAI(api_key=key, base_url=base_url or os.environ.get('OPENAI_BASE_URL') or None, max_retries=max_retries, timeout=timeout)
-        self.response_format = response_format; self.stream = stream
+        self.response_format = response_format; self.stream = stream; self.max_tokens = max_tokens
     def _streamed(self, kwargs):
         """The same response as a non-streaming call, assembled from a stream. A stream keeps
         a slow connection alive past gateways that cut requests with no response body."""
@@ -96,6 +96,7 @@ class OpenAICompatibleProvider:
     def _create(self, model, messages, effort, **extra):
         kwargs = dict(model=model, messages=messages, **extra)
         if effort: kwargs['reasoning_effort'] = effort
+        if self.max_tokens: kwargs['max_tokens'] = self.max_tokens  # bounds runaway reasoning; a cut reply records finish_reason 'length'
         r = self._streamed(kwargs) if self.stream else self.client.chat.completions.create(**kwargs)
         choice = r.choices[0]; usage = r.usage
         return r, choice, dict(served_model=r.model or model, input_tokens=getattr(usage, 'prompt_tokens', 0) or 0, output_tokens=getattr(usage, 'completion_tokens', 0) or 0)
